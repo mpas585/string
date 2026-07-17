@@ -6,17 +6,6 @@
   <meta name="theme-color" content="#1a1a2e">
   <title>チェロ練習</title>
 
-  <!-- CDN依存（ESモジュール版）。bare specifier を解決するための importmap。
-       実際に import するのは pdf / songs 移植バッチ。 -->
-  <script type="importmap">
-  {
-    "imports": {
-      "jszip": "https://esm.sh/jszip@3.10.1",
-      "pdfjs-dist": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs"
-    }
-  }
-  </script>
-
   <link rel="stylesheet" href="./src/styles.css">
 </head>
 <body>
@@ -360,6 +349,9 @@
 
 </div><!-- /#app -->
 
+  <!-- optional: .mxl 解凍 / PDF表示（読み込めなくてもコア機能は動作）。元と同じくグローバル読み込み。 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" onerror="window.__noZip=1"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" onerror="window.__noPdf=1"></script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
