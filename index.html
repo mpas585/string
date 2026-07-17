@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>チェロ練習</title>
+
+  <!-- CDN依存（ESモジュール版）。bare specifier を解決するための importmap。
+       実際に import するのは pdf / songs 移植バッチ。 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "jszip": "https://esm.sh/jszip@3.10.1",
+      "pdfjs-dist": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.mjs"
+    }
+  }
+  </script>
+
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+<div id="app">
+<div class="topbar">
+  <button id="menu" class="iconbtn" aria-label="メニュー">☰</button>
+  <div id="nowline" class="nowbar">譜面を開いてください</div>
+  <button id="gear" class="iconbtn" aria-label="指板の表示設定">⚙</button>
+</div>
+
+<!-- 全画面 指板 -->
+<div class="board-full">
+  <div id="fbsvg" class="fbsvg"></div>
+  <div id="staffview" class="staffview"></div>
+</div>
+
+<!-- 歯車：指板の表示設定 -->
+<div id="gearScrim" class="gscrim"></div>
+<div id="gearPanel" class="gearpanel">
+  <div class="gp-head">
+    <span class="gp-tt">⚙ 設定</span>
+    <button id="gearClose" class="iconbtn" aria-label="閉じる">✕</button>
+  </div>
+  <div class="gp-t">表示</div>
+  <div class="seg2" id="viewSeg">
+    <button data-view="board">🎻 指板</button>
+    <button data-view="staff">🎼 五線譜</button>
+  </div>
+  <div id="fretSw" class="sw on"><span>フレット線を表示</span><span class="knob"></span></div>
+  <div id="landSw" class="sw"><span>横画面（ランドスケープ）</span><span class="knob"></span></div>
+  <div class="sub" style="margin:-3px 0 8px">五線譜は横画面が見やすいです</div>
+
+  <div class="gp-t">再生</div>
+  <div id="countSw" class="sw on"><span>冒頭に4カウント</span><span class="knob"></span></div>
+  <div id="awakeSw" class="sw on"><span>再生中はスリープさせない</span><span class="knob"></span></div>
+
+  <div class="gp-t" style="margin-top:12px">指板ズーム</div>
+  <div class="field">
+    <div class="k">倍率</div>
+    <div class="v tempo">
+      <input id="zoom" type="range" min="20" max="220" step="5" value="100">
+      <b id="zoomval">100%</b>
+    </div>
+  </div>
+  <div class="row controls">
+    <button id="zoomOut" class="ghost">−</button>
+    <button id="zoomIn" class="ghost">＋</button>
+    <button id="zoomFit" class="ghost">全体</button>
+    <button id="zoomReset" class="ghost">等倍</button>
+  </div>
+
+  <div class="gp-t" style="margin-top:12px">音量</div>
+  <div class="vol"><span>全体</span><input id="volMaster" type="range" min="0" max="100" value="70"><b id="volMasterV">70</b></div>
+  <div class="vol"><span>メロディ</span><input id="volLead" type="range" min="0" max="100" value="80"><b id="volLeadV">80</b></div>
+  <div class="vol"><span>ドラム</span><input id="volDrum" type="range" min="0" max="100" value="70"><b id="volDrumV">70</b></div>
+  <div class="vol"><span>ベース</span><input id="volBass" type="range" min="0" max="100" value="70"><b id="volBassV">70</b></div>
+  <div class="vol"><span>コード</span><input id="volChord" type="range" min="0" max="100" value="60"><b id="volChordV">60</b></div>
+  <div class="vol"><span>メトロノーム</span><input id="volMetro" type="range" min="0" max="100" value="60"><b id="volMetroV">60</b></div>
+  <div class="row controls" style="margin-top:8px">
+    <button id="volReset" class="ghost" style="flex:1; justify-content:center">音量を初期値に戻す</button>
+  </div>
+</div>
+
+<div id="legend" class="legend"></div>
+
+<div id="empty" class="empty">
+  <b>譜面を読み込んでください</b>
+  <div><span class="kbd">☰</span> から「譜面を開く」または「サンプル」</div>
+</div>
+
+<!-- 下部トランスポート：運指リスト（横スクロール）＋ 再生メーター -->
+<div id="transport" class="transport">
+  <div id="strip" class="strip"></div>
+  <div class="seekrow">
+    <span id="tmCur" class="tm">1</span>
+    <div id="seek" class="seek">
+      <div class="trk">
+        <div id="seekLoop" class="loopband"></div>
+        <div id="seekFill" class="fill"></div>
+      </div>
+      <div id="seekHead" class="head"></div>
+    </div>
+    <span id="tmTotal" class="tm r">/ 1</span>
+  </div>
+</div>
+
+<!-- 入口：モード選択 -->
+<div id="picker" class="picker">
+  <div class="pk-logo">🎻</div>
+  <div class="pk-title">Cello Practice</div>
+  <div class="pk-sub">チェロ練習アプリ</div>
+  <button class="pk-card" data-mode="scale">
+    <span class="pk-ic">🎵</span><span class="pk-b">スケール練習<small>基礎練習</small></span>
+  </button>
+  <button class="pk-card" data-mode="score">
+    <span class="pk-ic">🎼</span><span class="pk-b">曲を練習する<small>曲を選択（譜面データ読込も可）</small></span>
+  </button>
+  <button class="pk-card" data-mode="tuner">
+    <span class="pk-ic">🎯</span><span class="pk-b">チューナー<small>音程をリアルタイム判定</small></span>
+  </button>
+  <button class="pk-card" data-mode="game">
+    <span class="pk-ic">🎮</span><span class="pk-b">ミニゲーム<small>準備中</small></span>
+  </button>
+</div>
+
+<button id="fab" class="fab" disabled aria-label="再生 / 停止">▶</button>
+
+<!-- ハンバーガードロワー（操作パネル） -->
+<div id="scrim" class="scrim"></div>
+<aside id="drawer" class="drawer">
+  <div class="drawer-top">
+    <div class="drawer-head">
+      <span class="accentbar"></span>
+      <h1>Cello</h1>
+      <button id="drawerClose" class="iconbtn" aria-label="閉じる">✕</button>
+    </div>
+    <div class="seg" id="modeSeg" role="tablist">
+      <button data-mode="scale">🎵 スケール</button>
+      <button data-mode="score">🎼 コピー</button>
+      <button data-mode="tuner">🎯 チューナー</button>
+    </div>
+  </div>
+
+  <!-- ========== チューナーモード ========== -->
+  <div data-m="tuner">
+    <div class="seclbl">マイク</div>
+    <div id="micSw" class="sw"><span>マイクで音程を検出</span><span class="knob"></span></div>
+    <div class="sub">弾いた音の位置が指板に出ます。<br>マイクは https:// か localhost でのみ使えます（file:// は不可）。</div>
+  </div>
+
+  <!-- ========== スケール練習モード ========== -->
+  <div data-m="scale">
+    <div class="seclbl">スケール設定</div>
+    <div class="field2">
+      <div>
+        <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">キー</div>
+        <select id="scaleRoot">
+          <option value="0">C</option><option value="1">C#/D♭</option><option value="2">D</option>
+          <option value="3">D#/E♭</option><option value="4">E</option><option value="5">F</option>
+          <option value="6">F#/G♭</option><option value="7">G</option><option value="8">G#/A♭</option>
+          <option value="9">A</option><option value="10">A#/B♭</option><option value="11">B</option>
+        </select>
+      </div>
+      <div>
+        <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">オクターブ</div>
+        <select id="scaleOct">
+          <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <div class="k">スケール</div>
+      <div class="v">
+        <select id="scaleType">
+          <option value="pop">🎵 ポップス（メジャー）</option>
+        </select>
+      </div>
+    </div>
+    <div class="seclbl">エンジョイモード</div>
+    <div id="enjoySw" class="sw"><span>ドラム・ベース・ピアノ伴奏</span><span class="knob"></span></div>
+    <div class="sub">上のキーに合わせた4コードループが鳴ります</div>
+  </div>
+
+  <!-- ========== コピー練習モード ========== -->
+  <div data-m="score">
+    <!-- 子タブ：曲を選ぶ / 譜面を読み込む -->
+    <div class="subseg" id="scoreSubSeg">
+      <button data-sub="songs" class="on">🎵 曲を選ぶ</button>
+      <button data-sub="load">📂 譜面を読み込む</button>
+    </div>
+
+    <!-- 子タブ内容：曲を選ぶ -->
+    <div class="subpanel" data-sub="songs">
+      <div class="seclbl">曲を選ぶ</div>
+      <div id="songBtns" class="songlist">
+        <button class="songbtn" data-song="kirakira">⭐ キラキラ星<small>ハ長調・2オクターブ</small></button>
+        <button class="songbtn" disabled>🎼 準備中<small>近日追加</small></button>
+        <button class="songbtn" disabled>🎼 準備中<small>近日追加</small></button>
+        <button class="songbtn" disabled>🎼 準備中<small>近日追加</small></button>
+      </div>
+      <div class="sub">曲を選ぶと譜面が読み込まれます</div>
+    </div>
+
+    <!-- 子タブ内容：譜面を読み込む（現状の内容） -->
+    <div class="subpanel m-hide" data-sub="load">
+      <div class="seclbl">譜面</div>
+      <div class="row controls">
+        <label class="filebtn">🎼 開く<input id="file" type="file" accept=".xml,.musicxml,.mxl,.mid,.midi,.pdf,audio/midi,audio/x-midi"></label>
+        <button id="pdfOpen" class="ghost">📄 PDF</button>
+      </div>
+      <div class="sub">MusicXML（.xml/.musicxml/.mxl）と MIDI（.mid）に対応</div>
+
+      <div id="tracks" class="tracks">
+        <div class="seclbl">MIDIトラック選択</div>
+        <div id="trackList"></div>
+        <div class="row controls">
+          <button id="skipStart" class="ghost" style="flex:1; justify-content:center">⏭ 最初の音へスキップ</button>
+        </div>
+        <div class="sub">トラック名をタップすると再生します。チェロの音域に近いトラックを自動で選んでいます。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 共通：テンポ・ループ ========== -->
+  <!-- ========== 共通：テンポ ========== -->
+  <div data-m="scale score">
+    <hr class="sep">
+    <div class="seclbl">テンポ</div>
+    <div class="field">
+      <div class="k">速さ</div>
+      <div class="v tempo">
+        <input id="tempo" type="range" min="30" max="160" value="80">
+        <b id="tempoval">80 bpm</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 共通：推奨ポジション ========== -->
+  <div data-m="scale score">
+    <hr class="sep">
+    <div class="seclbl">推奨ポジション</div>
+    <div class="row controls" style="gap:6px">
+      <button class="pref on" data-pref="low">ロー</button>
+      <button class="pref" data-pref="mid">ミドル</button>
+      <button class="pref" data-pref="high">ハイ</button>
+    </div>
+
+    <div data-m="score">
+      <div class="seclbl">オクターブ</div>
+      <div class="octrow">
+        <button class="oct on" data-oct="auto">自動</button>
+        <button class="oct" data-oct="0">原曲</button>
+        <button class="oct" data-oct="-3">-3</button>
+        <button class="oct" data-oct="-2">-2</button>
+        <button class="oct" data-oct="-1">-1</button>
+        <button class="oct" data-oct="1">+1</button>
+        <button class="oct" data-oct="2">+2</button>
+        <button class="oct" data-oct="3">+3</button>
+      </div>
+      <div id="octInfo" class="sub"></div>
+    </div>
+  </div>
+
+  <!-- ========== 共通：ループ設定（オクターブ設定の下） ========== -->
+  <div data-m="scale score">
+    <div class="seclbl">ループ設定</div>
+    <div id="loopSw" class="sw"><span>ループ再生</span><span class="knob"></span></div>
+    <div data-m="score">
+      <div class="field2">
+        <div>
+          <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">開始小節</div>
+          <input id="loopFrom" type="number" min="1" value="1">
+        </div>
+        <div>
+          <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">終了小節</div>
+          <input id="loopTo" type="number" min="1" value="4">
+        </div>
+      </div>
+    </div>
+    <div id="loopInfo" class="sub">小節を指定して繰り返します（例：34〜40）</div>
+  </div>
+
+  <!-- ========== コピー練習モード：添削・保存 ========== -->
+  <div data-m="score">
+    <hr class="sep">
+    <div class="seclbl">運指の保存</div>
+    <div class="row controls">
+      <button id="fingExport" class="ghost">書き出し</button>
+      <label class="filebtn">読み込み<input id="fingFile" type="file" accept=".json"></label>
+      <button id="fingReset" class="ghost">リセット</button>
+    </div>
+    <div id="storeInfo" class="sub">編集した運指は自動保存されます</div>
+  </div>
+
+  <!-- ========== スケール練習モード：生成（一番下） ========== -->
+  <div data-m="scale">
+    <hr class="sep">
+    <div class="row controls">
+      <button id="scaleGen" class="primary" style="flex:1; justify-content:center; min-height:46px">スケールを生成</button>
+    </div>
+  </div>
+
+  <div class="drawer-note">
+    押弦位置は弦長比（1 − 2<sup>−半音/12</sup>）から算出。ポジション名・指番号は目安です。<br>
+    ローカル動作・データは端末外に送信しません。
+  </div>
+</aside>
+
+<!-- PDF参照オーバーレイ -->
+<div id="pdfOverlay" class="pdf-overlay">
+  <div class="pdf-head">
+    <button id="pdfClose" class="iconbtn" aria-label="閉じる">✕</button>
+    <label class="filebtn">📄 開く<input id="pdffile" type="file" accept=".pdf"></label>
+    <button id="pdfprev" class="iconbtn" disabled>‹</button>
+    <b id="pdfpage">– / –</b>
+    <button id="pdfnext" class="iconbtn" disabled>›</button>
+    <span class="sp"></span>
+  </div>
+  <div class="pdf-scroll">
+    <div class="note-note">PDFは<b>参照表示のみ</b>。画像から音符を自動読み取り（OMR）はブラウザ単体では行えないため、運指・再生データは MusicXML から取り込みます。</div>
+    <canvas id="pdfcanvas"></canvas>
+    <div id="pdfempty" class="empty" style="position:static; display:block; pointer-events:auto; padding:30px 0; text-align:center">PDFファイルを選ぶとここに表示されます</div>
+  </div>
+</div>
+
+<!-- チューナー（下部シート） -->
+<div id="tunerSheet" class="sheet">
+  <div class="sheet-head">
+    <span class="t">チューナー / ピッチ判定</span>
+  </div>
+  <div class="tun-main">
+    <div id="tunHz" class="tun-hz">– Hz</div>
+    <div id="tunNote" class="tun-note">–</div>
+    <div id="tunCent" class="tun-cent">– cent</div>
+  </div>
+  <div class="tun-bar">
+    <div class="mid"></div>
+    <div id="tunNeedle" class="ndl"></div>
+  </div>
+  <div class="tun-str">
+    <span data-str="0">C2</span><span data-str="1">G2</span><span data-str="2">D3</span><span data-str="3">A3</span>
+  </div>
+  <div id="tunHint" class="tun-hint"></div>
+</div>
+
+<!-- 運指編集（ボトムシート） -->
+<div id="editSheet" class="sheet edit-sheet">
+  <div class="sheet-head">
+    <span class="t">👇 運指を変更できます</span>
+    <button id="editClose" class="iconbtn" aria-label="閉じる">✕</button>
+  </div>
+  <div id="edit" class="edit">
+    <div class="empty-edit">音符を選ぶと運指を編集できます</div>
+  </div>
+</div>
+
+<!-- 冒頭4カウント -->
+<div id="countin" class="countin"><span id="countnum">4</span></div>
+
+<div id="toast" class="toast"></div>
+
+</div><!-- /#app -->
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
