@@ -14,6 +14,8 @@
 import { OPEN, STRNAME, fracOf, midiName, zoneOf, fingerHint } from './util.js';
 import { ST } from './state.js';
 import { toast } from './dom.js';
+import { midiFreq } from './audio/synth.js';
+import { renderNow } from './modes.js';
 
 /* ===== ゾーン別の運指候補と推奨 ===== */
 export function optionsFor(midi){
@@ -280,3 +282,77 @@ export function zoomFit(){
   toast(`全体表示（${Math.round(ST.zoom*100)}%）`);
 }
 
+
+/* ===== 弦タップ発音（押している間だけ鳴る）＋ タップ座標 — 元 L3155–3227 ===== */
+export let liveCtx=null, liveOsc=null, liveGain=null;
+export function ensureLiveCtx(){
+  if(!liveCtx){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    liveCtx=new AC();
+  }
+  if(liveCtx.state==='suspended'){ try{ liveCtx.resume(); }catch(e){} }
+  return liveCtx;
+}
+export function holdStart(midi){
+  const ctx=ensureLiveCtx();
+  holdStop();
+  const f=midiFreq(midi), t=ctx.currentTime;
+  const o1=ctx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=f;
+  const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=f; o2.detune.value=-6;
+  const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=Math.min(4200,f*6); lp.Q.value=0.6;
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(0.20,t+0.03);
+  o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(ctx.destination);
+  o1.start(t); o2.start(t);
+  liveOsc={o1,o2}; liveGain=g;
+}
+export function holdUpdate(midi){
+  if(!liveOsc || !liveCtx) return;
+  const f=midiFreq(midi), t=liveCtx.currentTime;
+  liveOsc.o1.frequency.setTargetAtTime(f,t,0.008);
+  liveOsc.o2.frequency.setTargetAtTime(f,t,0.008);
+}
+export function holdStop(){
+  if(!liveOsc || !liveCtx) return;
+  const t=liveCtx.currentTime;
+  const {o1,o2}=liveOsc, g=liveGain;
+  try{
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.linearRampToValueAtTime(0.0001, t+0.06);
+  }catch(e){}
+  setTimeout(()=>{ try{o1.stop(); o2.stop();}catch(e){} }, 160);
+  liveOsc=null; liveGain=null;
+}
+/* 画面座標 → 弦・半音 */
+export function pointToPos(evt){
+  const svg=document.querySelector('#fbsvg svg');
+  if(!svg || !svg.getScreenCTM) return null;
+  const ctm=svg.getScreenCTM(); if(!ctm) return null;
+  const pt=svg.createSVGPoint();
+  pt.x=evt.clientX; pt.y=evt.clientY;
+  const p=pt.matrixTransform(ctm.inverse());
+  let si=0, best=1e9;
+  FB.strX.forEach((x,i)=>{ const d=Math.abs(p.x-x); if(d<best){ best=d; si=i; } });
+  if(best>34) return null;
+  let off=Math.round(offOfY(p.y));
+  off=Math.max(0, Math.min(FB.maxOff, off));
+  return {str:si, off, midi:OPEN[si]+off};
+}
+export function showHoldDot(pos){
+  const dot=document.getElementById('holddot');
+  if(!dot) return;
+  dot.setAttribute('cx', FB.strX[pos.str]);
+  dot.setAttribute('cy', yOf(pos.off).toFixed(1));
+  dot.setAttribute('opacity', '0.95');
+  const el=document.getElementById('nowline');
+  const z=zoneOf(pos.off);
+  el.innerHTML=`<b>${midiName(pos.midi)}</b> · ${STRNAME[pos.str]}線${fingerHint(pos.off)}指 · ${z.zone}`;
+}
+export function hideHoldDot(){
+  const dot=document.getElementById('holddot');
+  if(dot) dot.setAttribute('opacity','0');
+  const id=(ST.current!=null)?ST.current:ST.selected;
+  renderNow(id!=null ? ST.events[id] : null);
+}
