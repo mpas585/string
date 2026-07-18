@@ -14,10 +14,10 @@
   ※ pdf は Batch7 で作成。それまで PDFファイルを開く経路のみ実行時未解決。
 */
 import { ST } from './state.js';
-import { midiName } from './util.js';
-import { recommend, scrollBoardToActive } from './fingerboard.js';
+import { midiName, NOTE_NAMES, OPEN } from './util.js';
+import { recommend, scrollBoardToActive, FB } from './fingerboard.js';
 import { scrollStaffToActive } from './notation.js';
-import { buildScaleEvents } from './scale.js';
+import { buildScaleEvents, SCALE_LABEL } from './scale.js';
 import { measureOfBeat, setSeekHead, setTempo, startPlay, updateTransport } from './audio/scheduler.js';
 import { render, scrollStripToActive, setScore, syncLoopUI } from './modes.js';
 import { closeDrawer, openDrawer, openPdfOverlay } from './drawer.js';
@@ -304,6 +304,7 @@ export async function unMxl(file){
 }
 
 export let midiFile=null;
+export function setMidiFile(v){ midiFile=v; }  /* 分割対応: 外部モジュールからの代入用 */
 export function renderTracks(){
   const box=document.getElementById('tracks');
   const list=document.getElementById('trackList');

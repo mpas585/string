@@ -8,6 +8,7 @@
 import { toast } from './dom.js';
 
 export let pdfDoc=null, pdfPage=1;
+export function setPdfPage(v){ pdfPage=v; }  /* 分割対応: 外部からのページ変更用 */
 export async function openPdf(file){
   if(window.__noPdf || !window.pdfjsLib){ toast('PDF表示ライブラリを読み込めませんでした。'); return; }
   try{

@@ -5,18 +5,32 @@
   配線本体（on(...) 群・補助関数・末尾の初期化）は
   元 cello-finger.html L3522–3794 より無改変で移植（on() 定義 L3502–3521 は dom.js へ移設済みのため除外）。
 */
-import { ST, volProfileKey } from './state.js';
+import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
-import { applyZoom, hideHoldDot, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot } from './fingerboard.js';
-import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI } from './modes.js';
-import { acquireWake, beatFromSeekEvent, currentBeat, isRotated, releaseWake, seekTo, setSeekHead, startPlay } from './audio/scheduler.js';
+import { applyZoom, hideHoldDot, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
+import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, setPref } from './modes.js';
+import { acquireWake, beatFromSeekEvent, currentBeat, isRotated, releaseWake, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
-import { importFingering, loadSettings, saveSettings, syncSettingsUI } from './drawer.js';
-import { loadSong, selectTrack } from './songs.js';
-import { startTuner, stopTuner } from './tuner.js';
-import { pdfDoc, renderPdfPage } from './pdf.js';
+import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay } from './drawer.js';
+import { loadSong, selectTrack, skipToStart, loadScoreFile } from './songs.js';
+import { startTuner, stopTuner, TUN } from './tuner.js';
+import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
+/* --- 取りこぼしていた基本配線（元 L3509–3520。fab=再生ボタン等） --- */
+on('file','change', e=>{ if(e.target.files[0]) loadScoreFile(e.target.files[0]); e.target.value=''; });
+on('pdffile','change', e=>{ if(e.target.files[0]) openPdf(e.target.files[0]); e.target.value=''; });
+on('fab','click', ()=>{ if(ST.playing) stopPlay(); else startPlay(); });
+on('menu','click', openDrawer);
+on('drawerClose','click', closeDrawer);
+on('scrim','click', closeDrawer);
+on('pdfOpen','click', openPdfOverlay);
+on('pdfClose','click', closePdfOverlay);
+on('tempo','input', e=>{ setTempo(+e.target.value, true); saveSettings(); });
+document.querySelectorAll('.pref').forEach(b=> b.addEventListener('click', ()=> setPref(b.dataset.pref)));
+on('pdfprev','click', ()=>{ if(pdfPage>1){ setPdfPage(pdfPage-1); renderPdfPage();} });
+on('pdfnext','click', ()=>{ if(pdfDoc&&pdfPage<pdfDoc.numPages){ setPdfPage(pdfPage+1); renderPdfPage();} });
+
 /* ===== 運指ストリップ：スワイプ＋タップ選択 ===== */
 let sDrag=null, sMoved=false;
 on('strip','pointerdown', e=>{

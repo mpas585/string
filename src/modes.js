@@ -14,16 +14,16 @@
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey } from './state.js';
-import { fracOf, midiName, zoneOf, fingerHint } from './util.js';
+import { fracOf, midiName, zoneOf, fingerHint, NOTE_NAMES, OPEN, STRNAME } from './util.js';
 import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
 import { renderStaff } from './notation.js';
-import { buildScaleEvents } from './scale.js';
+import { buildScaleEvents, SCALE_LABEL } from './scale.js';
 import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
-import { paintTunerDots, startTuner, stopTuner } from './tuner.js';
+import { paintTunerDots, startTuner, stopTuner, TUN } from './tuner.js';
 import { warmAudio } from './audio/context.js';
 import { toast } from './dom.js';
-import { closeDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI } from './drawer.js';
-import { loadSample, renderTracks } from './songs.js';
+import { closeDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, Store } from './drawer.js';
+import { loadSample, renderTracks, midiFile, setMidiFile } from './songs.js';
 
 export function render(){
   const picker  = document.getElementById('picker');
@@ -104,7 +104,7 @@ export function setMode(mode, keepDrawer){
   ST.mode=mode;
   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
   ST.lastScrollId=null; ST.scoreName='';
-  midiFile=null; renderTracks();
+  setMidiFile(null); renderTracks();
   applyMode();
   ST.vol = ST.volProfiles[volProfileKey()];      /* モード別の音量プロファイル */
   syncSettingsUI();
@@ -386,7 +386,7 @@ export function setScore(parsed, scoreName){
 }
 export function genScale(quiet){
   try{
-    midiFile=null; renderTracks();
+    setMidiFile(null); renderTracks();
     const parsed=buildScaleEvents(ST.keyRoot, ST.scaleType, ST.scaleOct);
     const label=`${NOTE_NAMES[ST.keyRoot]} ${SCALE_LABEL[ST.scaleType]} ${ST.scaleOct}oct`;
     setScore(parsed, 'scale:'+label);

@@ -11,9 +11,10 @@
         modes(render/syncLayoutClass), dom(toast), pdf(pdfDoc/renderPdfPage)。
   ※ pdf は Batch7 で作成。それまで PDF開閉のみ実行時未解決（構文・元一致は検証済み）。
 */
-import { ST, volProfileKey } from './state.js';
+import { ST, volProfileKey, VOL_KEYS } from './state.js';
 import { fracOf, zoneOf, fingerHint } from './util.js';
 import { recommend } from './fingerboard.js';
+import { SCALES } from './scale.js';
 import { render, syncLayoutClass } from './modes.js';
 import { toast } from './dom.js';
 import { pdfDoc, renderPdfPage } from './pdf.js';

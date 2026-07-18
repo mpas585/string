@@ -15,7 +15,7 @@
 */
 import { ST } from '../state.js';
 import { playNote, bassNote, drHat, drKick, drSnare, metroClick, padChord } from './synth.js';
-import { audio, makeBuses } from './context.js';
+import { audio, makeBuses, NOISEBUF } from './context.js';
 import { paintNotes, pluckEvent, scrollBoardToActive } from '../fingerboard.js';
 import { updateStaffActive, scrollStaffToActive } from '../notation.js';
 import { progressionFor } from '../scale.js';
