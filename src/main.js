@@ -11,8 +11,9 @@ import { applyZoom, hideHoldDot, holdStart, holdStop, holdUpdate, pluckString, p
 import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, setPref } from './modes.js';
 import { acquireWake, beatFromSeekEvent, currentBeat, isRotated, releaseWake, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
-import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay } from './drawer.js';
-import { loadSong, selectTrack, skipToStart, loadScoreFile } from './songs.js';
+import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
+import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
+import { loadScales } from './scale.js';
 import { startTuner, stopTuner, TUN } from './tuner.js';
 import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 
@@ -115,27 +116,49 @@ on('fbsvg','click', e=>{
   if(ST.selected!=null) setStringForSelected(+c.dataset.str);
 });
 
-/* ===== 指板：押している間だけ鳴らす ===== */
+/* ===== 指板：押している間だけ鳴らす（複数指対応） =====
+   実際のチェロと同じく、複数の指が触れているときは「ブリッジ側」＝開放弦からの半音数
+   （off）が大きい指の音が鳴る。スマホ画面を指板に見立てて押さえ替えの練習ができる。 */
+const fbPtrs=new Map();                          /* pointerId -> {str, off, midi} */
+function fbDominant(){
+  let best=null;
+  fbPtrs.forEach(p=>{ if(!best || p.off>best.off) best=p; });
+  return best;
+}
 on('fbsvg','pointerdown', e=>{
   if(e.target.closest('.opt')) return;          /* 候補○は弦変更が優先 */
   const pos=pointToPos(e);
   if(!pos) return;
+  const prev=fbDominant();
+  fbPtrs.set(e.pointerId, pos);
   ST.holding=true;
   const fbEl=document.getElementById('fbsvg');
   try{ fbEl.setPointerCapture(e.pointerId); }catch(err){}
-  holdStart(pos.midi);
-  showHoldDot(pos);
-  pluckString(pos.str, pos.off, 1);
+  const cur=fbDominant();
+  if(!prev) holdStart(cur.midi); else if(cur.midi!==prev.midi) holdUpdate(cur.midi);
+  showHoldDot(cur);
+  /* ブリッジ側が入れ替わった時だけ弦を弾き直す（ナット側の指を足しても鳴り続ける） */
+  if(!prev || cur.str!==prev.str || cur.off!==prev.off) pluckString(cur.str, cur.off, 1);
 });
 on('fbsvg','pointermove', e=>{
-  if(!ST.holding) return;
+  if(!fbPtrs.has(e.pointerId)) return;
   const pos=pointToPos(e);
   if(!pos) return;
-  holdUpdate(pos.midi);
-  showHoldDot(pos);
+  fbPtrs.set(e.pointerId, pos);
+  const cur=fbDominant();
+  if(!cur) return;
+  holdUpdate(cur.midi);
+  showHoldDot(cur);
 });
-function endHold(){
-  if(!ST.holding) return;
+function endHold(e){
+  if(!fbPtrs.has(e.pointerId)) return;
+  fbPtrs.delete(e.pointerId);
+  const cur=fbDominant();
+  if(cur){                                      /* まだ指が残っている＝その音に戻す */
+    holdUpdate(cur.midi);
+    showHoldDot(cur);
+    return;
+  }
   ST.holding=false;
   holdStop();
   hideHoldDot();
@@ -197,7 +220,7 @@ on('countSw','click', ()=>{
 on('awakeSw','click', ()=>{
   ST.keepAwake=!ST.keepAwake;
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
-  if(!ST.keepAwake) releaseWake(); else if(ST.playing) acquireWake();
+  if(!ST.keepAwake) releaseWake(true); else if(ST.playing) acquireWake();
   saveSettings();
   if(ST.keepAwake && !navigator.wakeLock) toast('この端末はスリープ防止に非対応です');
 });
@@ -265,6 +288,13 @@ on('enjoySw','click', ()=>{
   if(ST.playing) startPlay(currentBeat());
 });
 
+/* ===== 画面左下ドック：テンポ / オクターブ / ループ（伴奏は上の enjoySw） ===== */
+on('dkTempo','click', ()=> openDockModal('mTempo'));
+on('dkOct','click',   ()=> openDockModal('mOct'));
+on('dkLoop','click',  ()=> openDockModal('mLoop'));
+on('dockScrim','click', closeDockModal);
+document.querySelectorAll('[data-dkclose]').forEach(b=> b.addEventListener('click', closeDockModal));
+
 /* ===== ゲーム / チューナー ===== */
 on('micSw','click', ()=>{
   if(TUN.on) stopTuner(); else startTuner();
@@ -296,11 +326,17 @@ on('fingFile','change', e=>{
 
 window.addEventListener('resize', ()=>{ if(pdfDoc && document.getElementById('pdfOverlay').classList.contains('open')) renderPdfPage(); });
 
-/* 初期描画 */
-loadSettings();
-applyMode();
-syncSettingsUI();
-syncLoopUI();
-render();
-applyZoom();
+/* 初期描画
+   スケール定義（public/scales/scales.json）と曲一覧（public/songs/manifest.json）は
+   外部読み込みのため、loadSettings() より先に await する
+   （保存済みの scaleType を SCALES と照合するため／scaleType の <option> が必要なため）。 */
+(async ()=>{
+  await Promise.all([ loadScales(), loadSongManifest() ]);
+  loadSettings();
+  applyMode();
+  syncSettingsUI();
+  syncLoopUI();
+  render();
+  applyZoom();
+})();
 window.addEventListener('orientationchange', ()=> setTimeout(applyZoom, 250));

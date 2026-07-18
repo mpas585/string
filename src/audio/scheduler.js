@@ -20,7 +20,7 @@ import { paintNotes, pluckEvent, scrollBoardToActive } from '../fingerboard.js';
 import { updateStaffActive, scrollStaffToActive } from '../notation.js';
 import { progressionFor } from '../scale.js';
 import { toast } from '../dom.js';
-import { render, renderNow, updateChrome, renderStrip, updateStripActive, scrollStripToActive, mq } from '../modes.js';
+import { render, renderNow, updateChrome, renderStrip, updateStripActive, scrollStripToActive, mq, syncDock } from '../modes.js';
 
 export function totalBeats(){
   if(!ST.events.length) return 1;
@@ -240,18 +240,34 @@ export function showCount(n){
 export function hideCount(){ document.getElementById('countin').classList.remove('show'); }
 
 /* ===== スリープ防止（Wake Lock） ===== */
+/* テンポ変更・シーク・ループ範囲変更では stopPlay→startPlay が連続で走るため、
+   解除は少し待ってから行う（その間に再開されればロックを保持＝取り直しの空白を作らない）。
+   force=true は「スリープさせない」をOFFにした時など、即時に手放したい場合。 */
+export let wakeRelTimer=0;
 export async function acquireWake(){
+  clearTimeout(wakeRelTimer); wakeRelTimer=0;
   if(!ST.keepAwake || ST.wakeLock) return;
   try{
     if(navigator.wakeLock && navigator.wakeLock.request){
-      ST.wakeLock=await navigator.wakeLock.request('screen');
-      ST.wakeLock.addEventListener('release', ()=>{ ST.wakeLock=null; });
+      const lock=await navigator.wakeLock.request('screen');
+      ST.wakeLock=lock;
+      lock.addEventListener('release', ()=>{
+        if(ST.wakeLock===lock) ST.wakeLock=null;   /* 取り直し後の新ロックを消さない */
+        if(ST.playing && ST.keepAwake) acquireWake();  /* OS都合で外れたら取り直す */
+      });
     }
   }catch(e){ ST.wakeLock=null; }
 }
-export function releaseWake(){
-  try{ if(ST.wakeLock) ST.wakeLock.release(); }catch(e){}
-  ST.wakeLock=null;
+export function releaseWake(force){
+  clearTimeout(wakeRelTimer); wakeRelTimer=0;
+  const lock=ST.wakeLock;
+  if(!lock) return;
+  const doRelease=()=>{
+    if(ST.wakeLock===lock) ST.wakeLock=null;
+    try{ lock.release(); }catch(e){}
+  };
+  if(force){ doRelease(); return; }
+  wakeRelTimer=setTimeout(()=>{ wakeRelTimer=0; if(!ST.playing) doRelease(); }, 400);
 }
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState==='visible' && ST.playing) acquireWake();
@@ -376,6 +392,7 @@ export function setTempo(v, live){
   ST.tempo=v;
   document.getElementById('tempo').value=v;
   document.getElementById('tempoval').textContent=v+' bpm';
+  syncDock();
   if(live && ST.playing){
     /* 再生中：現在位置を保って組み直す（リアルタイム反映） */
     const at=currentBeat();

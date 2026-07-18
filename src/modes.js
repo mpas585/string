@@ -355,6 +355,7 @@ export function applyOctave(){
 export function setOctave(v){
   ST.octave = (v==='auto') ? 'auto' : parseInt(v,10);
   document.querySelectorAll('.oct').forEach(b=> b.classList.toggle('on', String(b.dataset.oct)===String(ST.octave)));
+  syncDock();
   if(!ST.parsed) return;
   const at = ST.playing ? currentBeat() : null;
   applyOctave();
@@ -402,6 +403,18 @@ export function genScale(quiet){
     }
   }catch(e){ toast('生成できません：'+e.message); }
 }
+/* 画面左下ドックの表示（テンポ値・オクターブ値・ループON）を状態に合わせる */
+export function syncDock(){
+  const t=document.getElementById('dkTempoV');
+  if(t) t.textContent=ST.tempo;
+  const o=document.getElementById('dkOctV');
+  if(o){
+    const v=ST.octave;
+    o.textContent = (v==='auto') ? '自動' : (v===0 || v==='0') ? '原曲' : (v>0 ? '+'+v : String(v));
+  }
+  const l=document.getElementById('dkLoop');
+  if(l) l.classList.toggle('on', ST.loop.on);
+}
 export function syncLoopUI(){
   const mCount=ST.measures.length;
   const fromEl=document.getElementById('loopFrom');
@@ -417,6 +430,7 @@ export function syncLoopUI(){
   } else {
     info.textContent = mCount ? `全 ${mCount} 小節（${ST.loop.from}〜${ST.loop.to} を繰り返し）` : '譜面を読み込むと小節数が出ます';
   }
+  syncDock();
 }
 export function setLoopRange(){
   const mCount=Math.max(1, ST.measures.length);

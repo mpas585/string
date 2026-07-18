@@ -28,7 +28,8 @@ cello-app/
 │  ├─ songs/
 │  │  ├─ manifest.json   # 曲一覧（先読み）
 │  │  └─ kirakira.json   # 1曲1ファイル（選択時に遅延fetch）
-│  └─ scales/            # スケール定義の外部化先（移植時に作成）
+│  └─ scales/
+│     └─ scales.json     # スケール定義（起動時に先読み）
 └─ src/
    ├─ main.js            # エントリ。init順序・移植ロードマップ
    ├─ styles.css         # 元<style>の移植先（index.htmlの<link>で読む）
@@ -63,9 +64,15 @@ audio/* → audio/context
 `render` 統括や `transportTick` が同期で呼ぶため静的に変更した。重いライブラリは
 pdfjs / JSZip のみで、これらは元コードどおり index.html の `<script>` でグローバル
 （`window.pdfjsLib` / `window.JSZip`）読み込み。曲データは `public/songs/` にあるが、
-現状 `SONGS`（キラキラ星）はコード内。fetch 化は将来の任意拡張。
+曲データは `public/songs/` から fetch する（`SONGS` のハードコードは廃止）。
 
 初期表示に必要なのは state/dom/util/audio(context,synth,scheduler)/fingerboard/drawer/modes/scale のみ。譜面・チューナー・PDF・IR・曲は初期ロードから外れる。
+
+**曲・スケールは外部JSON化済み。** `main.js` の初期化は
+`await Promise.all([loadScales(), loadSongManifest()])` → `loadSettings()` の順。
+保存済み `scaleType` の照合と `#scaleType` の `<option>` 生成に定義が要るため、この順序は変えないこと。
+パスは `import.meta.url` 基準（`../public/...`）なのでサブディレクトリ設置でも解決できる。
+fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCALES` に落ちる（曲は空一覧）。
 
 ---
 
@@ -96,13 +103,15 @@ pdfjs / JSZip のみで、これらは元コードどおり index.html の `<scr
 | PDF取り込み（`pdfOpen`） | — | `pdf.js`（動的import） |
 
 ### 曲データの外部化フォーマット（確定）
-`buildSongKirakira` のハードコードを廃し、`public/songs/*.json` へ。
+`buildSongKirakira` のハードコードを廃し、`public/songs/*.json` へ（実装済み）。
 `notes` は `[midi, beats]` の配列（`kirakira.json` 参照）。
 運指付与・小節割り・`name`生成などの変換ロジックは `songs.js` 側に残し、JSONは生データのみ持つ。
 `drawer.js` は `manifest.json` を fetch して曲ボタンを生成、選択で個別JSONを fetch。
 
 ### スケールの外部化
-`public/scales/scales.json` に定義を用意済み（`id`/`label`/`intervals`。実構造は `SCALES.pop`=`[0,2,4,5,7,9,11]` を確認して作成）。現状 scale.js 内の `SCALES`/`SCALE_LABEL` はコードのまま。実 fetch 差し替え（`loadScales`）は初期化フローが async になるため Batch5 で `genScale` 統括と同時に行う（曲の `kirakira.json` と同じ「フォーマット先行・配線後」）。
+`public/scales/scales.json`（`id`/`label`/`intervals`）を `loadScales()` が fetch し、`SCALES`/`SCALE_LABEL`
+を**中身だけ差し替える**（オブジェクト参照は保つ＝`drawer.js`/`modes.js` の import が生きたまま効く）。
+同時に `#scaleType` の `<option>` も作り直す。スケールを増やすときは JSON に1行足すだけでよい。
 
 ---
 

@@ -5,6 +5,7 @@
     startTuner / stopTuner             … L3263–3306
     paintTunerDots（検出音を指板に描く）… L3308–3330
     tunerLoop / updateTunerUI          … L3331–3399
+    inputPct / updateInputLevel        … 新規（インプットボリュームゲージ）
   依存: state(ST), util(OPEN/STRNAME/midiName/fingerHint),
         fingerboard(FB/yOf/optionsFor/pluckString), dom(toast),
         modes(render/micUnavailableReason/setTunerHint/syncSheet/syncMicUI)。
@@ -90,6 +91,7 @@ export function stopTuner(){
   if(TUN.ctx){ try{ TUN.ctx.close(); }catch(e){} }
   TUN.ctx=null; TUN.stream=null; TUN.analyser=null; TUN.buf=null;
   ST.tunerMidi=null; ST.tunerCents=0;
+  updateInputLevel(0, 0);
   syncMicUI(); syncSheet();
   if(ST.mode==='tuner'){ paintTunerDots(null, 0); render(); }
 }
@@ -117,6 +119,32 @@ export function paintTunerDots(midi, cents){
     lbl.setAttribute('opacity','1');
   }
 }
+/* ===== インプットボリュームゲージ =====
+   RMS を dB に直して -60dB〜0dB をバー全幅に割り当てる。
+   推奨インプットレベルは -30dB〜-9dB（CSS の .tun-in-bar .rec ＝ left:50% / width:35% と一致）。 */
+export const IN_MIN_DB=-60, IN_REC_LO=-30, IN_REC_HI=-9;
+export function inputPct(db){
+  return Math.max(0, Math.min(100, (db - IN_MIN_DB) / (0 - IN_MIN_DB) * 100));
+}
+export function updateInputLevel(rms, peak){
+  const bar=document.getElementById('tunLevel');
+  const msg=document.getElementById('tunInMsg');
+  if(!bar || !msg) return;
+  if(!TUN.on){
+    bar.style.width='0%'; bar.className='lv';
+    msg.textContent='–'; msg.className='';
+    return;
+  }
+  const db=20*Math.log10(Math.max(rms, 1e-6));
+  const hot=(peak>=0.98) || (db>IN_REC_HI);
+  const ok =!hot && (db>=IN_REC_LO);
+  bar.style.width=inputPct(db).toFixed(1)+'%';
+  bar.className='lv' + (hot ? ' hot' : (ok ? ' ok' : ''));
+  msg.textContent = hot ? '大きすぎ（歪みます）'
+                  : ok  ? 'OK'
+                  : (db < IN_MIN_DB+8) ? '小さすぎ' : 'もう少し大きく';
+  msg.className = hot ? 'hot' : (ok ? 'ok' : 'low');
+}
 export function tunerLoop(){
   if(!TUN.on) return;
   TUN.raf=requestAnimationFrame(tunerLoop);
@@ -124,6 +152,14 @@ export function tunerLoop(){
   if(now - TUN.last < 50) return;     /* 約20fpsに制限 */
   TUN.last=now;
   TUN.analyser.getFloatTimeDomainData(TUN.buf);
+  let sq=0, pk=0;
+  for(let i=0;i<TUN.buf.length;i++){
+    const v=TUN.buf[i];
+    sq+=v*v;
+    const a=(v<0)?-v:v;
+    if(a>pk) pk=a;
+  }
+  updateInputLevel(Math.sqrt(sq/TUN.buf.length), pk);
   const f=detectPitch(TUN.buf, TUN.ctx.sampleRate);
   updateTunerUI(f);
 }

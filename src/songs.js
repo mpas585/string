@@ -5,7 +5,9 @@
     parseMidi/bestTrackIndex/midiTrackToEvents（SMFパーサ）… L2016–2185
     readAsText/unMxl（.mxl解凍。JSZipはグローバル）… L2738–2748
     midiFile/renderTracks/selectTrack/firstNoteBeat/skipToStart/loadScoreFile … L2832–2919
-    SAMPLE_XML/loadSample/buildSongKirakira/SONGS/loadSong … L2948–3124
+    SAMPLE_XML/loadSample                     … L2948–3010
+    SONGS/loadSong（元 L3088–3124）は public/songs/ の外部JSON読み込みに変更
+      （loadSongManifest → renderSongList → loadSong で個別JSONを fetch）
   依存: state(ST), util(midiName), fingerboard(recommend/scrollBoardToActive),
         notation(scrollStaffToActive), scale(buildScaleEvents),
         scheduler(measureOfBeat/setSeekHead/setTempo/startPlay/updateTransport),
@@ -531,18 +533,47 @@ export function genScale(quiet){
   }catch(e){ toast('生成できません：'+e.message); }
 }
 
-/* ===== プリセット曲：キラキラ星（伝承・パブリックドメイン） ===== */
-/* [midi, 拍数] の並び。4/4・ハ長調・2オクターブ内の主旋律 */
-export function buildSongKirakira(){
-  const seq=[
-    [60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],
-    [65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],
-    [67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],
-    [67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],
-    [60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],
-    [65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]
-  ];
-  const beatsPerMeasure=4;
+/* ===== プリセット曲（public/songs/ から外部読み込み） ===== */
+/* manifest.json＝曲一覧（起動時に先読み）。個別JSONは曲を選んだ時に fetch する。
+   JSONは生データのみ（notes＝[midi, 拍数] の並び）。運指付与・小節割りはここで行う。 */
+export const SONGS_DIR = new URL('../public/songs/', import.meta.url);
+export let SONGS = {};            /* id -> {id, title, desc, file, tempo} */
+export function setSongs(list){
+  SONGS={};
+  list.forEach(s=>{ if(s && s.id) SONGS[s.id]=s; });
+}
+/* 曲ボタンを manifest から作り直す */
+export function renderSongList(){
+  const box=document.getElementById('songBtns');
+  if(!box) return;
+  const ids=Object.keys(SONGS);
+  if(!ids.length){
+    box.innerHTML='<button class="songbtn" disabled>🎼 曲がありません<small>public/songs/manifest.json を確認してください</small></button>';
+    return;
+  }
+  box.innerHTML=ids.map(id=>{
+    const s=SONGS[id];
+    return `<button class="songbtn" data-song="${id}">🎵 ${s.title||id}<small>${s.desc||''}</small></button>`;
+  }).join('');
+}
+export async function loadSongManifest(){
+  try{
+    const res=await fetch(new URL('manifest.json', SONGS_DIR), {cache:'no-cache'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    if(!j || !Array.isArray(j.songs)) throw new Error('songs がありません');
+    setSongs(j.songs);
+  }catch(e){
+    setSongs([]);
+    console.error('[cello] manifest.json を読み込めません：', e);
+  }
+  renderSongList();
+}
+/* 曲JSON（notes＝[midi, 拍数]）→ イベント列 */
+export function buildSongFromData(data){
+  const seq = (data && Array.isArray(data.notes)) ? data.notes : [];
+  if(!seq.length) throw new Error('notes がありません');
+  const beatsPerMeasure=data.beatsPerMeasure || 4;
   let onset=0;
   const evs=seq.map((it,i)=>{
     const p={midi:it[0], name:midiName(it[0])};
@@ -556,17 +587,17 @@ export function buildSongKirakira(){
   for(let mm=1;mm<=maxM;mm++) measures.push({num:mm, start:(mm-1)*beatsPerMeasure, end:mm*beatsPerMeasure});
   return {events:evs, measures, beatsPerMeasure};
 }
-export const SONGS = {
-  kirakira: {label:'キラキラ星', tempo:96, build:buildSongKirakira}
-};
-export function loadSong(id, quiet){
+export async function loadSong(id, quiet){
   const s=SONGS[id];
   if(!s){ toast('準備中です'); return; }
   try{
     midiFile=null; renderTracks();
-    const parsed=s.build();
-    setTempo(s.tempo);
+    const res=await fetch(new URL(s.file || (id+'.json'), SONGS_DIR), {cache:'no-cache'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const parsed=buildSongFromData(data);
+    setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
     setScore(parsed, 'song:'+id);
-    if(!quiet){ closeDrawer(); toast(s.label+'を読み込みました'); }
+    if(!quiet){ closeDrawer(); toast((data.title || s.title || id)+'を読み込みました'); }
   }catch(e){ toast('読込エラー：'+e.message); }
 }

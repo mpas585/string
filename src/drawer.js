@@ -15,7 +15,7 @@ import { ST, volProfileKey, VOL_KEYS } from './state.js';
 import { fracOf, zoneOf, fingerHint } from './util.js';
 import { recommend } from './fingerboard.js';
 import { SCALES } from './scale.js';
-import { render, syncLayoutClass } from './modes.js';
+import { render, syncLayoutClass, syncDock } from './modes.js';
 import { toast } from './dom.js';
 import { pdfDoc, renderPdfPage } from './pdf.js';
 
@@ -91,6 +91,7 @@ export function syncSettingsUI(){
     if(el) el.value=v;
     if(lb) lb.textContent=v;
   }
+  syncDock();
 }
 
 /* ===== 運指の保存 ===== */
@@ -171,3 +172,13 @@ export function toggleGear(){ document.getElementById('gearPanel').classList.con
 export function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); }
 export function openPdfOverlay(){ document.getElementById('pdfOverlay').classList.add('open'); if(pdfDoc) renderPdfPage(); }
 export function closePdfOverlay(){ document.getElementById('pdfOverlay').classList.remove('open'); }
+
+/* ===== 画面左下ドックのモーダル（テンポ / オクターブ / ループ） ===== */
+export function openDockModal(id){
+  document.querySelectorAll('.dkmodal').forEach(m=> m.classList.toggle('open', m.id===id));
+  document.getElementById('dockScrim').classList.add('open');
+}
+export function closeDockModal(){
+  document.querySelectorAll('.dkmodal').forEach(m=> m.classList.remove('open'));
+  document.getElementById('dockScrim').classList.remove('open');
+}

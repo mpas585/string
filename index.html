@@ -113,6 +113,70 @@
 
 <button id="fab" class="fab" disabled aria-label="再生 / 停止">▶</button>
 
+<!-- 画面左下のドック：テンポ / 伴奏 / オクターブ / ループ（ドロワーから移動） -->
+<div id="dock" class="dock" data-m="scale score">
+  <button id="dkTempo" class="dockbtn" aria-label="テンポ設定"><i>⏱</i><small id="dkTempoV">80</small></button>
+  <button id="enjoySw" class="dockbtn" data-m="scale" aria-label="伴奏 ON/OFF"><i>🥁</i><small>伴奏</small></button>
+  <button id="dkOct" class="dockbtn" data-m="score" aria-label="オクターブ設定"><i>Oct</i><small id="dkOctV">自動</small></button>
+  <button id="dkLoop" class="dockbtn" aria-label="ループ設定"><i>🔁</i><small>ループ</small></button>
+</div>
+
+<!-- ドックのモーダル -->
+<div id="dockScrim" class="dkscrim"></div>
+
+<div id="mTempo" class="dkmodal">
+  <div class="dk-head">
+    <span class="dk-tt">⏱ テンポ</span>
+    <button class="iconbtn" data-dkclose aria-label="閉じる">✕</button>
+  </div>
+  <div class="field">
+    <div class="k">速さ</div>
+    <div class="v tempo">
+      <input id="tempo" type="range" min="30" max="160" value="80">
+      <b id="tempoval">80 bpm</b>
+    </div>
+  </div>
+</div>
+
+<div id="mOct" class="dkmodal">
+  <div class="dk-head">
+    <span class="dk-tt">Oct オクターブ</span>
+    <button class="iconbtn" data-dkclose aria-label="閉じる">✕</button>
+  </div>
+  <div class="octrow">
+    <button class="oct on" data-oct="auto">自動</button>
+    <button class="oct" data-oct="0">原曲</button>
+    <button class="oct" data-oct="-3">-3</button>
+    <button class="oct" data-oct="-2">-2</button>
+    <button class="oct" data-oct="-1">-1</button>
+    <button class="oct" data-oct="1">+1</button>
+    <button class="oct" data-oct="2">+2</button>
+    <button class="oct" data-oct="3">+3</button>
+  </div>
+  <div id="octInfo" class="sub"></div>
+</div>
+
+<div id="mLoop" class="dkmodal">
+  <div class="dk-head">
+    <span class="dk-tt">🔁 ループ設定</span>
+    <button class="iconbtn" data-dkclose aria-label="閉じる">✕</button>
+  </div>
+  <div id="loopSw" class="sw"><span>ループ再生</span><span class="knob"></span></div>
+  <div data-m="score">
+    <div class="field2">
+      <div>
+        <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">開始小節</div>
+        <input id="loopFrom" type="number" min="1" value="1">
+      </div>
+      <div>
+        <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">終了小節</div>
+        <input id="loopTo" type="number" min="1" value="4">
+      </div>
+    </div>
+  </div>
+  <div id="loopInfo" class="sub">小節を指定して繰り返します（例：34〜40）</div>
+</div>
+
 <!-- ハンバーガードロワー（操作パネル） -->
 <div id="scrim" class="scrim"></div>
 <aside id="drawer" class="drawer">
@@ -124,7 +188,7 @@
     </div>
     <div class="seg" id="modeSeg" role="tablist">
       <button data-mode="scale">🎵 スケール</button>
-      <button data-mode="score">🎼 コピー</button>
+      <button data-mode="score">🎼 曲練習</button>
       <button data-mode="tuner">🎯 チューナー</button>
     </div>
   </div>
@@ -164,9 +228,6 @@
         </select>
       </div>
     </div>
-    <div class="seclbl">エンジョイモード</div>
-    <div id="enjoySw" class="sw"><span>ドラム・ベース・ピアノ伴奏</span><span class="knob"></span></div>
-    <div class="sub">上のキーに合わせた4コードループが鳴ります</div>
   </div>
 
   <!-- ========== コピー練習モード ========== -->
@@ -181,10 +242,7 @@
     <div class="subpanel" data-sub="songs">
       <div class="seclbl">曲を選ぶ</div>
       <div id="songBtns" class="songlist">
-        <button class="songbtn" data-song="kirakira">⭐ キラキラ星<small>ハ長調・2オクターブ</small></button>
-        <button class="songbtn" disabled>🎼 準備中<small>近日追加</small></button>
-        <button class="songbtn" disabled>🎼 準備中<small>近日追加</small></button>
-        <button class="songbtn" disabled>🎼 準備中<small>近日追加</small></button>
+        <button class="songbtn" disabled>🎼 読み込み中…<small>public/songs/manifest.json</small></button>
       </div>
       <div class="sub">曲を選ぶと譜面が読み込まれます</div>
     </div>
@@ -209,20 +267,6 @@
     </div>
   </div>
 
-  <!-- ========== 共通：テンポ・ループ ========== -->
-  <!-- ========== 共通：テンポ ========== -->
-  <div data-m="scale score">
-    <hr class="sep">
-    <div class="seclbl">テンポ</div>
-    <div class="field">
-      <div class="k">速さ</div>
-      <div class="v tempo">
-        <input id="tempo" type="range" min="30" max="160" value="80">
-        <b id="tempoval">80 bpm</b>
-      </div>
-    </div>
-  </div>
-
   <!-- ========== 共通：推奨ポジション ========== -->
   <div data-m="scale score">
     <hr class="sep">
@@ -233,39 +277,6 @@
       <button class="pref" data-pref="high">ハイ</button>
     </div>
 
-    <div data-m="score">
-      <div class="seclbl">オクターブ</div>
-      <div class="octrow">
-        <button class="oct on" data-oct="auto">自動</button>
-        <button class="oct" data-oct="0">原曲</button>
-        <button class="oct" data-oct="-3">-3</button>
-        <button class="oct" data-oct="-2">-2</button>
-        <button class="oct" data-oct="-1">-1</button>
-        <button class="oct" data-oct="1">+1</button>
-        <button class="oct" data-oct="2">+2</button>
-        <button class="oct" data-oct="3">+3</button>
-      </div>
-      <div id="octInfo" class="sub"></div>
-    </div>
-  </div>
-
-  <!-- ========== 共通：ループ設定（オクターブ設定の下） ========== -->
-  <div data-m="scale score">
-    <div class="seclbl">ループ設定</div>
-    <div id="loopSw" class="sw"><span>ループ再生</span><span class="knob"></span></div>
-    <div data-m="score">
-      <div class="field2">
-        <div>
-          <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">開始小節</div>
-          <input id="loopFrom" type="number" min="1" value="1">
-        </div>
-        <div>
-          <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">終了小節</div>
-          <input id="loopTo" type="number" min="1" value="4">
-        </div>
-      </div>
-    </div>
-    <div id="loopInfo" class="sub">小節を指定して繰り返します（例：34〜40）</div>
   </div>
 
   <!-- ========== コピー練習モード：添削・保存 ========== -->
@@ -327,6 +338,12 @@
   </div>
   <div class="tun-str">
     <span data-str="0">C2</span><span data-str="1">G2</span><span data-str="2">D3</span><span data-str="3">A3</span>
+  </div>
+  <!-- 入力レベル（緑の帯＝推奨インプットレベル） -->
+  <div class="tun-in">
+    <div class="tun-in-t"><span>入力レベル</span><b id="tunInMsg">–</b></div>
+    <div class="tun-in-bar"><div class="rec"></div><div id="tunLevel" class="lv"></div></div>
+    <div class="tun-in-sub">緑の帯（推奨）に収まるようにマイクとの距離・入力音量を調整してください</div>
   </div>
   <div id="tunHint" class="tun-hint"></div>
 </div>
