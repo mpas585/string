@@ -243,26 +243,58 @@ export function hideCount(){ document.getElementById('countin').classList.remove
 /* テンポ変更・シーク・ループ範囲変更では stopPlay→startPlay が連続で走るため、
    解除は少し待ってから行う（その間に再開されればロックを保持＝取り直しの空白を作らない）。
    force=true は「スリープさせない」をOFFにした時など、即時に手放したい場合。 */
+/* Wake Lock API が使えない環境（http:// や file://、古いiOS など）向けの保険。
+   ミュートした極小動画をインライン再生している間は画面が消えない。
+   webm（Chrome/Firefox）と mp4（Safari/iOS）の両方を置いておく。 */
+export const NOSLEEP_WEBM = new URL('../../public/nosleep.webm', import.meta.url);
+export const NOSLEEP_MP4  = new URL('../../public/nosleep.mp4',  import.meta.url);
+export let noSleepVid=null;
+export function playNoSleepVideo(){
+  try{
+    if(!noSleepVid){
+      const v=document.createElement('video');
+      v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
+      v.muted=true; v.defaultMuted=true; v.loop=true; v.preload='auto';
+      v.style.cssText='position:fixed; left:0; bottom:0; width:1px; height:1px; opacity:0.01; pointer-events:none; z-index:-1';
+      [[NOSLEEP_WEBM,'video/webm'],[NOSLEEP_MP4,'video/mp4']].forEach(([u,t])=>{
+        const s=document.createElement('source'); s.src=u.href; s.type=t; v.appendChild(s);
+      });
+      document.body.appendChild(v);
+      noSleepVid=v;
+    }
+    const p=noSleepVid.play();
+    if(p && p.catch) p.catch(()=>{});
+  }catch(e){}
+}
+export function stopNoSleepVideo(){
+  if(!noSleepVid) return;
+  try{ noSleepVid.pause(); }catch(e){}
+}
 export let wakeRelTimer=0;
 export async function acquireWake(){
   clearTimeout(wakeRelTimer); wakeRelTimer=0;
-  if(!ST.keepAwake || ST.wakeLock) return;
-  try{
-    if(navigator.wakeLock && navigator.wakeLock.request){
-      const lock=await navigator.wakeLock.request('screen');
-      ST.wakeLock=lock;
-      lock.addEventListener('release', ()=>{
-        if(ST.wakeLock===lock) ST.wakeLock=null;   /* 取り直し後の新ロックを消さない */
-        if(ST.playing && ST.keepAwake) acquireWake();  /* OS都合で外れたら取り直す */
-      });
-    }
-  }catch(e){ ST.wakeLock=null; }
+  if(!ST.keepAwake) return;
+  if(!ST.wakeLock){
+    try{
+      if(navigator.wakeLock && navigator.wakeLock.request){
+        const lock=await navigator.wakeLock.request('screen');
+        ST.wakeLock=lock;
+        lock.addEventListener('release', ()=>{
+          if(ST.wakeLock===lock) ST.wakeLock=null;   /* 取り直し後の新ロックを消さない */
+          if(ST.playing && ST.keepAwake) acquireWake();  /* OS都合で外れたら取り直す */
+        });
+      }
+    }catch(e){ ST.wakeLock=null; }
+  }
+  /* Wake Lock が取れなかった時だけ動画で代替する */
+  if(!ST.wakeLock && ST.playing) playNoSleepVideo();
 }
 export function releaseWake(force){
   clearTimeout(wakeRelTimer); wakeRelTimer=0;
   const lock=ST.wakeLock;
-  if(!lock) return;
   const doRelease=()=>{
+    stopNoSleepVideo();
+    if(!lock) return;
     if(ST.wakeLock===lock) ST.wakeLock=null;
     try{ lock.release(); }catch(e){}
   };

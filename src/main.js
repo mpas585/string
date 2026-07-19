@@ -7,7 +7,7 @@
 */
 import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
-import { applyZoom, hideHoldDot, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
+import { applyZoom, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
 import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, setPref } from './modes.js';
 import { acquireWake, beatFromSeekEvent, currentBeat, isRotated, releaseWake, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
@@ -112,56 +112,58 @@ on('edit','click', e=>{
 /* 指板の候補○タップ（委譲） */
 on('fbsvg','click', e=>{
   const c=e.target.closest('.opt'); if(!c) return;
-  if(ST.selected==null && ST.current!=null) ST.selected=ST.current;
+  /* 再生を止めた直後は selected も current も null になり、○を押しても無反応だった。
+     指板に描いている音符（render の focusId と同じ規則）を対象にする。 */
+  if(ST.selected==null) ST.selected = (ST.current!=null) ? ST.current : (ST.events.length ? 0 : null);
   if(ST.selected!=null) setStringForSelected(+c.dataset.str);
 });
 
-/* ===== 指板：押している間だけ鳴らす（複数指対応） =====
-   実際のチェロと同じく、複数の指が触れているときは「ブリッジ側」＝開放弦からの半音数
-   （off）が大きい指の音が鳴る。スマホ画面を指板に見立てて押さえ替えの練習ができる。 */
+/* ===== 指板：押している間だけ鳴らす（複数指・複数弦対応） =====
+   実際のチェロと同じく、「同じ弦」に複数の指が触れているときは、ブリッジ側
+   ＝開放弦からの半音数（off）が大きい指の音が鳴る。弦が違えば互いに独立して
+   同時に鳴る（重音）。スマホ画面を指板に見立てて押さえ替えの練習ができる。 */
 const fbPtrs=new Map();                          /* pointerId -> {str, off, midi} */
-function fbDominant(){
+function fbDominant(str){
   let best=null;
-  fbPtrs.forEach(p=>{ if(!best || p.off>best.off) best=p; });
+  fbPtrs.forEach(p=>{ if(p.str===str && (!best || p.off>best.off)) best=p; });
   return best;
+}
+/* その弦のブリッジ側の指に合わせて発音・表示を作り直す（弦ごとに独立） */
+function fbSyncString(str, pluck){
+  const cur=fbDominant(str);
+  if(!cur){ holdStop(str); hideHoldDot(str); return; }
+  if(holdActive(str)) holdUpdate(str, cur.midi); else holdStart(str, cur.midi);
+  showHoldDot(cur);
+  if(pluck) pluckString(cur.str, cur.off, 1);
 }
 on('fbsvg','pointerdown', e=>{
   if(e.target.closest('.opt')) return;          /* 候補○は弦変更が優先 */
   const pos=pointToPos(e);
   if(!pos) return;
-  const prev=fbDominant();
+  const prev=fbDominant(pos.str);
   fbPtrs.set(e.pointerId, pos);
   ST.holding=true;
   const fbEl=document.getElementById('fbsvg');
   try{ fbEl.setPointerCapture(e.pointerId); }catch(err){}
-  const cur=fbDominant();
-  if(!prev) holdStart(cur.midi); else if(cur.midi!==prev.midi) holdUpdate(cur.midi);
-  showHoldDot(cur);
-  /* ブリッジ側が入れ替わった時だけ弦を弾き直す（ナット側の指を足しても鳴り続ける） */
-  if(!prev || cur.str!==prev.str || cur.off!==prev.off) pluckString(cur.str, cur.off, 1);
+  const cur=fbDominant(pos.str);
+  /* その弦のブリッジ側が入れ替わった時だけ弾き直す（ナット側の指を足しても鳴り続ける） */
+  fbSyncString(pos.str, !prev || cur.off!==prev.off);
 });
 on('fbsvg','pointermove', e=>{
-  if(!fbPtrs.has(e.pointerId)) return;
+  const old=fbPtrs.get(e.pointerId);
+  if(!old) return;
   const pos=pointToPos(e);
   if(!pos) return;
   fbPtrs.set(e.pointerId, pos);
-  const cur=fbDominant();
-  if(!cur) return;
-  holdUpdate(cur.midi);
-  showHoldDot(cur);
+  if(pos.str!==old.str) fbSyncString(old.str, false);   /* 抜けた弦：残った指に戻す／居なければ止める */
+  fbSyncString(pos.str, pos.str!==old.str);             /* 移った弦：またいだ時だけ弾き直す */
 });
 function endHold(e){
-  if(!fbPtrs.has(e.pointerId)) return;
+  const p=fbPtrs.get(e.pointerId);
+  if(!p) return;
   fbPtrs.delete(e.pointerId);
-  const cur=fbDominant();
-  if(cur){                                      /* まだ指が残っている＝その音に戻す */
-    holdUpdate(cur.midi);
-    showHoldDot(cur);
-    return;
-  }
-  ST.holding=false;
-  holdStop();
-  hideHoldDot();
+  fbSyncString(p.str, false);                   /* まだ指が残っていればその音に戻す／無ければ停止 */
+  if(!fbPtrs.size) ST.holding=false;
 }
 on('fbsvg','pointerup', endHold);
 on('fbsvg','pointercancel', endHold);
@@ -222,7 +224,7 @@ on('awakeSw','click', ()=>{
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
   if(!ST.keepAwake) releaseWake(true); else if(ST.playing) acquireWake();
   saveSettings();
-  if(ST.keepAwake && !navigator.wakeLock) toast('この端末はスリープ防止に非対応です');
+  if(ST.keepAwake && !navigator.wakeLock) toast('Wake Lock非対応のため、無音動画でスリープを抑止します');
 });
 
 on('fretSw','click', ()=>{
@@ -230,6 +232,8 @@ on('fretSw','click', ()=>{
   document.getElementById('fretSw').classList.toggle('on', ST.frets);
   saveSettings(); render();
 });
+/* 言語切替（選択の保存のみ。文言の差し替えは未実装） */
+on('langSel','change', e=>{ ST.lang=e.target.value; saveSettings(); });
 document.querySelectorAll('.oct').forEach(b=> b.addEventListener('click', ()=> setOctave(b.dataset.oct)));
 [['volMaster','master'],['volLead','lead'],['volDrum','drum'],['volBass','bass'],
  ['volChord','chord'],['volMetro','metro']].forEach(([id,key])=>{

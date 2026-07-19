@@ -58,9 +58,25 @@ export function isMinorScale(type){
   return true;
 }
 
+/* 推奨ポジション（ロー/ミドル/ハイ）に合わせて開始音のオクターブを選ぶ。
+   C2 のように開放弦でしか鳴らせない音から始めると、「ハイ」を選んでいても
+   ローポジションから始まってしまうため。1オクターブ以上入る中で、
+   指定ゾーンに該当する一番低い開始音を使う。 */
+export function startRoot(rootPc){
+  const pc = (((rootPc % 12) + 12) % 12);
+  const lowest = 36 + pc;                          /* C2(36) 以上の最低ルート */
+  const maxMidi = OPEN[3] + 26;                    /* A線26半音 = 演奏可能な上限 */
+  const want = (ST.pref==='high') ? 'high' : (ST.pref==='mid') ? 'mid' : 'low';
+  for(let m=lowest; m+12<=maxMidi; m+=12){
+    const r=recommend(m);
+    if(r && r.klass===want) return m;
+  }
+  return lowest;                                   /* 該当が無ければ従来どおり最低ルート */
+}
+
 export function buildScaleEvents(rootPc, type, octaves){
   const steps=stepsOf(type);
-  const root = 36 + (((rootPc % 12) + 12) % 12);   /* C2(36) 以上の最低ルート */
+  const root = startRoot(rootPc);                  /* 推奨ポジションに応じた開始音 */
   const maxMidi = OPEN[3] + 26;                    /* A線26半音 = 演奏可能な上限 */
 
   /* 1オクターブ = 「ド〜ド」で完結する run（＝メジャーなら8音＝8拍）

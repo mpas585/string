@@ -29,6 +29,21 @@
     <span class="gp-tt">⚙ 設定</span>
     <button id="gearClose" class="iconbtn" aria-label="閉じる">✕</button>
   </div>
+
+  <div class="gp-t">言語 / Language</div>
+  <select id="langSel">
+    <option value="ja">日本語</option>
+    <option value="en">英語</option>
+    <option value="zh">中国語</option>
+    <option value="es">スペイン語</option>
+    <option value="fr">フランス語</option>
+    <option value="de">ドイツ語</option>
+    <option value="pt">ポルトガル語</option>
+    <option value="ko">韓国語</option>
+    <option value="zh-Hans">中国語・簡体字</option>
+  </select>
+  <div class="sub" style="margin:6px 0 10px">選択のみ保存されます（表示の切り替えは今後対応）</div>
+
   <div class="gp-t">表示</div>
   <div class="seg2" id="viewSeg">
     <button data-view="board">🎻 指板</button>
@@ -68,8 +83,6 @@
     <button id="volReset" class="ghost" style="flex:1; justify-content:center">音量を初期値に戻す</button>
   </div>
 </div>
-
-<div id="legend" class="legend"></div>
 
 <div id="empty" class="empty">
   <b>譜面を読み込んでください</b>
@@ -115,7 +128,7 @@
 
 <!-- 画面左下のドック：テンポ / 伴奏 / オクターブ / ループ（ドロワーから移動） -->
 <div id="dock" class="dock" data-m="scale score">
-  <button id="dkTempo" class="dockbtn" aria-label="テンポ設定"><i>⏱</i><small id="dkTempoV">80</small></button>
+  <button id="dkTempo" class="dockbtn" aria-label="テンポ設定"><i>BPM</i><small id="dkTempoV">80</small></button>
   <button id="enjoySw" class="dockbtn" data-m="scale" aria-label="伴奏 ON/OFF"><i>🥁</i><small>伴奏</small></button>
   <button id="dkOct" class="dockbtn" data-m="score" aria-label="オクターブ設定"><i>Oct</i><small id="dkOctV">自動</small></button>
   <button id="dkLoop" class="dockbtn" aria-label="ループ設定"><i>🔁</i><small>ループ</small></button>
@@ -359,8 +372,11 @@
   </div>
 </div>
 
-<!-- 冒頭4カウント -->
-<div id="countin" class="countin"><span id="countnum">4</span></div>
+<!-- 冒頭4カウント（凡例はカウントダウンの下だけに出す＝カウントが終われば消える） -->
+<div id="countin" class="countin">
+  <span id="countnum">4</span>
+  <div id="legend" class="legend"></div>
+</div>
 
 <div id="toast" class="toast"></div>
 

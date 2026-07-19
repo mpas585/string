@@ -299,9 +299,11 @@ export function setFinger(fn){
 export function setPref(p){
   ST.pref=p;
   document.querySelectorAll('.pref').forEach(b=>b.classList.toggle('on', b.dataset.pref===p));
+  saveSettings();
+  /* スケール練習は開始音（オクターブ）がポジションで変わるので作り直す */
+  if(ST.mode==='scale' && ST.events.length){ genScale(true); return; }
   ST.events.forEach(ev=>{ if(ev.fing && !ev.fing.manual) ev.fing=recommend(ev.pitches[ev.leadIdx].midi); });
   saveFingering();
-  saveSettings();
   render();
 }
 export function playableCount(shift){
@@ -383,6 +385,8 @@ export function setScore(parsed, scoreName){
   syncLoopUI();
   render();
   zoomFitPositions(5);                 /* 読み込み時：0〜5F が画面に収まるように */
+  ST.lastScrollId=null;
+  scrollBoardToActive();               /* ハイポジション始まりでも最初の音が画面に入るように */
   return restored;
 }
 export function genScale(quiet){

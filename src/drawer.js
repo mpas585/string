@@ -33,16 +33,19 @@ export const Store = (()=>{
 
 /* ===== 設定の保存（localStorage。使えない環境ではメモリ） ===== */
 export const SETTINGS_KEY='cf:settings:v1';
+/* 保存済みの音量プロファイルにも「全トラック +5」を1回だけ反映するための版番号 */
+export const VOL_BUMP=1;
 export function saveSettings(){
   Store.set(SETTINGS_KEY, JSON.stringify({
     view:ST.view, frets:ST.frets, landscape:ST.landscape, zoom:ST.zoom, octave:ST.octave, pref:ST.pref,
-    volProfiles:ST.volProfiles, countIn:ST.countIn, keepAwake:ST.keepAwake,
-    tempo:ST.tempo, enjoy:ST.enjoy, loop:ST.loop,
+    volProfiles:ST.volProfiles, volBump:VOL_BUMP, countIn:ST.countIn, keepAwake:ST.keepAwake,
+    tempo:ST.tempo, enjoy:ST.enjoy, loop:ST.loop, lang:ST.lang,
     keyRoot:ST.keyRoot, scaleType:ST.scaleType, scaleOct:ST.scaleOct
   }));
 }
 export function loadSettings(){
   const raw=Store.get(SETTINGS_KEY); if(!raw) return;
+  let bumped=false;
   try{
     const j=JSON.parse(raw);
     if(j.view==='board'||j.view==='staff') ST.view=j.view;
@@ -54,16 +57,25 @@ export function loadSettings(){
     if(j.volProfiles){
       if(j.volProfiles.scale) Object.assign(ST.volProfiles.scale, j.volProfiles.scale);
       if(j.volProfiles.score) Object.assign(ST.volProfiles.score, j.volProfiles.score);
+      /* 保存済みの音量にも「全トラック +5」を1回だけ反映する（初期値だけ上げても既存端末に効かないため） */
+      if(j.volBump!==VOL_BUMP){
+        for(const pk of ['scale','score']){
+          for(const k of VOL_KEYS) ST.volProfiles[pk][k]=Math.min(1, (ST.volProfiles[pk][k]||0)+0.05);
+        }
+        bumped=true;
+      }
     }
     if(typeof j.countIn==='boolean') ST.countIn=j.countIn;
     if(typeof j.keepAwake==='boolean') ST.keepAwake=j.keepAwake;
     if(typeof j.tempo==='number') ST.tempo=j.tempo;
     if(typeof j.enjoy==='boolean') ST.enjoy=j.enjoy;
     if(j.loop) Object.assign(ST.loop, j.loop);
+    if(j.lang) ST.lang=j.lang;
     if(typeof j.keyRoot==='number') ST.keyRoot=j.keyRoot;
     if(j.scaleType && SCALES[j.scaleType]) ST.scaleType=j.scaleType;
     if(typeof j.scaleOct==='number') ST.scaleOct=j.scaleOct;
   }catch(e){}
+  if(bumped) saveSettings();          /* 底上げは1回だけ。以降は volBump 済みとして保存 */
 }
 /* 設定UIを状態に合わせる */
 export function syncSettingsUI(){
@@ -83,6 +95,8 @@ export function syncSettingsUI(){
   document.getElementById('tempoval').textContent=ST.tempo+' bpm';
   document.getElementById('countSw').classList.toggle('on', ST.countIn);
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
+  const langEl=document.getElementById('langSel');
+  if(langEl) langEl.value=ST.lang;
   ST.vol = ST.volProfiles[volProfileKey()];
   for(const k of VOL_KEYS){
     const id='vol'+k[0].toUpperCase()+k.slice(1);
@@ -119,9 +133,15 @@ export function applyFingerData(data){
   data.forEach((d,i)=>{
     const ev=ST.events[i]; if(!ev) return;
     if(typeof d.l==='number' && d.l>=0 && d.l<ev.pitches.length) ev.leadIdx=d.l;
-    if(d.s!=null && d.o!=null){
+    if(d.s!=null && d.o!=null && d.m){
+      /* 手で直した運指だけ復元する */
       const z=zoneOf(d.o);
-      ev.fing={str:d.s, off:d.o, frac:fracOf(d.o), zone:z.zone, klass:z.klass, finger:d.f||fingerHint(d.o), manual:!!d.m};
+      ev.fing={str:d.s, off:d.o, frac:fracOf(d.o), zone:z.zone, klass:z.klass, finger:d.f||fingerHint(d.o), manual:true};
+    }else{
+      /* 自動ぶんは「今の推奨ポジション」で計算し直す。
+         保存時のポジションをそのまま復元すると、ロー/ミドル/ハイを切り替えても
+         譜面を読み込み直した時点で元に戻ってしまうため。 */
+      ev.fing=recommend(ev.pitches[ev.leadIdx].midi);
     }
   });
   return true;

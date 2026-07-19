@@ -108,7 +108,9 @@ export function drawBoardStatic(){
   });
 
   parts.push(`<g id="notes"></g>`);
-  parts.push(`<circle id="holddot" cx="-99" cy="-99" r="13" fill="none" stroke="var(--alt)" stroke-width="3" opacity="0"/>`);
+  for(let i=0;i<4;i++){
+    parts.push(`<circle id="holddot${i}" cx="${FB.strX[i]}" cy="-99" r="13" fill="none" stroke="var(--alt)" stroke-width="3" opacity="0"/>`);
+  }
   for(let i=0;i<4;i++){
     parts.push(`<circle id="tdot${i}" cx="${FB.strX[i]}" cy="-99" r="16" fill="var(--accent)" opacity="0"/>`);
     parts.push(`<text id="tlbl${i}" x="${FB.strX[i]}" y="-99" fill="#241a08" font-size="13" text-anchor="middle" font-weight="800" font-family="var(--mono)" opacity="0"></text>`);
@@ -284,7 +286,10 @@ export function zoomFit(){
 
 
 /* ===== 弦タップ発音（押している間だけ鳴る）＋ タップ座標 — 元 L3155–3227 ===== */
-export let liveCtx=null, liveOsc=null, liveGain=null;
+/* 発音は弦ごとに独立させる。ブリッジ側優先（＝off が大きい指を鳴らす）は
+   「同じ弦の中」での話で、別の弦を押さえたらその弦も同時に鳴る。 */
+export let liveCtx=null;
+export const liveVoices=[null,null,null,null];    /* 弦index -> {o1,o2,g} */
 export function ensureLiveCtx(){
   if(!liveCtx){
     const AC=window.AudioContext||window.webkitAudioContext;
@@ -293,9 +298,11 @@ export function ensureLiveCtx(){
   if(liveCtx.state==='suspended'){ try{ liveCtx.resume(); }catch(e){} }
   return liveCtx;
 }
-export function holdStart(midi){
+export function holdActive(str){ return !!liveVoices[str]; }
+export function holdStart(str, midi){
+  if(str<0 || str>3) return;
   const ctx=ensureLiveCtx();
-  holdStop();
+  holdStop(str);
   const f=midiFreq(midi), t=ctx.currentTime;
   const o1=ctx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=f;
   const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=f; o2.detune.value=-6;
@@ -305,26 +312,29 @@ export function holdStart(midi){
   g.gain.linearRampToValueAtTime(0.20,t+0.03);
   o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(ctx.destination);
   o1.start(t); o2.start(t);
-  liveOsc={o1,o2}; liveGain=g;
+  liveVoices[str]={o1,o2,g};
 }
-export function holdUpdate(midi){
-  if(!liveOsc || !liveCtx) return;
+export function holdUpdate(str, midi){
+  const v=liveVoices[str];
+  if(!v || !liveCtx) return;
   const f=midiFreq(midi), t=liveCtx.currentTime;
-  liveOsc.o1.frequency.setTargetAtTime(f,t,0.008);
-  liveOsc.o2.frequency.setTargetAtTime(f,t,0.008);
+  v.o1.frequency.setTargetAtTime(f,t,0.008);
+  v.o2.frequency.setTargetAtTime(f,t,0.008);
 }
-export function holdStop(){
-  if(!liveOsc || !liveCtx) return;
+export function holdStop(str){
+  const v=liveVoices[str];
+  if(!v || !liveCtx) return;
+  liveVoices[str]=null;
   const t=liveCtx.currentTime;
-  const {o1,o2}=liveOsc, g=liveGain;
+  const {o1,o2,g}=v;
   try{
     g.gain.cancelScheduledValues(t);
     g.gain.setValueAtTime(g.gain.value, t);
     g.gain.linearRampToValueAtTime(0.0001, t+0.06);
   }catch(e){}
   setTimeout(()=>{ try{o1.stop(); o2.stop();}catch(e){} }, 160);
-  liveOsc=null; liveGain=null;
 }
+export function holdStopAll(){ for(let i=0;i<4;i++) holdStop(i); }
 /* 画面座標 → 弦・半音 */
 export function pointToPos(evt){
   const svg=document.querySelector('#fbsvg svg');
@@ -341,7 +351,7 @@ export function pointToPos(evt){
   return {str:si, off, midi:OPEN[si]+off};
 }
 export function showHoldDot(pos){
-  const dot=document.getElementById('holddot');
+  const dot=document.getElementById('holddot'+pos.str);
   if(!dot) return;
   dot.setAttribute('cx', FB.strX[pos.str]);
   dot.setAttribute('cy', yOf(pos.off).toFixed(1));
@@ -350,9 +360,14 @@ export function showHoldDot(pos){
   const z=zoneOf(pos.off);
   el.innerHTML=`<b>${midiName(pos.midi)}</b> · ${STRNAME[pos.str]}線${fingerHint(pos.off)}指 · ${z.zone}`;
 }
-export function hideHoldDot(){
-  const dot=document.getElementById('holddot');
-  if(dot) dot.setAttribute('opacity','0');
+export function hideHoldDot(str){
+  if(str==null){
+    for(let i=0;i<4;i++){ const d=document.getElementById('holddot'+i); if(d) d.setAttribute('opacity','0'); }
+  }else{
+    const d=document.getElementById('holddot'+str);
+    if(d) d.setAttribute('opacity','0');
+  }
+  if(liveVoices.some(v=>v)) return;        /* まだ鳴っている弦があれば上部表示は戻さない */
   const id=(ST.current!=null)?ST.current:ST.selected;
   renderNow(id!=null ? ST.events[id] : null);
 }

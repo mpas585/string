@@ -96,8 +96,13 @@
   /* fingerboard */
   .fbsvg svg.fb{width:100%; height:auto; display:block; touch-action:pan-y}
   body.zoomed .fbsvg svg.fb{touch-action:pan-x pan-y}
-  .legend{position:fixed; left:10px; z-index:5; bottom:calc(10px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:4px; color:var(--muted); font-size:10px; background:rgba(20,17,12,.72); border:1px solid var(--line); border-radius:8px; padding:6px 8px; backdrop-filter:blur(2px)}
-  body.has-tp .legend{ bottom:calc(122px + env(safe-area-inset-bottom)) }
+  /* 指板のタップ／ドラッグでテキスト選択・長押しメニューが出ないようにする */
+  .board-full, .fbsvg, .fbsvg svg.fb, .fbsvg svg.fb text, .staffview, .staffview svg{
+    -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  /* 凡例：カウントダウンの中（数字の下）に置く。常時表示はしない */
+  .legend{position:static; margin-top:20px; display:flex; flex-direction:column; gap:5px; color:var(--muted); font-size:11px; background:rgba(20,17,12,.72); border:1px solid var(--line); border-radius:8px; padding:8px 10px; backdrop-filter:blur(2px)}
   .legend span{display:inline-flex; align-items:center; gap:5px}
   .dot{width:11px;height:11px;border-radius:50%;display:inline-block}
   .dot.lead{background:var(--accent)}
@@ -386,7 +391,7 @@
   .staffview{display:none; width:100%; padding:8px 0}
   body.view-staff .fbsvg{display:none}
   body.view-staff .staffview{display:block}
-  body.view-staff .zoompad, body.view-staff .legend{display:none !important}
+  body.view-staff .zoompad{display:none !important}
   .staffview svg{width:100%; height:auto; display:block}
   .stf-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y}
   .stf-wrap::-webkit-scrollbar{display:none}
@@ -419,7 +424,6 @@
   body.landscape-layout .nchip small{ font-size:9px }
   body.landscape-layout .mbar{ height:30px }
   body.landscape-layout .seek{ height:22px }
-  body.landscape-layout .legend{ display:none !important }
   body.landscape-layout.has-tp .fab{ bottom:calc(92px + env(safe-area-inset-bottom)) }
   body.landscape-layout.has-tp .sheet{ bottom:0 }
   body.landscape-layout .picker{flex-direction:column; gap:8px; padding-top:10px; justify-content:flex-start}
@@ -553,12 +557,12 @@
   /* ======== 冒頭4カウント ======== */
   .countin{
     position:fixed; inset:0; z-index:80; display:none;
-    align-items:center; justify-content:center;
+    flex-direction:column; align-items:center; justify-content:center;
     background:radial-gradient(closest-side, rgba(21,17,12,.80), rgba(21,17,12,.94));
     pointer-events:none;
   }
   .countin.show{display:flex}
-  .countin span{
+  .countin>span{
     font-family:var(--mono); font-weight:900;
     font-size:min(46vw, 46vh); line-height:1;
     color:var(--accent);
@@ -590,7 +594,7 @@
   /* ======== 画面左下のドック（テンポ / 伴奏 / Oct / ループ） ======== */
   .dock{
     position:fixed; left:10px; z-index:7; bottom:calc(10px + env(safe-area-inset-bottom));
-    display:flex; align-items:flex-end; gap:6px;
+    display:flex; flex-direction:column; align-items:flex-start; gap:6px;
   }
   body.has-tp .dock{ bottom:calc(122px + env(safe-area-inset-bottom)) }
   body.landscape-layout.has-tp .dock{ bottom:calc(92px + env(safe-area-inset-bottom)) }
@@ -603,16 +607,13 @@
   .dockbtn small{font-family:var(--mono); font-size:9px; color:var(--faint); white-space:nowrap}
   .dockbtn.on{border-color:var(--accent); box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 0 12px rgba(231,178,75,.35)}
   .dockbtn.on i, .dockbtn.on small{color:var(--accent)}
-  /* ドックと重ならないように凡例を上へ逃がす */
-  .legend{ bottom:calc(70px + env(safe-area-inset-bottom)) }
-  body.has-tp .legend{ bottom:calc(182px + env(safe-area-inset-bottom)) }
 
   /* ======== ドックのモーダル（テンポ / オクターブ / ループ） ======== */
   .dkscrim{position:fixed; inset:0; z-index:42; background:rgba(0,0,0,.45); display:none}
   .dkscrim.open{display:block}
   .dkmodal{
-    position:fixed; left:10px; z-index:43; bottom:calc(72px + env(safe-area-inset-bottom));
-    width:min(320px, calc(100vw - 20px));
+    position:fixed; left:72px; z-index:43; bottom:calc(72px + env(safe-area-inset-bottom));
+    width:min(320px, calc(100vw - 82px));
     background:var(--panel); border:1px solid var(--line); border-radius:12px;
     padding:12px; box-shadow:0 10px 28px rgba(0,0,0,.55); display:none;
   }

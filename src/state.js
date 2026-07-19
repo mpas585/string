@@ -6,12 +6,13 @@
   volProfileKey は ST.mode を参照（同一モジュール内なので依存解決は不要）。
 */
 
-/* 音量の初期値（モード別） */
+/* 音量の初期値（モード別）。全トラック +5（0〜100表示）で底上げ済み。
+   scale の metro は既に上限 100 のためそのまま。 */
 export const DEFAULT_VOL = {
   /* スケール練習：ガイドメロは小さく、メトロノームが一番大きい */
-  scale: {master:0.75, lead:0.30, drum:0.55, bass:0.55, chord:0.45, metro:1.00},
+  scale: {master:0.80, lead:0.35, drum:0.60, bass:0.60, chord:0.50, metro:1.00},
   /* 曲を練習：メロディ主体 */
-  score: {master:0.75, lead:0.85, drum:0.60, bass:0.60, chord:0.55, metro:0.50}
+  score: {master:0.80, lead:0.90, drum:0.65, bass:0.65, chord:0.60, metro:0.55}
 };
 export const VOL_KEYS=['master','lead','drum','bass','chord','metro'];
 export function volProfileKey(){ return (ST.mode==='scale') ? 'scale' : 'score'; }
@@ -54,6 +55,7 @@ export const ST = {
   vibRaf: 0,
   /* 表示 */
   view: 'board',        // 'board' | 'staff'
+  lang: 'ja',           // 表示言語（切替UIのみ。文言の差し替えは未実装）
   frets: true,
   landscape: false,     // 横画面固定
   landAuto: false,      // 五線譜が自動でONにしたか
