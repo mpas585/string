@@ -15,15 +15,34 @@ python3 -m http.server 8000      # → http://localhost:8000
 
 - `import` は必ず**拡張子付き**（`'./state.js'`）。素のブラウザは拡張子を補完しない。
 - CDN依存（jszip / pdfjs）は `index.html` の **importmap** で解決（npm不使用）。
-- 設置先はサブディレクトリ（例 `gud.co.jp/cello/`）でも可。参照は相対パス（`./src/...`）。
+- 設置先はサブディレクトリ（例 `gud.co.jp/cello/`）でも可。参照は相対パス（`../../src/...`）。
+- 入口は PHP になったので静的サーバーでは不可。`php -S localhost:8000` などで確認する。
 
 ---
 
 ## ディレクトリ構成
 
 ```
-cello-app/
-├─ index.html            # shell。importmap + CSS link + module script。#app にDOM本体を移植
+string/
+├─ index.php             # ルート。言語判定 → /{言語}/cello/ へリダイレクト
+├─ sitemap.php           # config/app.php から sitemap を生成（ready=true の楽器のみ）
+├─ robots.txt            # ※ドメイン直下に移すこと。サブディレクトリでは無効
+├─ ja/ en/ es/ zh/       # 言語ディレクトリ
+│  ├─ index.php          # 楽器未指定 → 既定楽器へリダイレクト
+│  └─ cello/index.php    # $LANG と $INSTRUMENT を定義して基幹PHPを require するだけ
+├─ includes/
+│  ├─ string_instrument.php  # 基幹（約110行）。検証・config/言語の読込・ビューの振り分けのみ
+│  ├─ views/
+│  │  ├─ app.php         # アプリ本体のHTMLシェル（旧 index.html）
+│  │  └─ soon.php        # 準備中の楽器（ready=false）のページ
+│  ├─ fingering.php      # ゾーン判定・指番号（JS の zoneOf/fingerHint と同じ規則）
+│  ├─ midi.php           # 音名・周波数・弦長比（JS の midiName/fracOf と同じ規則）
+│  └─ lang/{ja,en,es,zh}.php  # 文言・音名・ゾーンラベル
+├─ config/
+│  ├─ app.php            # 対応言語・対応楽器・既定値（ここが唯一の定義）
+│  ├─ cello.php          # 開放弦・弦名・ゾーン境界・指番号テーブル（ready=true）
+│  ├─ violin.php         # 調弦のみ（ready=false ＝「準備中」ページ）
+│  └─ viola.php          # 同上
 ├─ public/               # そのまま配信される静的アセット（fetch対象）
 │  ├─ songs/
 │  │  ├─ manifest.json   # 曲一覧（先読み）
@@ -34,7 +53,7 @@ cello-app/
    ├─ main.js            # エントリ。init順序・移植ロードマップ
    ├─ styles.css         # 元<style>の移植先（index.htmlの<link>で読む）
    ├─ state.js           # ST(状態) + 定数（OPEN弦, NOTE_NAMES 等）
-   ├─ util.js            # 純粋関数（midiName, clamp 等。DOM/状態に非依存）
+   ├─ util.js            # 純粋関数（midiName 等）＋楽器定数（window.INSTRUMENT から受取）
    ├─ dom.js             # $ / on ヘルパ、要素参照
    ├─ fingerboard.js     # 指板描画
    ├─ scale.js           # スケール生成（buildScaleEvents, SCALES）
@@ -43,13 +62,71 @@ cello-app/
    ├─ songs.js           # 曲ローダ（manifest取得, loadSong, データ→events変換）
    ├─ notation.js        # 五線譜レンダラ（静的import）
    ├─ tuner.js           # ピッチ検出（静的import）
-   ├─ pdf.js             # PDF表示（pdfjsはindex.htmlでグローバル読み込み）
+   ├─ pdf.js             # PDF表示（pdfjsは基幹PHPでグローバル読み込み）
    └─ audio/
       ├─ context.js      # 永続AudioContext, warmAudio, 音量バス
       ├─ synth.js        # 発音（チェロ/ドラム/ベース/コード/メトロノーム）
       ├─ ir.js           # リバーブIRの合成生成（外部アセット不要）
       └─ scheduler.js    # 再生スケジューラ（startPlay/stopPlay/setTempo）★Batch5
 ```
+
+### 多言語 / 多楽器（PHP 化）
+URL は `/{言語}/{楽器}/` の2階層固定。`/ja/cello/index.php` は次の3行だけ:
+
+```php
+$LANG = 'ja'; $INSTRUMENT = 'cello';
+require __DIR__ . '/../../includes/string_instrument.php';
+```
+
+基幹 `includes/string_instrument.php` が
+`config/{楽器}.php`（開放弦・ゾーン・指番号）と `includes/lang/{言語}.php`（文言）を読み、
+合成した値を `window.INSTRUMENT` / `window.APP` として出力する。
+`src/util.js` はそれを読むだけで、未注入なら従来どおりチェロ・日本語で動く（＝JS単体でも壊れない）。
+
+- **対応言語・対応楽器の定義は `config/app.php` の1ファイルだけ**（ルートの `index.php` も基幹PHPもここを読む）。
+  ここを直すと hreflang・言語セレクト・ホワイトリスト・`/` からの転送先・準備中ページの戻り先が同時に効く。
+- 言語を足す: `config/app.php` の `langs` に追加 → `includes/lang/xx.php` を作る →
+  `/xx/index.php`（既存の `ja/index.php` を写す）と `/xx/{楽器}/index.php` を置く。
+- 楽器を足す: `config/app.php` の `instruments` に追加 → `config/yy.php` を作る →
+  `includes/lang/*.php` の `instrument` に楽器名を足す → `/{言語}/yy/index.php` を置く。
+- `src/` と `public/` はルート直下のまま。参照は `../../` 固定なのでサブディレクトリ設置でも動く。
+- **HTML は `includes/views/` にしかない。** 画面を直すときは基幹PHPを開かなくてよい。
+  ビューからは基幹側で作った変数（`$T` `$INST` `$INST_NAME` `$BASE` `$LANG_URLS` 等）と
+  `t()` / `h()` / `e()` / `er()` がそのまま使える。
+- `config/*.php` `includes/*.php` は `STRING_APP` 未定義なら 403。基幹PHP自体も直接URLで叩かれたら 403。
+- SEO: 各ページに `canonical`、全言語の `hreflang`、既定楽器のみ `x-default`（＝Accept-Language で
+  振り分けるルート）を出力する。サイトマップは `sitemap.php` が `config/app.php` から自動生成するので、
+  言語や楽器を足しても手を入れる必要はない。
+- 入口（モード選択）の下に説明・機能・使い方・FAQ を出す。文言は `includes/lang/*.php` の `intro.*`。
+  FAQ は同じデータから FAQPage の JSON-LD も出力するので、**FAQ を直すときは lang ファイルだけ**でよい
+  （画面表示と構造化データが食い違わない）。
+- 楽器固有の値はすべて `config/{楽器}.php` が出所で、JS 側にハードコードは残っていない:
+
+  | config のキー | 効く場所 |
+  | --- | --- |
+  | `open` / `strnames` | `src/util.js` の `OPEN` / `STRNAME` |
+  | `zones` / `finger_table` / `finger_high` | `zoneOf()` / `fingerHint()` |
+  | `max_off` | `src/fingerboard.js` の `FB.maxOff` と `FB.fmax` |
+  | `board` | `FB` の指板SVG寸法（`vbW/vbH/bx/bw/strX/strW/topY/botY`） |
+  | `scale_max_off` | `src/scale.js` の音域上限 |
+
+  JS 側には同じ値がフォールバックとして残してあるので、PHP を通さず開いても従来どおりチェロで動く。
+- 保存キーは楽器ごとに分かれる（`cf:{楽器}:settings:v1` / `cf:{楽器}:{譜面ハッシュ}:{音数}`）。
+  楽器別にする前の `cf:…` はチェロ専用だったので、**チェロのときだけ読み込みで互換参照**する
+  （旧キーは消さないので切り戻せる）。
+- violin/viola の `board` と `scale_max_off` は暫定値。`ready=true` にする前に実機に合わせて見直すこと。
+- 部分翻訳可: 訳し漏れたキーは `array_replace_recursive` で **ja の文言に自動フォールバック**する
+  （キー名が画面に出ることはない）。ja にも無い場合だけキー名が出る＝打ち間違いの検出になる。
+- 辞書は `includes/lang/{言語}.php` の**1ファイルのみ**。同じ内容が `window.T` としても出力されるので、
+  JS 側の文言もここから引く（JS用の辞書を別に作らないこと）。JS 側の取り出しは例えば:
+
+```js
+const T = (typeof window!=='undefined' && window.T) ? window.T : {};
+export const tt = (k, d='') => k.split('.').reduce((o,x)=> (o&&o[x]!=null)?o[x]:null, T) ?? d;
+```
+
+- 未翻訳: JS 内の文言（`modes.js` / `tuner.js` のトーストや `nowline` 等、実測116個）と
+  `public/scales/scales.json` のスケール名・曲名は日本語のまま。
 
 ### 依存の向き（上が下に依存）
 ```

@@ -232,8 +232,12 @@ on('fretSw','click', ()=>{
   document.getElementById('fretSw').classList.toggle('on', ST.frets);
   saveSettings(); render();
 });
-/* 言語切替（選択の保存のみ。文言の差し替えは未実装） */
-on('langSel','change', e=>{ ST.lang=e.target.value; saveSettings(); });
+/* 言語切替（/{言語}/{楽器}/ へ移動。URLは PHP が window.APP.langUrls に出力） */
+on('langSel','change', e=>{
+  ST.lang=e.target.value; saveSettings();
+  const url=(window.APP && window.APP.langUrls) ? window.APP.langUrls[ST.lang] : null;
+  if(url) location.href=url;
+});
 document.querySelectorAll('.oct').forEach(b=> b.addEventListener('click', ()=> setOctave(b.dataset.oct)));
 [['volMaster','master'],['volLead','lead'],['volDrum','drum'],['volBass','bass'],
  ['volChord','chord'],['volMetro','metro']].forEach(([id,key])=>{
@@ -294,6 +298,7 @@ on('enjoySw','click', ()=>{
 
 /* ===== 画面左下ドック：テンポ / オクターブ / ループ（伴奏は上の enjoySw） ===== */
 on('dkTempo','click', ()=> openDockModal('mTempo'));
+on('instBtn','click', ()=> openDockModal('mInst'));   /* ドロワー見出しの楽器名 → 楽器切り替え */
 on('dkOct','click',   ()=> openDockModal('mOct'));
 on('dkLoop','click',  ()=> openDockModal('mLoop'));
 on('dockScrim','click', closeDockModal);
@@ -337,6 +342,8 @@ window.addEventListener('resize', ()=>{ if(pdfDoc && document.getElementById('pd
 (async ()=>{
   await Promise.all([ loadScales(), loadSongManifest() ]);
   loadSettings();
+  /* 表示言語は URL（/{言語}/{楽器}/）を正とする。保存値で選択欄がずれないように上書き */
+  if(window.APP && window.APP.lang) ST.lang=window.APP.lang;
   applyMode();
   syncSettingsUI();
   syncLoopUI();

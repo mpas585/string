@@ -1,0 +1,47 @@
+<?php
+/*
+  config/viola.php — ビオラ。violin.php と同じく ready=false（調弦のみ）。
+*/
+if (!defined('STRING_APP')) { http_response_code(403); exit; }
+
+return [
+  'id'       => 'viola',
+  'ready'    => false,
+  'emoji'    => '🎻',
+  'title_en' => 'Viola Practice',
+  'label'    => 'Viola',
+
+  /* 開放弦 C3 G3 D4 A4 */
+  'open'     => [48, 55, 62, 69],
+  'strnames' => ['C', 'G', 'D', 'A'],
+
+  /* TODO: 指板寸法（src/fingerboard.js の FB）をビオラ用に決めてから見直す */
+  'max_off'  => 24,
+
+  /* TODO: 暫定でチェロと同じ寸法。実機に合わせて弦の太さ・間隔を見直すこと */
+  'board' => [
+    'vbW'  => 320, 'vbH'  => 1300,
+    'bx'   => 56,  'bw'   => 240,
+    'strX' => [86, 146, 206, 266],
+    'strW' => [6.0, 4.8, 3.7, 2.7],
+    'topY' => 64,  'botY' => 1250,
+  ],
+
+  /* TODO: 音域上限は未確定。ready=true にする前に必ず見直すこと */
+  'scale_max_off' => 20,
+
+  /* TODO: ポジション帯を要検討 */
+  'zones' => [
+    ['key' => 'open', 'max_off' => 0,    'klass' => 'low'],
+    ['key' => 'low',  'max_off' => 7,    'klass' => 'low'],
+    ['key' => 'mid',  'max_off' => 12,   'klass' => 'mid'],
+    ['key' => 'high', 'max_off' => null, 'klass' => 'high'],
+  ],
+
+  /* TODO: 運指テーブル未確定。ready=true にする前に必ず作り直すこと */
+  'finger_table' => [
+    0 => 'open', 1 => '1', 2 => '1', 3 => '2', 4 => '2', 5 => '3', 6 => '3',
+    7 => '4', 8 => '1', 9 => '1', 10 => '2', 11 => '2', 12 => '3',
+  ],
+  'finger_high' => '4',
+];

@@ -41,12 +41,18 @@ export function recommend(midi){
 }
 
 /* ===== 指板描画 ===== */
-export const FB = {
-  vbW:320, vbH:1300, maxOff:30,     /* 30半音（白鳥のD6=A線29半音まで表示） */
-  bx:56, bw:240,                    /* 指板の左端と幅 */
+/* 表示する半音数と指板SVGの寸法は config/{楽器}.php（PHPが window.INSTRUMENT に出力）から。
+   未注入のときは従来どおりチェロの値。fmax は maxOff に追従させる
+   （別々に持つと、maxOff を変えても座標変換が旧値のままになるため）。 */
+const _I = (typeof window!=='undefined' && window.INSTRUMENT) ? window.INSTRUMENT : {};
+const MAXOFF = _I.maxOff || 30;   /* 既定30半音（白鳥のD6=A線29半音まで表示） */
+const BOARD = _I.board || {
+  vbW:320, vbH:1300,
+  bx:56, bw:240,                  /* 指板の左端と幅 */
   strX:[86,146,206,266], strW:[6.0,4.8,3.7,2.7],
-  topY:64, botY:1250, fmax:fracOf(30)
+  topY:64, botY:1250
 };
+export const FB = Object.assign({}, BOARD, { maxOff:MAXOFF, fmax:fracOf(MAXOFF) });
 export function yOf(off){
   const f = Math.min(fracOf(off), FB.fmax);
   return FB.topY + (f/FB.fmax)*(FB.botY-FB.topY);

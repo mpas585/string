@@ -1,0 +1,193 @@
+<?php
+/*
+  includes/lang/zh.php — 简体中文。与 ja.php 键名保持一致。
+*/
+if (!defined('STRING_APP')) { http_response_code(403); exit; }
+
+return [
+  'html_lang'  => 'zh-Hans',
+  'name'       => '简体中文',
+
+  'note_names' => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+
+  'zone' => [
+    'open'       => '空弦',
+    'low'        => '低把位',
+    'mid'        => '中把位',
+    'high'       => '高把位',
+    'high_thumb' => '高把位(拇指)',
+  ],
+  'finger' => [
+    'open'  => '空',
+    'thumb' => '拇',
+  ],
+  'instrument' => [
+    'cello'  => '大提琴',
+    'violin' => '小提琴',
+    'viola'  => '中提琴',
+  ],
+
+  'page_title' => '%s练习应用｜指板按弦位置・指法・调音器',
+  'app_sub'    => '%s练习应用',
+
+  'ui' => [
+    'menu'           => '菜单',
+    'nowline'        => '请打开谱面',
+    'gear_aria'      => '指板显示设置',
+    'close'          => '关闭',
+    'settings'       => '⚙ 设置',
+    'lang_label'     => '语言 / Language',
+    'lang_note'      => '选择后将跳转到该语言的页面',
+
+    'view'           => '显示',
+    'view_board'     => '🎻 指板',
+    'view_staff'     => '🎼 五线谱',
+    'frets'          => '显示品位线',
+    'landscape'      => '横屏',
+    'landscape_note' => '五线谱在横屏下更易查看',
+
+    'playback'       => '播放',
+    'countin'        => '开头四拍预备',
+    'keepawake'      => '播放时不息屏',
+
+    'zoom'           => '指板缩放',
+    'zoom_k'         => '倍率',
+    'zoom_fit'       => '全览',
+    'zoom_reset'     => '原始大小',
+
+    'volume'         => '音量',
+    'vol_master'     => '总音量',
+    'vol_lead'       => '旋律',
+    'vol_drum'       => '鼓',
+    'vol_bass'       => '贝斯',
+    'vol_chord'      => '和弦',
+    'vol_metro'      => '节拍器',
+    'vol_reset'      => '恢复默认音量',
+
+    'empty_t'        => '请载入谱面',
+    'empty_s'        => '→ 打开谱面或选择乐曲',
+
+    'mode_scale'     => '音阶练习',
+    'mode_scale_s'   => '基础练习',
+    'mode_score'     => '练习乐曲',
+    'mode_score_s'   => '选择乐曲（也可载入谱面数据）',
+    'mode_tuner'     => '调音器',
+    'mode_tuner_s'   => '实时判定音准',
+    'mode_game'      => '小游戏',
+    'mode_game_s'    => '准备中',
+
+    'fab_aria'       => '播放 / 停止',
+    'dk_tempo_aria'  => '速度设置',
+    'dk_enjoy_aria'  => '伴奏 ON/OFF',
+    'dk_enjoy'       => '伴奏',
+    'dk_oct_aria'    => '八度设置',
+    'dk_oct_auto'    => '自动',
+    'dk_loop_aria'   => '循环设置',
+    'dk_loop'        => '循环',
+
+    'm_tempo'        => '⏱ 速度',
+    'tempo_k'        => '快慢',
+    'm_oct'          => 'Oct 八度',
+    'oct_auto'       => '自动',
+    'oct_orig'       => '原调',
+    'm_loop'         => '🔁 循环设置',
+    'm_inst'         => '🎻 选择乐器',
+    'inst_soon'      => '准备中',
+    'loop_sw'        => '循环播放',
+    'loop_from'      => '起始小节',
+    'loop_to'        => '结束小节',
+    'loop_info'      => '指定小节反复播放（例：34–40）',
+
+    'seg_scale'      => '🎵 音阶',
+    'seg_score'      => '🎼 乐曲',
+    'seg_tuner'      => '🎯 调音器',
+
+    'mic'            => '麦克风',
+    'mic_sw'         => '用麦克风检测音准',
+    'mic_note1'      => '弹奏的音会显示在指板上。',
+    'mic_note2'      => '麦克风仅在 https:// 或 localhost 下可用（file:// 不可）。',
+
+    'scale_set'      => '音阶设置',
+    'key'            => '调',
+    'octave'         => '八度',
+    'scale'          => '音阶',
+    'scale_pop'      => '🎵 流行（大调）',
+
+    'sub_songs'      => '🎵 选择乐曲',
+    'sub_load'       => '📂 载入谱面',
+    'songs'          => '选择乐曲',
+    'songs_loading'  => '🎼 载入中…',
+    'songs_note'     => '选择乐曲后会载入谱面',
+
+    'score'          => '谱面',
+    'file_open'      => '🎼 打开',
+    'pdf_btn'        => '📄 PDF',
+    'file_note'      => '支持 MusicXML（.xml/.musicxml/.mxl）与 MIDI（.mid）',
+    'tracks'         => 'MIDI 音轨选择',
+    'skip_start'     => '⏭ 跳到第一个音',
+    'tracks_note'    => '点击音轨名称即可试听。已自动选择音域接近%s的音轨。',
+
+    'pref'           => '推荐把位',
+
+    'fing_save'      => '指法保存',
+    'fing_export'    => '导出',
+    'fing_import'    => '导入',
+    'fing_reset'     => '重置',
+    'fing_note'      => '修改后的指法会自动保存',
+
+    'scale_gen'      => '生成音阶',
+
+    'drawer_note_html' => '按弦位置由弦长比（1 − 2<sup>−半音/12</sup>）计算。把位名称与指法编号仅供参考。<br>全部在本地运行，不会将数据发送到设备之外。',
+
+    'pdf_open'       => '📄 打开',
+    'pdf_note_html'  => 'PDF <b>仅供参考显示</b>。浏览器无法单独完成乐谱图像识别（OMR），因此指法与播放数据需从 MusicXML 导入。',
+    'pdf_empty'      => '选择 PDF 文件后将显示在这里',
+
+    'tuner_t'        => '调音器 / 音准判定',
+    'tun_in'         => '输入电平',
+    'tun_in_note'    => '请调整与麦克风的距离和输入音量，使其保持在绿色区间内',
+
+    'edit_t'         => '👇 可以修改指法',
+    'edit_empty'     => '选择音符后可编辑指法',
+  ],
+
+  'intro' => [
+    'title' => '关于本应用',
+    'lead'  => '将%s的指板显示在手机屏幕上，可一边确认按弦位置、指法编号与音准一边练习的网页应用。无需安装，用浏览器即可使用。',
+    'items' => [
+      ['🎵', '音阶练习', '选择调与八度数后，音阶会排列在指板与五线谱上，并可跟随伴奏与节拍器演奏。'],
+      ['🎼', '练习乐曲', '选择内置乐曲，或载入 MusicXML / MIDI，即可生成带指法的谱面。指法可点击修改。'],
+      ['🎯', '调音器',   '通过麦克风判定音准，并在指板上显示当前发出的音的位置。'],
+    ],
+    'feat_title' => '主要功能',
+    'feats' => [
+      '按弦位置根据弦长比计算并显示。把位名称（空弦・低・中・高）与指法编号仅作参考。',
+      '选择调与八度数后，音阶会同时排列在指板与五线谱上，并可跟随伴奏（鼓・贝斯・和弦）与节拍器练习。',
+      '谱面支持 MusicXML（.xml / .musicxml / .mxl）与 MIDI（.mid）。MIDI 会自动选择音域接近本乐器的音轨。',
+      '点击音符即可修改指法，修改内容会自动保存在本机，也可以导出后转移到其他设备。',
+      '支持调整速度、开头四拍预备，以及指定小节的循环播放。',
+      '调音器通过麦克风判定音准，显示以音分为单位的偏差与输入电平。',
+      '可在指板与五线谱之间切换、显示品位线、缩放指板，并使用横屏显示。',
+    ],
+    'use_title' => '使用方法',
+    'steps' => [
+      '从上方按钮选择练习模式。',
+      '音阶练习选择调与八度数；乐曲练习选择乐曲或载入谱面文件。',
+      '点击播放后会发声，当前要演奏的音会显示在指板上。',
+    ],
+    'faq_title' => '常见问题',
+    'faqs' => [
+      ['需要安装吗？', '不需要。用浏览器打开即可使用。载入的谱面与修改的指法都保存在本机，不会发送到外部。'],
+      ['麦克风没有反应', '麦克风仅在 https:// 或 localhost 下可用。以 file:// 直接打开文件，或未在浏览器中允许使用麦克风时无法工作。'],
+      ['支持哪些谱面文件？', 'MusicXML（.xml / .musicxml / .mxl）与 MIDI（.mid）。PDF 仅作参考显示，不会从图像中识别音符。'],
+      ['可以自己修改指法吗？', '点击音符会显示候选项。选择的指法会自动保存，也可以导出与导入。'],
+    ],
+    'note'  => '所有处理均在本机完成，不会向外部发送数据。',
+  ],
+
+  'soon' => [
+    'title' => '%s版正在准备中',
+    'body'  => '目前尚未开放，请稍后再来查看。',
+    'back'  => '打开%s版',
+  ],
+];

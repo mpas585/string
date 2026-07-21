@@ -12,7 +12,7 @@
   ※ pdf は Batch7 で作成。それまで PDF開閉のみ実行時未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey, VOL_KEYS } from './state.js';
-import { fracOf, zoneOf, fingerHint } from './util.js';
+import { fracOf, zoneOf, fingerHint, INSTRUMENT_ID } from './util.js';
 import { recommend } from './fingerboard.js';
 import { SCALES } from './scale.js';
 import { render, syncLayoutClass, syncDock } from './modes.js';
@@ -32,7 +32,15 @@ export const Store = (()=>{
 })();
 
 /* ===== 設定の保存（localStorage。使えない環境ではメモリ） ===== */
-export const SETTINGS_KEY='cf:settings:v1';
+/* 保存キーは楽器ごとに分ける（チェロとバイオリンで設定・運指が混ざらないように）。
+   楽器別にする前のキーは 'cf:…' で、チェロ専用だった。読み込みのときだけ互換で見る。 */
+const KEY_PREFIX='cf:'+INSTRUMENT_ID+':';
+const LEGACY_PREFIX='cf:';
+const LEGACY_INSTRUMENT='cello';
+function legacyGet(key){ return (INSTRUMENT_ID===LEGACY_INSTRUMENT) ? Store.get(key) : null; }
+
+export const SETTINGS_KEY=KEY_PREFIX+'settings:v1';
+const LEGACY_SETTINGS_KEY=LEGACY_PREFIX+'settings:v1';
 /* 保存済みの音量プロファイルにも「全トラック +5」を1回だけ反映するための版番号 */
 export const VOL_BUMP=1;
 export function saveSettings(){
@@ -44,7 +52,7 @@ export function saveSettings(){
   }));
 }
 export function loadSettings(){
-  const raw=Store.get(SETTINGS_KEY); if(!raw) return;
+  const raw=Store.get(SETTINGS_KEY) || legacyGet(LEGACY_SETTINGS_KEY); if(!raw) return;
   let bumped=false;
   try{
     const j=JSON.parse(raw);
@@ -109,16 +117,17 @@ export function syncSettingsUI(){
 }
 
 /* ===== 運指の保存 ===== */
-export function scoreSig(){
+function sigOf(prefix){
   const n=ST.events.length;
-  if(!n) return 'cf:empty';
+  if(!n) return prefix+'empty';
   const a=ST.events[0].pitches[0].midi;
   const b=ST.events[n-1].pitches[0].midi;
   const s=(ST.scoreName||'')+'|'+n+'|'+a+'|'+b;
   let h=0;
   for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; }
-  return 'cf:'+(h>>>0).toString(36)+':'+n;
+  return prefix+(h>>>0).toString(36)+':'+n;
 }
+export function scoreSig(){ return sigOf(KEY_PREFIX); }
 export function fingerData(){
   return ST.events.map(e=>({
     l:e.leadIdx,
@@ -155,7 +164,7 @@ export function saveFingering(){
   }, 250);
 }
 export function loadFingering(){
-  const raw=Store.get(scoreSig()); if(!raw) return false;
+  const raw=Store.get(scoreSig()) || legacyGet(sigOf(LEGACY_PREFIX)); if(!raw) return false;
   try{ const j=JSON.parse(raw); return applyFingerData(j.data); }catch(e){ return false; }
 }
 export function exportFingering(){

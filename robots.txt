@@ -1,0 +1,13 @@
+# ⚠ 置き場所に注意 ⚠
+# robots.txt はドメイン直下（さくらなら ~/www/robots.txt）に置かないと無視されます。
+# /cello-finger/robots.txt に置いても効きません。
+#
+# 同じドメインで他のサイトも動かしている場合は、このファイルで上書きせず
+# 既存の robots.txt に Sitemap 行だけを追記してください。
+#
+# Search Console にサイトマップURLを直接登録するなら、このファイルは無くても構いません。
+
+User-agent: *
+Allow: /
+
+Sitemap: https://unchokori.sakura.ne.jp/cello-finger/sitemap.php

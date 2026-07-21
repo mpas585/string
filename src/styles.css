@@ -82,7 +82,7 @@
     display:flex; align-items:center; gap:8px; padding:12px 0 10px; border-bottom:1px solid var(--line);
   }
   .drawer-head .accentbar{width:18px; height:3px; background:var(--accent); border-radius:2px}
-  .drawer-head h1{margin:0; font-size:15px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; flex:1}
+  .drawer-head .dh-t{margin:0; font-size:15px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; flex:1}
   .seclbl{font-size:11px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; margin:14px 0 6px}
   hr.sep{border:none; border-top:1px solid var(--line); margin:14px 0}
   .drawer-note{color:var(--faint); font-size:11px; line-height:1.7; margin-top:16px}
@@ -650,3 +650,62 @@
   .tun-in-bar .lv.ok{background:var(--good)}
   .tun-in-bar .lv.hot{background:var(--danger)}
   .tun-in-sub{font-size:10px; color:var(--faint); margin-top:4px; line-height:1.5}
+
+  /* ======== 入口の説明ブロック（/{言語}/{楽器}/index.php の説明ページ部分） ======== */
+  .pk-desc{
+    width:100%; max-width:400px; margin:18px 0 28px;
+    border-top:1px solid var(--line); padding-top:16px; text-align:left;
+  }
+  .pk-desc h2{font-size:13px; font-weight:700; color:var(--muted); margin:0 0 8px; letter-spacing:.04em}
+  .pk-desc p{font-size:12px; color:var(--muted); line-height:1.75; margin:0 0 12px}
+  .pk-desc dl{margin:0}
+  .pk-desc dt{
+    display:flex; align-items:center; gap:7px;
+    font-size:12px; font-weight:700; color:var(--ink); margin-top:10px;
+  }
+  .pk-desc dt span{font-size:13px}
+  .pk-desc dd{margin:3px 0 0 24px; font-size:11px; color:var(--faint); line-height:1.7}
+  .pk-desc-note{margin-top:14px; font-size:10px; color:var(--faint)}
+  body.landscape-layout .pk-desc,
+  body.force-landscape .pk-desc{max-width:560px}
+
+  /* ======== 楽器の切り替え（ドロワー見出し → モーダル） ======== */
+  .drawer-head .dh-t .instbtn{
+    font:inherit; letter-spacing:inherit; text-transform:inherit; color:inherit;
+    background:none; border:none; padding:0; margin:0; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .drawer-head .dh-t .instbtn .cv{font-size:11px; letter-spacing:0; color:var(--accent)}
+  .drawer-head .dh-t .instbtn:active{opacity:.6}
+  /* dkmodal は本来ドック用に左下固定。楽器切り替えはドロワーの上に出すので中央に置く */
+  #mInst{
+    left:50%; right:auto; top:50%; bottom:auto;
+    transform:translate(-50%,-50%);
+    width:min(300px, calc(100vw - 48px));
+  }
+  .instrow{
+    display:flex; align-items:center; gap:10px; width:100%;
+    padding:11px 12px; margin-top:8px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    color:var(--ink); text-decoration:none;
+  }
+  .instrow .ic{font-size:18px; line-height:1}
+  .instrow .nm{flex:1; font-size:13px; font-weight:700; display:flex; align-items:baseline; gap:8px}
+  .instrow .nm small{font-weight:400; font-size:10px; color:var(--faint)}
+  .instrow.on{border-color:var(--accent); color:var(--accent)}
+  .instrow:active{transform:translateY(1px)}
+
+  /* ======== 歯車だけ少し大きく（☰ や ✕ は従来どおり40px） ======== */
+  .topbar #gear{width:46px; height:46px; font-size:22px; border-radius:11px}
+
+  /* ======== 入口の説明：機能・使い方・FAQ ======== */
+  h1.pk-title{margin:0}
+  .pk-desc h2:not(:first-child){margin-top:20px; padding-top:14px; border-top:1px solid var(--line)}
+  .pk-feat, .pk-steps{margin:0; padding-left:1.15em}
+  .pk-feat li, .pk-steps li{font-size:11px; color:var(--muted); line-height:1.75; margin-bottom:7px}
+  .pk-feat{list-style:disc}
+  .pk-steps{list-style:decimal}
+  .pk-faq{margin:0}
+  .pk-faq dt{font-size:12px; font-weight:700; color:var(--ink); margin-top:12px}
+  .pk-faq dt::before{content:"Q. "; color:var(--accent)}
+  .pk-faq dd{margin:4px 0 0; font-size:11px; color:var(--muted); line-height:1.75}

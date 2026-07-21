@@ -62,10 +62,14 @@ export function isMinorScale(type){
    C2 のように開放弦でしか鳴らせない音から始めると、「ハイ」を選んでいても
    ローポジションから始まってしまうため。1オクターブ以上入る中で、
    指定ゾーンに該当する一番低い開始音を使う。 */
+/* 演奏可能な上限（最高弦の開放から何半音上まで扱うか）。
+   config/{楽器}.php の scale_max_off から。未注入時は従来どおりチェロの26半音。 */
+const SCALE_MAX_OFF = (typeof window!=='undefined' && window.INSTRUMENT && window.INSTRUMENT.scaleMaxOff) || 26;
+
 export function startRoot(rootPc){
   const pc = (((rootPc % 12) + 12) % 12);
   const lowest = 36 + pc;                          /* C2(36) 以上の最低ルート */
-  const maxMidi = OPEN[3] + 26;                    /* A線26半音 = 演奏可能な上限 */
+  const maxMidi = OPEN[3] + SCALE_MAX_OFF;          /* 最高弦から SCALE_MAX_OFF 半音上 = 演奏可能な上限 */
   const want = (ST.pref==='high') ? 'high' : (ST.pref==='mid') ? 'mid' : 'low';
   for(let m=lowest; m+12<=maxMidi; m+=12){
     const r=recommend(m);
@@ -77,7 +81,7 @@ export function startRoot(rootPc){
 export function buildScaleEvents(rootPc, type, octaves){
   const steps=stepsOf(type);
   const root = startRoot(rootPc);                  /* 推奨ポジションに応じた開始音 */
-  const maxMidi = OPEN[3] + 26;                    /* A線26半音 = 演奏可能な上限 */
+  const maxMidi = OPEN[3] + SCALE_MAX_OFF;          /* 最高弦から SCALE_MAX_OFF 半音上 = 演奏可能な上限 */
 
   /* 1オクターブ = 「ド〜ド」で完結する run（＝メジャーなら8音＝8拍）
      境界のドは前の run の終点と次の run の始点で 2回鳴る            */
