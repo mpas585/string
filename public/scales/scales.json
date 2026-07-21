@@ -1,5 +1,14 @@
 {
   "scales": [
-    { "id": "pop", "label": "ポップス（メジャー）", "intervals": [0, 2, 4, 5, 7, 9, 11] }
+    {
+      "id": "pop",
+      "label": {
+        "ja": "ポップス（メジャー）",
+        "en": "Pop (major)",
+        "es": "Pop (mayor)",
+        "zh": "流行（大调）"
+      },
+      "intervals": [0, 2, 4, 5, 7, 9, 11]
+    }
   ]
 }

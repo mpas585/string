@@ -11,7 +11,7 @@
   公開API: renderBoard（署名変化時に指板を作り直し＋音符描画）, pluckString/pluckEvent,
            optionsFor/recommend, applyZoom/zoomFit/zoomFitPositions, scrollBoardToActive, yOf/offOfY, FB。
 */
-import { OPEN, STRNAME, fracOf, midiName, zoneOf, fingerHint } from './util.js';
+import { OPEN, STRNAME, fracOf, midiName, zoneOf, fingerHint, tt } from './util.js';
 import { ST } from './state.js';
 import { toast } from './dom.js';
 import { midiFreq } from './audio/synth.js';
@@ -64,7 +64,8 @@ export function offOfY(y){
   return -12*Math.log2(1-f);
 }
 /* ポジション標識（太線＋ラベル） */
-export const MARKERS = [
+/* config/{楽器}.php の markers から（ラベルは PHP 側で言語解決済み）。未注入時はチェロ */
+export const MARKERS = _I.markers || [
   {off:1,  r:'½'},   {off:2,  r:'I'},   {off:4,  r:'II'},  {off:5,  r:'III'},
   {off:7,  r:'IV'},  {off:9,  r:'V'},   {off:11, r:'VI'},  {off:12, r:'8ve'},
   {off:14, r:'親指'}, {off:16, r:''},   {off:19, r:'12th'},{off:21, r:''}, {off:24, r:'15ma'},
@@ -100,9 +101,9 @@ export function drawBoardStatic(){
     parts.push(`<text x="${br+6}" y="${(y+3.5).toFixed(1)}" fill="var(--faint)" font-size="10" text-anchor="start" font-family="var(--mono)">${mk.r}</text>`);
   });
 
-  parts.push(`<text x="${bx+4}" y="${((FB.topY+yLow)/2).toFixed(1)}" fill="var(--good)" font-size="10" opacity="0.5" font-family="var(--mono)">ロー</text>`);
-  parts.push(`<text x="${bx+4}" y="${((yLow+yMid)/2).toFixed(1)}" fill="var(--accent)" font-size="10" opacity="0.5" font-family="var(--mono)">ミドル</text>`);
-  parts.push(`<text x="${bx+4}" y="${((yMid+FB.botY)/2).toFixed(1)}" fill="var(--danger)" font-size="10" opacity="0.5" font-family="var(--mono)">ハイ</text>`);
+  parts.push(`<text x="${bx+4}" y="${((FB.topY+yLow)/2).toFixed(1)}" fill="var(--good)" font-size="10" opacity="0.5" font-family="var(--mono)">${tt('zone.low')}</text>`);
+  parts.push(`<text x="${bx+4}" y="${((yLow+yMid)/2).toFixed(1)}" fill="var(--accent)" font-size="10" opacity="0.5" font-family="var(--mono)">${tt('zone.mid')}</text>`);
+  parts.push(`<text x="${bx+4}" y="${((yMid+FB.botY)/2).toFixed(1)}" fill="var(--danger)" font-size="10" opacity="0.5" font-family="var(--mono)">${tt('zone.high')}</text>`);
   parts.push(`<rect x="${bx}" y="${FB.topY-9}" width="${bw}" height="6" fill="var(--wood)" rx="2"/>`);
 
   /* 弦：揺らせるように path で描く */
@@ -287,7 +288,7 @@ export function zoomFit(){
   ST.zoom=needW / baseBoardWidth();
   applyZoom();
   wrap.scrollTo({top:0, left:0, behavior:'smooth'});
-  toast(`全体表示（${Math.round(ST.zoom*100)}%）`);
+  toast(tt('msg.zoom_fit', Math.round(ST.zoom*100)));
 }
 
 
@@ -364,7 +365,7 @@ export function showHoldDot(pos){
   dot.setAttribute('opacity', '0.95');
   const el=document.getElementById('nowline');
   const z=zoneOf(pos.off);
-  el.innerHTML=`<b>${midiName(pos.midi)}</b> · ${STRNAME[pos.str]}線${fingerHint(pos.off)}指 · ${z.zone}`;
+  el.innerHTML=`<b>${midiName(pos.midi)}</b> · ${tt('msg.str_finger', STRNAME[pos.str], fingerHint(pos.off))} · ${z.zone}`;
 }
 export function hideHoldDot(str){
   if(str==null){

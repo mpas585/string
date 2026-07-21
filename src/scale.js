@@ -7,14 +7,14 @@
   ※ SCALES/SCALE_LABEL は public/scales/scales.json から loadScales() で読み込む（外部化済み）。
     main.js の初期化で loadSettings() より先に await すること（保存済み scaleType の照合に必要）。
 */
-import { OPEN, midiName } from './util.js';
+import { OPEN, midiName, pickText, tt } from './util.js';
 import { recommend } from './fingerboard.js';
 import { ST } from './state.js';
 
 /* ===== スケール定義（public/scales/scales.json から外部読み込み） ===== */
 /* fetch できない環境（file:// 等）で無音にならないための最終手段。 */
 export const FALLBACK_SCALES = [
-  {id:'pop', label:'ポップス（メジャー）', intervals:[0,2,4,5,7,9,11]}
+  {id:'pop', label:{ja:'ポップス（メジャー）', en:'Pop (major)', es:'Pop (mayor)', zh:'流行（大调）'}, intervals:[0,2,4,5,7,9,11]}
 ];
 export const SCALES = {};        /* id -> intervals（loadScales で充填） */
 export const SCALE_LABEL = {};   /* id -> 表示名（loadScales で充填） */
@@ -26,7 +26,7 @@ export function setScales(list){
   list.forEach(s=>{
     if(!s || !s.id || !Array.isArray(s.intervals) || !s.intervals.length) return;
     SCALES[s.id]=s.intervals.slice();
-    SCALE_LABEL[s.id]=s.label || s.id;
+    SCALE_LABEL[s.id]=pickText(s.label) || s.id;
   });
   const ids=Object.keys(SCALES);
   const sel=document.getElementById('scaleType');
@@ -43,7 +43,7 @@ export async function loadScales(){
     setScales(j.scales);
   }catch(e){
     setScales(FALLBACK_SCALES);
-    console.error('[cello] scales.json を読み込めません：', e);
+    console.error('[string] scales.json を読み込めません：', e);
   }
 }
 /* 音階の音程列（未ロード・未定義でも落ちないように） */
@@ -94,7 +94,7 @@ export function buildScaleEvents(rootPc, type, octaves){
     run.push(top);
     runs.push(run);
   }
-  if(!runs.length) throw new Error('この設定では音域外です。オクターブを減らしてください。');
+  if(!runs.length) throw new Error(tt('msg.scale_out_of_range'));
 
   const seq=[];
   runs.forEach(r=> seq.push(...r));                                  /* 上行：ド〜ド × N */

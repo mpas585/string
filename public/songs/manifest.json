@@ -1,5 +1,20 @@
 {
   "songs": [
-    { "id": "kirakira", "title": "キラキラ星", "desc": "ハ長調・2オクターブ", "file": "kirakira.json" }
+    {
+      "id": "kirakira",
+      "title": {
+        "ja": "キラキラ星",
+        "en": "Twinkle, Twinkle, Little Star",
+        "es": "Estrellita, ¿dónde estás?",
+        "zh": "小星星"
+      },
+      "desc": {
+        "ja": "ハ長調・2オクターブ",
+        "en": "C major, 2 octaves",
+        "es": "Do mayor, 2 octavas",
+        "zh": "C大调・2个八度"
+      },
+      "file": "kirakira.json"
+    }
   ]
 }

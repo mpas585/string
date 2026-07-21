@@ -12,7 +12,7 @@
   ※ modes は Batch5 後半で作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST } from './state.js';
-import { OPEN, STRNAME, midiName, fingerHint } from './util.js';
+import { OPEN, STRNAME, midiName, fingerHint, tt } from './util.js';
 import { FB, yOf, optionsFor, pluckString } from './fingerboard.js';
 import { toast } from './dom.js';
 import { render, micUnavailableReason, setTunerHint, syncSheet, syncMicUI } from './modes.js';
@@ -56,7 +56,7 @@ export async function startTuner(){
   if(reason){
     setTunerHint(reason);
     syncSheet(); syncMicUI();
-    toast('マイクを使えません（https:// / localhost が必要）');
+    toast(tt('msg.mic_unavailable'));
     return;
   }
   try{
@@ -77,10 +77,10 @@ export async function startTuner(){
     if(ST.mode==='tuner') render();
     tunerLoop();
   }catch(e){
-    setTunerHint('<b>マイクを開始できません。</b>' + e.message
-      + '<br>ブラウザのマイク許可を確認してください。');
+    setTunerHint(tt('msg.mic_start_fail_html') + e.message
+      + tt('msg.mic_check_perm_html'));
     syncSheet(); syncMicUI();
-    toast('マイクを開始できません：'+e.message);
+    toast(tt('msg.mic_start_fail', e.message));
   }
 }
 export function stopTuner(){
@@ -140,9 +140,9 @@ export function updateInputLevel(rms, peak){
   const ok =!hot && (db>=IN_REC_LO);
   bar.style.width=inputPct(db).toFixed(1)+'%';
   bar.className='lv' + (hot ? ' hot' : (ok ? ' ok' : ''));
-  msg.textContent = hot ? '大きすぎ（歪みます）'
+  msg.textContent = hot ? tt('msg.lvl_too_loud')
                   : ok  ? 'OK'
-                  : (db < IN_MIN_DB+8) ? '小さすぎ' : 'もう少し大きく';
+                  : (db < IN_MIN_DB+8) ? tt('msg.lvl_too_quiet') : tt('msg.lvl_louder');
   msg.className = hot ? 'hot' : (ok ? 'ok' : 'low');
 }
 export function tunerLoop(){
@@ -179,7 +179,7 @@ export function updateTunerUI(f){
     if(ST.mode==='tuner' && ST.tunerMidi!=null){
       ST.tunerMidi=null; ST.tunerCents=0;
       paintTunerDots(null, 0);
-      document.getElementById('nowline').textContent='弾いた音が指板に出ます';
+      document.getElementById('nowline').textContent=tt('msg.tuner_on_hint');
     }
     return;
   }
@@ -216,8 +216,8 @@ export function updateTunerUI(f){
     paintTunerDots(near, cents);
     const opts=optionsFor(near);
     const where = opts.length
-      ? opts.map(o=> `${STRNAME[o.str]}線${o.finger}指`).join(' / ')
-      : '音域外';
+      ? opts.map(o=> tt('msg.str_finger', STRNAME[o.str], o.finger)).join(' / ')
+      : tt('msg.out_of_range');
     document.getElementById('nowline').innerHTML =
       `<b>${midiName(near)}</b> ${(cents>0?'+':'')+cents}¢ · ${where}`;
   }

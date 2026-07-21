@@ -13,6 +13,12 @@ return [
   'title_en' => 'Violin Practice',
   'label'    => 'Violin',
 
+  /* TODO: ポジション標識は未確定（バイオリン系は親指ポジションが無く区切りも異なる） */
+  'markers' => [
+    ['off'=>2, 'r'=>'I'], ['off'=>5, 'r'=>'III'], ['off'=>7, 'r'=>'IV'],
+    ['off'=>12,'r'=>'8ve'], ['off'=>24,'r'=>'15ma'],
+  ],
+
   /* 開放弦 G3 D4 A4 E5 */
   'open'     => [55, 62, 69, 76],
   'strnames' => ['G', 'D', 'A', 'E'],

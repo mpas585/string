@@ -16,7 +16,7 @@ export function toast(msg){
 
 export function on(id, ev, fn){
   const el=document.getElementById(id);
-  if(!el){ console.error(`[cello] 要素 #${id} が見つかりません（${ev} を配線できません）`); return null; }
+  if(!el){ console.error(`[string] 要素 #${id} が見つかりません（${ev} を配線できません）`); return null; }
   el.addEventListener(ev, fn);
   return el;
 }

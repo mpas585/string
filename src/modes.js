@@ -14,7 +14,7 @@
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey } from './state.js';
-import { fracOf, midiName, zoneOf, fingerHint, NOTE_NAMES, OPEN, STRNAME } from './util.js';
+import { fracOf, midiName, zoneOf, fingerHint, NOTE_NAMES, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
 import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
 import { renderStaff } from './notation.js';
 import { buildScaleEvents, SCALE_LABEL } from './scale.js';
@@ -34,7 +34,7 @@ export function render(){
     picker.style.display='flex';
     emptyEl.style.display='none';
     renderBoard(null);
-    document.getElementById('nowline').textContent='モードを選んでください';
+    document.getElementById('nowline').textContent=tt('msg.pick_mode');
     renderLegend(); updateTransport(); updateChrome();
     return;
   }
@@ -44,7 +44,7 @@ export function render(){
   if(ST.mode==='tuner'){
     emptyEl.style.display='none';
     renderBoard(null);
-    document.getElementById('nowline').textContent = TUN.on ? '弾いた音が指板に出ます' : 'マイクをONにしてください';
+    document.getElementById('nowline').textContent = TUN.on ? tt('msg.tuner_on_hint') : tt('msg.tuner_off_hint');
     paintTunerDots(ST.tunerMidi, ST.tunerCents);
     renderLegend(); updateTransport(); updateChrome();
     return;
@@ -53,11 +53,11 @@ export function render(){
   if(!ST.events.length){
     emptyEl.style.display='flex';
     emptyEl.innerHTML = (ST.mode==='score')
-      ? '<b>譜面を読み込んでください</b><div><span class="kbd">☰</span> から MusicXML / MIDI を開く</div>'
-      : '<b>スケールを生成してください</b><div><span class="kbd">☰</span> からキーとスケールを選ぶ</div>';
+      ? tt('msg.empty_score_html')
+      : tt('msg.empty_scale_html');
     renderBoard(null);
-    document.getElementById('nowline').textContent = (ST.mode==='score') ? '譜面を開いてください' : 'スケールを生成してください';
-    document.getElementById('edit').innerHTML='<div class="empty-edit">音符を選ぶと運指を編集できます</div>';
+    document.getElementById('nowline').textContent = (ST.mode==='score') ? tt('ui.nowline') : tt('msg.nowline_scale');
+    document.getElementById('edit').innerHTML=tt('msg.edit_empty_html');
     renderLegend(); updateTransport(); updateChrome();
     return;
   }
@@ -76,10 +76,10 @@ export function renderLegend(){
   const lg=document.getElementById('legend');
   if(!ST.mode || ST.mode==='tuner' || !ST.events.length){ lg.style.display='none'; return; }
   lg.style.display='flex';
-  const chordItem = (ST.mode==='score') ? '<span><i class="dot chord"></i>和音の他音</span>' : '';
-  lg.innerHTML = '<span><i class="dot lead"></i>' + (ST.mode==='score' ? 'リード' : '押さえる音') + '</span>'
+  const chordItem = (ST.mode==='score') ? `<span><i class="dot chord"></i>${tt('msg.lg_chord')}</span>` : '';
+  lg.innerHTML = '<span><i class="dot lead"></i>' + (ST.mode==='score' ? tt('msg.lg_lead') : tt('msg.lg_press')) + '</span>'
     + chordItem
-    + '<span><i class="dot alt"></i>別弦の候補(タップで変更)</span>';
+    + `<span><i class="dot alt"></i>${tt('msg.lg_alt')}</span>`;
 }
 
 /* ===== 練習モードの切替 ===== */
@@ -93,7 +93,7 @@ export function applyMode(){
   });
 }
 export function setMode(mode, keepDrawer){
-  if(mode==='game'){ toast('ミニゲームは準備中です'); return; }
+  if(mode==='game'){ toast(tt('msg.game_soon')); return; }
   warmAudio();
   if(ST.mode===mode) return;
   stopPlay();
@@ -113,7 +113,7 @@ export function setMode(mode, keepDrawer){
   if(mode==='scale'){
     genScale(true);
     if(!keepDrawer) closeDrawer();
-    toast('☰ からキー・スケール・伴奏を変えられます');
+    toast(tt('msg.hint_scale'));
 
   } else if(mode==='score'){
     /* 伴奏はキーが前提のためスケール練習モード専用 */
@@ -121,7 +121,7 @@ export function setMode(mode, keepDrawer){
     document.getElementById('enjoySw').classList.remove('on');
     loadSample(true);                       /* プリセット：G線上のアリア */
     if(!keepDrawer) closeDrawer();
-    toast('白鳥（☰ から別の譜面も開けます）');
+    toast(tt('msg.hint_swan'));
 
   } else if(mode==='tuner'){
     ST.enjoy=false;
@@ -165,16 +165,16 @@ export function setTunerHint(msg){
   const el=document.getElementById('tunHint');
   if(!msg){ el.classList.remove('show'); el.innerHTML=''; return; }
   el.classList.add('show');
-  el.innerHTML = msg + '<div><button id="micRetry">マイクを許可する</button></div>';
+  el.innerHTML = msg + `<div><button id="micRetry">${tt('msg.mic_allow')}</button></div>`;
   const btn=document.getElementById('micRetry');
   if(btn) btn.addEventListener('click', ()=> startTuner());
 }
 export function micUnavailableReason(){
   const secure = (typeof isSecureContext!=='undefined') ? isSecureContext : (location.protocol==='https:' || location.hostname==='localhost');
   if(!secure || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    return '<b>マイクを使えません。</b>ブラウザの制限で、<b>file://</b> ではマイクを開けません。'
-         + '<br>このHTMLを <b>https://</b> か <b>localhost</b> から開いてください。'
-         + '<br><span style="color:var(--faint)">例：フォルダで <code>python3 -m http.server</code> → <code>http://localhost:8000/</code></span>';
+    return tt('msg.mic_file_html')
+         + tt('msg.mic_https_html')
+         + tt('msg.mic_example_html');
   }
   return null;
 }
@@ -183,12 +183,12 @@ export function renderNow(ev){
   const el=document.getElementById('nowline');
   if(!ev || !ev.fing){ el.innerHTML=''; return; }
   const lead=ev.pitches[ev.leadIdx];
-  el.innerHTML = `<b>${lead.name}</b> · ${STRNAME[ev.fing.str]}線${ev.fing.finger}指 · ${ev.fing.zone}`;
+  el.innerHTML = `<b>${lead.name}</b> · ${tt('msg.str_finger', STRNAME[ev.fing.str], ev.fing.finger)} · ${ev.fing.zone}`;
 }
 
 export function renderEdit(ev){
   const el=document.getElementById('edit');
-  if(!ev){ el.innerHTML='<div class="empty-edit">音符を選ぶと運指を編集できます</div>'; return; }
+  if(!ev){ el.innerHTML=tt('msg.edit_empty_html'); return; }
   const lead=ev.pitches[ev.leadIdx];
 
   let cur=`<div class="cur">`;
@@ -200,25 +200,25 @@ export function renderEdit(ev){
   /* リード選択（和音のとき） */
   let leadGrp='';
   if(ev.pitches.length>1){
-    leadGrp = `<div class="grp"><div class="lbl">リード（旋律）に使う音</div><div class="chips">`
+    leadGrp = `<div class="grp"><div class="lbl">${tt('msg.grp_lead')}</div><div class="chips">`
       + ev.pitches.map((p,i)=>`<div class="chip lead-pick ${i===ev.leadIdx?'on':''}" data-idx="${i}">${p.name}</div>`).join('')
       + `</div></div>`;
   }
 
   /* 弦選択 */
   const opts = optionsFor(lead.midi);
-  const strGrp = `<div class="grp"><div class="lbl">弦（押さえる位置）</div><div class="chips">`
-    + opts.map(o=>`<div class="chip str-pick ${ev.fing&&ev.fing.str===o.str?'on':''}" data-str="${o.str}">${STRNAME[o.str]}線<small>${o.zone}</small></div>`).join('')
+  const strGrp = `<div class="grp"><div class="lbl">${tt('msg.grp_str')}</div><div class="chips">`
+    + opts.map(o=>`<div class="chip str-pick ${ev.fing&&ev.fing.str===o.str?'on':''}" data-str="${o.str}">${tt('msg.str_chip', STRNAME[o.str])}<small>${o.zone}</small></div>`).join('')
     + `</div></div>`;
 
   /* 指の目安 */
-  const fingerOpts = (ev.fing && ev.fing.off===0) ? ['開'] : ['1','2','3','4','親'];
-  const fingGrp = `<div class="grp"><div class="lbl">指（目安・修正可）</div><div class="chips">`
+  const fingerOpts = (ev.fing && ev.fing.off===0) ? [FINGER_TABLE[0]] : ['1','2','3','4',FINGER_HIGH];
+  const fingGrp = `<div class="grp"><div class="lbl">${tt('msg.grp_finger')}</div><div class="chips">`
     + fingerOpts.map(fn=>`<div class="chip fing-pick ${ev.fing&&ev.fing.finger===fn?'on':''}" data-fin="${fn}">${fn}</div>`).join('')
     + `</div></div>`;
 
-  el.innerHTML = `<h3>選択中の音符</h3>${cur}${leadGrp}${strGrp}${fingGrp}`
-    + `<div class="hint">指板の ○（別弦候補）をタップしても弦を変えられます。ポジション名・指は目安なので、実際の運指に合わせて修正してください。</div>`;
+  el.innerHTML = `<h3>${tt('msg.sel_note')}</h3>${cur}${leadGrp}${strGrp}${fingGrp}`
+    + `<div class="hint">${tt('msg.edit_hint')}</div>`;
 }
 export let stripSig='';
 export function stripSignature(){
@@ -248,7 +248,7 @@ export function renderStrip(){
     const lead=ev.pitches[ev.leadIdx];
     const f=ev.fing;
     const zc = f ? (f.klass==='low'?'zone-low':f.klass==='mid'?'zone-mid':'zone-high') : '';
-    const sub = f ? `${STRNAME[f.str]}·${f.finger}` : '音域外';
+    const sub = f ? `${STRNAME[f.str]}·${f.finger}` : tt('msg.out_of_range');
     const chord = (ev.pitches.length>1) ? '<i class="ch"></i>' : '';
     const cls = (ev.id===ST.selected?' on':'') + (ev.id===ST.current?' playing':'') + (f?'':' out');
     html += `<div class="nchip${cls}" data-id="${ev.id}">${chord}<b>${lead.name}</b><small class="${zc}">${sub}</small></div>`;
@@ -342,9 +342,9 @@ export function applyOctave(){
   const el=document.getElementById('octInfo');
   if(el){
     const out=ST.events.filter(e=>!e.fing).length;
-    const lbl = sh===0 ? '原曲どおり' : (sh>0? `+${sh} オクターブ` : `${sh} オクターブ`);
+    const lbl = sh===0 ? tt('msg.oct_orig') : (sh>0? tt('msg.oct_up', sh) : tt('msg.oct_down', sh));
     el.textContent = ST.events.length
-      ? `${lbl}${ST.octave==='auto'?'（自動判定）':''}` + (out? ` / 音域外 ${out}音` : ' / 全音が演奏可能')
+      ? `${lbl}${ST.octave==='auto'?tt('msg.oct_auto_suffix'):''}` + (out? tt('msg.oct_out', out) : tt('msg.oct_all_ok'))
       : '';
   }
   /* 全音が収まらないボタンは非アクティブに */
@@ -402,10 +402,10 @@ export function genScale(quiet){
     updateTransport();
     if(!quiet){
       closeDrawer();
-      toast(`${label}（${parsed.events.length}音 / ${parsed.measures.length}小節）`);
+      toast(tt('msg.scale_built', label, parsed.events.length, parsed.measures.length));
       setTimeout(()=>{ if(ST.mode==='scale' && ST.events.length) startPlay(0); }, 260);  /* 生成したら自動再生 */
     }
-  }catch(e){ toast('生成できません：'+e.message); }
+  }catch(e){ toast(tt('msg.gen_failed', e.message)); }
 }
 /* 画面左下ドックの表示（テンポ値・オクターブ値・ループON）を状態に合わせる */
 export function syncDock(){
@@ -414,7 +414,7 @@ export function syncDock(){
   const o=document.getElementById('dkOctV');
   if(o){
     const v=ST.octave;
-    o.textContent = (v==='auto') ? '自動' : (v===0 || v==='0') ? '原曲' : (v>0 ? '+'+v : String(v));
+    o.textContent = (v==='auto') ? tt('ui.oct_auto') : (v===0 || v==='0') ? tt('ui.oct_orig') : (v>0 ? '+'+v : String(v));
   }
   const l=document.getElementById('dkLoop');
   if(l) l.classList.toggle('on', ST.loop.on);
@@ -430,9 +430,9 @@ export function syncLoopUI(){
   document.getElementById('loopSw').classList.toggle('on', ST.loop.on);
   const info=document.getElementById('loopInfo');
   if(ST.mode==='scale'){
-    info.textContent = mCount ? `スケール全体（${mCount} 小節）を繰り返します` : 'スケールを生成すると有効になります';
+    info.textContent = mCount ? tt('msg.loop_scale_all', mCount) : tt('msg.loop_need_scale');
   } else {
-    info.textContent = mCount ? `全 ${mCount} 小節（${ST.loop.from}〜${ST.loop.to} を繰り返し）` : '譜面を読み込むと小節数が出ます';
+    info.textContent = mCount ? tt('msg.loop_range', mCount, ST.loop.from, ST.loop.to) : tt('msg.loop_need_score');
   }
   syncDock();
 }
@@ -460,6 +460,6 @@ export function updateChrome(){
   fab.disabled=!playable; fab.textContent=ST.playing?'■':'▶'; fab.classList.toggle('playing', ST.playing);
   document.getElementById('gear').style.display = ST.mode ? 'inline-flex' : 'none';
   document.getElementById('storeInfo').textContent =
-    Store.ok ? '編集した運指は自動保存されます（この端末に保存）'
-             : 'この環境では自動保存が使えません。「書き出し」でJSON保存してください';
+    Store.ok ? tt('msg.store_ok')
+             : tt('msg.store_ng');
 }

@@ -21,6 +21,7 @@ import { updateStaffActive, scrollStaffToActive } from '../notation.js';
 import { progressionFor } from '../scale.js';
 import { toast } from '../dom.js';
 import { render, renderNow, updateChrome, renderStrip, updateStripActive, scrollStripToActive, mq, syncDock } from '../modes.js';
+import { tt } from '../util.js';
 
 export function totalBeats(){
   if(!ST.events.length) return 1;
@@ -329,7 +330,7 @@ export function startPlay(fromBeat, noCount){
   ST.t0 = ctx.currentTime + lead + countBeats*ST.beatSec - (from - ST.range.sB)*ST.beatSec;
 
   if(!ST.range.list.length && !ST.enjoy){
-    toast('その小節範囲に音符がありません');
+    toast(tt('msg.loop_no_notes'));
     stopPlay(); return;
   }
 

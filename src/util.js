@@ -40,6 +40,35 @@ export function zoneOf(off){
 }
 export const FINGER_TABLE = INST.fingerTable || {0:'開',1:'1',2:'1',3:'2',4:'3',5:'4',6:'2',7:'1',8:'1',9:'2',10:'3',11:'4',12:'1'};
 export const FINGER_HIGH = INST.fingerHigh || '親';
+/* ===== 文言 =====
+   includes/lang/{言語}.php を PHP が window.T として出力したもの。JS側の文言もここから引く。
+   'msg.xxx' のようにドットで辿り、%s / %1$s を引数で置換する（PHP側 vsprintf と同じ書き方）。
+   PHP を通さずに開いた場合 window.T が無いので、キー名がそのまま返る。 */
+const T = (typeof window!=='undefined' && window.T) ? window.T : null;
+export function tt(key, ...args){
+  let v=T;
+  for(const k of key.split('.')){
+    if(!v || typeof v!=='object' || !(k in v)) return key;
+    v=v[k];
+  }
+  if(typeof v!=='string') return key;
+  let i=0;
+  return v.replace(/%(\d+\$)?s/g, (m,n)=>{
+    const a = n ? args[parseInt(n,10)-1] : args[i++];
+    return a==null ? '' : String(a);
+  });
+}
+
+/* 外部JSON（scales.json / manifest.json / 曲JSON）の文字列フィールド。
+   文字列ならそのまま、{"ja":"…","en":"…"} なら 表示言語 → ja → 先頭 の順で拾う。
+   従来の「ただの文字列」もそのまま動く（後方互換）。 */
+export function pickText(v){
+  if(typeof v==='string') return v;
+  if(!v || typeof v!=='object') return '';
+  const lang = APPC.lang || 'ja';
+  return v[lang] || v.ja || Object.values(v)[0] || '';
+}
+
 export function fingerHint(off){
   if(off in FINGER_TABLE) return FINGER_TABLE[off];
   if(off>12) return FINGER_HIGH;

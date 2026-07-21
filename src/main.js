@@ -16,6 +16,7 @@ import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } f
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, TUN } from './tuner.js';
 import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
+import { tt } from './util.js';
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
 /* --- 取りこぼしていた基本配線（元 L3509–3520。fab=再生ボタン等） --- */
@@ -183,7 +184,7 @@ on('viewSeg','click', e=>{
   ST.view=b.dataset.view;
   syncSettingsUI(); saveSettings(); render();
   if(ST.view==='staff'){
-    if(!ST.landscape){ ST.landAuto=true; setLandscape(true); toast('五線譜：横画面にしました'); }
+    if(!ST.landscape){ ST.landAuto=true; setLandscape(true); toast(tt('msg.staff_landscape')); }
   } else {
     if(ST.landAuto){ ST.landAuto=false; setLandscape(false); }   /* 自動でONにした分だけ戻す */
   }
@@ -212,7 +213,7 @@ on('volReset','click', ()=>{
   const key=volProfileKey();
   Object.assign(ST.volProfiles[key], DEFAULT_VOL[key]);
   syncSettingsUI(); applyVolumes(); saveSettings();
-  toast(`音量を初期値に戻しました（${key==='scale'?'スケール練習':'曲を練習'}）`);
+  toast(tt('msg.vol_reset_done', tt(key==='scale'?'ui.mode_scale':'ui.mode_score')));
 });
 on('countSw','click', ()=>{
   ST.countIn=!ST.countIn;
@@ -224,7 +225,7 @@ on('awakeSw','click', ()=>{
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
   if(!ST.keepAwake) releaseWake(true); else if(ST.playing) acquireWake();
   saveSettings();
-  if(ST.keepAwake && !navigator.wakeLock) toast('Wake Lock非対応のため、無音動画でスリープを抑止します');
+  if(ST.keepAwake && !navigator.wakeLock) toast(tt('msg.wakelock_video'));
 });
 
 on('fretSw','click', ()=>{
@@ -271,7 +272,7 @@ on('scoreSubSeg','click', e=>{
 on('songBtns','click', e=>{
   const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;
   const id=b.dataset.song;
-  if(!id){ toast('準備中です'); return; }
+  if(!id){ toast(tt('msg.soon')); return; }
   loadSong(id, false);
 });
 

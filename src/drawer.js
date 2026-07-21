@@ -12,7 +12,7 @@
   ※ pdf は Batch7 で作成。それまで PDF開閉のみ実行時未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey, VOL_KEYS } from './state.js';
-import { fracOf, zoneOf, fingerHint, INSTRUMENT_ID } from './util.js';
+import { fracOf, zoneOf, fingerHint, INSTRUMENT_ID, tt } from './util.js';
 import { recommend } from './fingerboard.js';
 import { SCALES } from './scale.js';
 import { render, syncLayoutClass, syncDock } from './modes.js';
@@ -168,7 +168,7 @@ export function loadFingering(){
   try{ const j=JSON.parse(raw); return applyFingerData(j.data); }catch(e){ return false; }
 }
 export function exportFingering(){
-  if(!ST.events.length){ toast('先に譜面を読み込んでください'); return; }
+  if(!ST.events.length){ toast(tt('msg.need_score')); return; }
   const j={v:1, name:ST.scoreName, sig:scoreSig(), data:fingerData()};
   const blob=new Blob([JSON.stringify(j,null,1)],{type:'application/json'});
   const a=document.createElement('a');
@@ -176,22 +176,22 @@ export function exportFingering(){
   a.download=(ST.scoreName||'fingering').replace(/[^\w.-]+/g,'_')+'.fing.json';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-  toast('運指を書き出しました');
+  toast(tt('msg.fing_exported'));
 }
 export async function importFingering(file){
   try{
     const j=JSON.parse(await file.text());
-    if(!applyFingerData(j.data)){ toast('音符数が一致しません（別の譜面の可能性）'); return; }
+    if(!applyFingerData(j.data)){ toast(tt('msg.fing_mismatch')); return; }
     saveFingering(); render();
-    toast('運指を読み込みました');
-  }catch(e){ toast('読み込めません：'+e.message); }
+    toast(tt('msg.fing_imported'));
+  }catch(e){ toast(tt('msg.load_failed', e.message)); }
 }
 export function resetFingering(){
   if(!ST.events.length) return;
   ST.events.forEach(ev=>{ ev.leadIdx=ev.pitches.length-1; ev.fing=recommend(ev.pitches[ev.leadIdx].midi); });
   Store.del(scoreSig());
   render();
-  toast('運指をリセットしました');
+  toast(tt('msg.fing_reset_done'));
 }
 
 export function openDrawer(){ document.getElementById('drawer').classList.add('open'); document.getElementById('scrim').classList.add('show'); }

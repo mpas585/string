@@ -6,11 +6,12 @@
   ページ送りボタン（pdfprev/pdfnext）は配線側で pdfPage±1 → renderPdfPage。
 */
 import { toast } from './dom.js';
+import { tt } from './util.js';
 
 export let pdfDoc=null, pdfPage=1;
 export function setPdfPage(v){ pdfPage=v; }  /* 分割対応: 外部からのページ変更用 */
 export async function openPdf(file){
-  if(window.__noPdf || !window.pdfjsLib){ toast('PDF表示ライブラリを読み込めませんでした。'); return; }
+  if(window.__noPdf || !window.pdfjsLib){ toast(tt('msg.pdf_lib_fail')); return; }
   try{
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const buf=await file.arrayBuffer();
@@ -18,8 +19,8 @@ export async function openPdf(file){
     pdfPage=1;
     document.getElementById('pdfempty').style.display='none';
     renderPdfPage();
-    toast(`PDF：${pdfDoc.numPages}ページ`);
-  }catch(e){ toast('PDFを開けません：'+e.message); console.error(e); }
+    toast(tt('msg.pdf_pages', pdfDoc.numPages));
+  }catch(e){ toast(tt('msg.pdf_open_fail', e.message)); console.error(e); }
 }
 export async function renderPdfPage(){
   if(!pdfDoc) return;

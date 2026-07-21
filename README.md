@@ -125,8 +125,12 @@ const T = (typeof window!=='undefined' && window.T) ? window.T : {};
 export const tt = (k, d='') => k.split('.').reduce((o,x)=> (o&&o[x]!=null)?o[x]:null, T) ?? d;
 ```
 
-- 未翻訳: JS 内の文言（`modes.js` / `tuner.js` のトーストや `nowline` 等、実測116個）と
-  `public/scales/scales.json` のスケール名・曲名は日本語のまま。
+- JS 側の文言も `includes/lang/*.php` の `msg.*` から引く。`src/util.js` の `tt('msg.xxx', ...args)` を使い、
+  `%s` / `%1$s` で引数を差し込む（PHP の vsprintf と同じ書き方）。キーが無いときはキー名が返る。
+- 外部JSON（`scales.json` / `manifest.json` / 曲JSON）の文字列は `{"ja":"…","en":"…"}` の形で持てる。
+  読み出しは `pickText()`（表示言語 → ja → 先頭の順）。ただの文字列のままでも動く（後方互換）。
+- JS に残る日本語は、PHP を通さず開いたときのフォールバック（`util.js` のゾーン名・指番号、
+  `fingerboard.js` の MARKERS、`scale.js` の FALLBACK_SCALES）と、開発者向けの console 出力のみ。
 
 ### 依存の向き（上が下に依存）
 ```

@@ -16,7 +16,7 @@
   ※ pdf は Batch7 で作成。それまで PDFファイルを開く経路のみ実行時未解決。
 */
 import { ST } from './state.js';
-import { midiName, NOTE_NAMES, OPEN } from './util.js';
+import { midiName, NOTE_NAMES, OPEN, tt, pickText } from './util.js';
 import { recommend, scrollBoardToActive, FB } from './fingerboard.js';
 import { scrollStaffToActive } from './notation.js';
 import { buildScaleEvents, SCALE_LABEL } from './scale.js';
@@ -37,13 +37,13 @@ export function pitchToMidi(pEl){
 
 export function parseMusicXML(text){
   const doc = new DOMParser().parseFromString(text, 'application/xml');
-  if(doc.querySelector('parsererror')) throw new Error('XMLを解析できませんでした。ファイルが壊れている可能性があります。');
+  if(doc.querySelector('parsererror')) throw new Error(tt('msg.xml_parse_fail'));
   if(!doc.querySelector('score-partwise')){
-    if(doc.querySelector('score-timewise')) throw new Error('score-timewise 形式は未対応です。partwise形式で書き出してください。');
-    throw new Error('MusicXMLとして認識できませんでした。');
+    if(doc.querySelector('score-timewise')) throw new Error(tt('msg.timewise_unsupported'));
+    throw new Error(tt('msg.not_musicxml'));
   }
   const part = doc.querySelector('score-partwise > part');
-  if(!part) throw new Error('パート（part）が見つかりませんでした。');
+  if(!part) throw new Error(tt('msg.no_part'));
 
   /* テンポ */
   let tempo = ST.tempo;
@@ -118,7 +118,7 @@ export function parseMusicXML(text){
   });
   evs.forEach(e=>{ e.fing = recommend(e.pitches[e.leadIdx].midi); });
 
-  if(!evs.length) throw new Error('音符が見つかりませんでした。');
+  if(!evs.length) throw new Error(tt('msg.no_notes'));
   return {events:evs, tempo, measures:mList, beatsPerMeasure};
 }
 
@@ -126,13 +126,13 @@ export function parseMidi(buf){
   const dv=new DataView(buf);
   let p=0;
   const tag=(n)=>{ let s=''; for(let i=0;i<n;i++) s+=String.fromCharCode(dv.getUint8(p++)); return s; };
-  if(dv.byteLength<14 || tag(4)!=='MThd') throw new Error('MIDIファイルとして認識できません。');
+  if(dv.byteLength<14 || tag(4)!=='MThd') throw new Error(tt('msg.not_midi'));
   const hlen=dv.getUint32(p); p+=4;
   p+=2;                                  /* format */
   const ntrk=dv.getUint16(p); p+=2;
   const division=dv.getUint16(p); p+=2;
   p += Math.max(0, hlen-6);
-  if(division & 0x8000) throw new Error('SMPTE形式のMIDIは未対応です。');
+  if(division & 0x8000) throw new Error(tt('msg.smpte_unsupported'));
 
   let tempo=120, tempoSet=false, tsNum=4, tsDen=4;
   const tracks=[];
@@ -216,7 +216,7 @@ export function parseMidi(buf){
         let lo=127, hi=0;
         for(const n of ns){ if(n.midi<lo) lo=n.midi; if(n.midi>hi) hi=n.midi; }
         const drum = (ch===9);
-        let label = name || `トラック ${t+1}`;
+        let label = name || tt('msg.track_n', t+1);
         if(multi || drum) label += ` [ch${ch+1}]`;
         if(drum) label += ' 🥁';
         tracks.push({
@@ -226,7 +226,7 @@ export function parseMidi(buf){
       }
     }
   }
-  if(!tracks.length) throw new Error('音符のあるトラックが見つかりませんでした。');
+  if(!tracks.length) throw new Error(tt('msg.no_track_with_notes'));
   return {tracks, tempo, tsNum, tsDen, division};
 }
 
@@ -295,13 +295,13 @@ export function midiTrackToEvents(track, division, tsNum, tsDen){
 
 export async function readAsText(file){ return await file.text(); }
 export async function unMxl(file){
-  if(window.__noZip || !window.JSZip) throw new Error('.mxl の展開に必要なライブラリを読み込めませんでした。オフライン時は .xml / .musicxml で保存してください。');
+  if(window.__noZip || !window.JSZip) throw new Error(tt('msg.mxl_lib_fail'));
   const zip=await JSZip.loadAsync(file);
   let target=null;
   const container=zip.file('META-INF/container.xml');
   if(container){ const c=await container.async('string'); const m=c.match(/full-path="([^"]+)"/); if(m) target=m[1]; }
   if(!target){ target=Object.keys(zip.files).find(n=>/\.xml$/i.test(n) && !/^META-INF/i.test(n)); }
-  if(!target || !zip.file(target)) throw new Error('.mxl 内にMusicXMLが見つかりませんでした。');
+  if(!target || !zip.file(target)) throw new Error(tt('msg.mxl_no_xml'));
   return await zip.file(target).async('string');
 }
 
@@ -316,7 +316,7 @@ export function renderTracks(){
     const range = `${midiName(t.lo)}–${midiName(t.hi)}`;
     return `<div class="trow${i===midiFile.sel?' on':''}" data-i="${i}">`
       + `<span class="tn">${t.name}<small>${range}</small></span>`
-      + `<span class="tc">${t.count}音</span></div>`;
+      + `<span class="tc">${tt('msg.track_count', t.count)}</span></div>`;
   }).join('');
 }
 export function selectTrack(i, play){
@@ -328,7 +328,7 @@ export function selectTrack(i, play){
   setScore(parsed, midiFile.name+'#'+i);
   renderTracks();
   const out=parsed.events.filter(e=> !e.fing).length;
-  toast(`${t.name}：${parsed.events.length}イベント` + (out ? ` / 音域外 ${out}` : ''));
+  toast(tt('msg.track_loaded', t.name, parsed.events.length) + (out ? tt('msg.out_range_suffix', out) : ''));
   if(play && ST.events.length){
     /* トラック名タップ → 最初の音から試聴 */
     const first=firstNoteBeat();
@@ -354,7 +354,7 @@ export function skipToStart(){
     if(ST.view==='staff') scrollStaffToActive();
   }
   const m=measureOfBeat(beat);
-  toast(`最初の音へ（第${m}小節 / ${ST.events[0].pitches[0].name}）`);
+  toast(tt('msg.skip_to_first', m, ST.events[0].pitches[0].name));
 }
 
 export async function loadScoreFile(file){
@@ -372,7 +372,7 @@ export async function loadScoreFile(file){
       openDrawer();
       const box=document.getElementById('tracks');
       if(box.scrollIntoView) box.scrollIntoView({block:'nearest'});
-      toast(`MIDI：${m.tracks.length}トラック → 一覧から選べます`);
+      toast(tt('msg.midi_tracks', m.tracks.length));
       return;
     }
 
@@ -388,9 +388,9 @@ export async function loadScoreFile(file){
     setTempo(Math.round(parsed.tempo));
     const restored=setScore(parsed, file.name);
     closeDrawer();
-    toast(`読み込み完了：${parsed.events.length}イベント${restored?' / 運指を復元':''}`);
+    toast(tt('msg.score_loaded', parsed.events.length) + (restored ? tt('msg.fing_restored_suffix') : ''));
   }catch(err){
-    toast('読み込めません：'+err.message);
+    toast(tt('msg.load_failed', err.message));
     console.error(err);
   }
 }
@@ -509,8 +509,8 @@ export function loadSample(quiet){
     const parsed=parseMusicXML(SAMPLE_XML);
     setTempo(Math.round(parsed.tempo));
     setScore(parsed, 'le-cygne');
-    if(!quiet){ closeDrawer(); toast('白鳥を読み込みました'); }
-  }catch(e){ toast('プリセット読込エラー：'+e.message); }
+    if(!quiet){ closeDrawer(); toast(tt('msg.swan_loaded')); }
+  }catch(e){ toast(tt('msg.preset_err', e.message)); }
 }
 
 /* ===== スケール生成（スケール練習モード） ===== */
@@ -527,10 +527,10 @@ export function genScale(quiet){
     updateTransport();
     if(!quiet){
       closeDrawer();
-      toast(`${label}（${parsed.events.length}音 / ${parsed.measures.length}小節）`);
+      toast(tt('msg.scale_built', label, parsed.events.length, parsed.measures.length));
       setTimeout(()=>{ if(ST.mode==='scale' && ST.events.length) startPlay(0); }, 260);  /* 生成したら自動再生 */
     }
-  }catch(e){ toast('生成できません：'+e.message); }
+  }catch(e){ toast(tt('msg.gen_failed', e.message)); }
 }
 
 /* ===== プリセット曲（public/songs/ から外部読み込み） ===== */
@@ -548,12 +548,12 @@ export function renderSongList(){
   if(!box) return;
   const ids=Object.keys(SONGS);
   if(!ids.length){
-    box.innerHTML='<button class="songbtn" disabled>🎼 曲がありません<small>public/songs/manifest.json を確認してください</small></button>';
+    box.innerHTML=tt('msg.no_songs_html');
     return;
   }
   box.innerHTML=ids.map(id=>{
     const s=SONGS[id];
-    return `<button class="songbtn" data-song="${id}">🎵 ${s.title||id}<small>${s.desc||''}</small></button>`;
+    return `<button class="songbtn" data-song="${id}">🎵 ${pickText(s.title)||id}<small>${pickText(s.desc)}</small></button>`;
   }).join('');
 }
 export async function loadSongManifest(){
@@ -565,7 +565,7 @@ export async function loadSongManifest(){
     setSongs(j.songs);
   }catch(e){
     setSongs([]);
-    console.error('[cello] manifest.json を読み込めません：', e);
+    console.error('[string] manifest.json を読み込めません：', e);
   }
   renderSongList();
 }
@@ -589,7 +589,7 @@ export function buildSongFromData(data){
 }
 export async function loadSong(id, quiet){
   const s=SONGS[id];
-  if(!s){ toast('準備中です'); return; }
+  if(!s){ toast(tt('msg.soon')); return; }
   try{
     midiFile=null; renderTracks();
     const res=await fetch(new URL(s.file || (id+'.json'), SONGS_DIR), {cache:'no-cache'});
@@ -598,6 +598,6 @@ export async function loadSong(id, quiet){
     const parsed=buildSongFromData(data);
     setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
     setScore(parsed, 'song:'+id);
-    if(!quiet){ closeDrawer(); toast((data.title || s.title || id)+'を読み込みました'); }
-  }catch(e){ toast('読込エラー：'+e.message); }
+    if(!quiet){ closeDrawer(); toast(tt('msg.song_loaded', pickText(data.title) || pickText(s.title) || id)); }
+  }catch(e){ toast(tt('msg.song_err', e.message)); }
 }

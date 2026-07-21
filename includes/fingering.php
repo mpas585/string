@@ -58,6 +58,17 @@ function fingering_hint(int $off, array $table, string $high): string {
   return '?';
 }
 
+/* 指板のポジション標識。'@xxx' を言語ファイルの marker.xxx で置き換える */
+function fingering_markers(array $inst, array $lang): array {
+  $out = [];
+  foreach (($inst['markers'] ?? []) as $m) {
+    $r = (string)$m['r'];
+    if ($r !== '' && $r[0] === '@') { $r = $lang['marker'][substr($r, 1)] ?? substr($r, 1); }
+    $out[] = ['off' => (int)$m['off'], 'r' => $r];
+  }
+  return $out;
+}
+
 /* JS へ渡す楽器定義（window.INSTRUMENT）を組み立てる */
 function fingering_js_config(array $inst, array $lang): array {
   return [
@@ -67,6 +78,7 @@ function fingering_js_config(array $inst, array $lang): array {
     'maxOff'      => (int)$inst['max_off'],
     'scaleMaxOff' => (int)$inst['scale_max_off'],
     'board'       => $inst['board'],
+    'markers'     => fingering_markers($inst, $lang),
     'zones'       => fingering_zones($inst, $lang),
     /* JS 側は数値キーで引くのでオブジェクトに固定する（配列化させない） */
     'fingerTable' => (object)fingering_table($inst, $lang),
