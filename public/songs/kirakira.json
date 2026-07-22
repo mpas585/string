@@ -9,6 +9,7 @@
   "key": "C",
   "tempo": 96,
   "beatsPerMeasure": 4,
+  "chords": ["C", "Am", "F", "C", "C", "G", "C", "G", "C", "Am", "F", "C"],
   "notes": [
     [
       60,

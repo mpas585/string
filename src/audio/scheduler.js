@@ -181,6 +181,17 @@ export function scheduleBar(ctx, B, tBar, bs, chord, next, beats){
   if(n>=4) padChord(ctx, B.chord, tBar+bs*2, n*bs*0.5, voic.slice(1));
 }
 
+/* 伴奏が鳴らせるか。スケール練習はキーから自動生成、曲を練習は曲JSONの chords がある時だけ */
+export function enjoyOK(){
+  if(ST.mode==='scale') return true;
+  return Array.isArray(ST.songChords) && ST.songChords.length>0;
+}
+/* 伴奏に使うコード列（曲のコード優先。無ければ従来どおりスケール設定の4コード） */
+export function chordSource(){
+  const cs=ST.songChords;
+  return (Array.isArray(cs) && cs.length) ? cs : progressionFor(ST.keyRoot, ST.scaleType);
+}
+
 /* --- 再生範囲（ループ小節指定） --- */
 export function loopActive(){
   return ST.loop.on && ST.measures.length>0;
@@ -359,7 +370,8 @@ export function fillQueue(untilTime){
   const r=ST.range, bs=ST.beatSec;
   const beats=ST.beatsPerMeasure || 4;
   const barSec=beats*bs;
-  const prog=progressionFor(ST.keyRoot, ST.scaleType);
+  const prog=chordSource();
+  const barOffset=Math.round(r.sB/beats);   /* 再生範囲の先頭が曲の何小節目か（0始まり） */
   const loop=loopActive();
   let guard=0;
 
@@ -379,7 +391,7 @@ export function fillQueue(untilTime){
     for(let b=0;b<bars;b++){
       const tBar=base + b*barSec;
       if(tBar < base + (from - r.sB)*bs - 1e-6) continue;
-      ST.queue.push({t:tBar, kind:'bar', bar:b, prog, beats});
+      ST.queue.push({t:tBar, kind:'bar', bar:barOffset+b, prog, beats});
     }
     if(!loop){ ST.queue.push({t: base + ST.passDur + 0.35, kind:'end'}); break; }
   }
@@ -399,9 +411,11 @@ export function pumpQueue(){
     if(it.kind==='note'){
       it.ev.pitches.forEach(p=> playNote(ctx, B.lead, p.midi, it.t, it.dur));
     } else if(it.kind==='bar'){
-      if(ST.enjoy) scheduleBar(ctx, B, it.t, bs, it.prog[it.bar%4], it.prog[(it.bar+1)%4], it.beats);
+      const acc = ST.enjoy && enjoyOK();
+      const n = it.prog.length;
+      if(acc) scheduleBar(ctx, B, it.t, bs, it.prog[it.bar%n], it.prog[(it.bar+1)%n], it.beats);
       /* メトロノーム：伴奏OFF時は常に。スケール練習は伴奏ONでも鳴らす（練習の基準） */
-      if(!ST.enjoy || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats);
+      if(!acc || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats);
     } else if(it.kind==='end'){
       ST.timers.push(setTimeout(stopPlay, Math.max(0,(it.t - ctx.currentTime)*1000)));
     }

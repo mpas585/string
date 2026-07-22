@@ -21,7 +21,7 @@ import { recommend, scrollBoardToActive, FB } from './fingerboard.js';
 import { scrollStaffToActive } from './notation.js';
 import { buildScaleEvents, SCALE_LABEL } from './scale.js';
 import { measureOfBeat, setSeekHead, setTempo, startPlay, updateTransport } from './audio/scheduler.js';
-import { render, scrollStripToActive, setScore, syncLoopUI } from './modes.js';
+import { render, scrollStripToActive, setScore, syncDock, syncLoopUI } from './modes.js';
 import { closeDrawer, openDrawer, openPdfOverlay } from './drawer.js';
 import { toast } from './dom.js';
 import { openPdf } from './pdf.js';
@@ -503,12 +503,17 @@ export const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </part>
 </score-partwise>`;
 
+/* SAMPLE_XML（白鳥）の伴奏コード＝1小節1個。public/songs/swan.json の chords と同じ */
+export const SAMPLE_CHORDS = ['G','Am','C','G','G','F#','Bm','D','G','D','F','C','Am','D'];
+
 export function loadSample(quiet){
   try{
     midiFile=null; renderTracks();
     const parsed=parseMusicXML(SAMPLE_XML);
     setTempo(Math.round(parsed.tempo));
     setScore(parsed, 'le-cygne');
+    ST.songChords=buildChords(SAMPLE_CHORDS);   /* setScore が消すので、その後に入れる */
+    syncDock();
     if(!quiet){ closeDrawer(); toast(tt('msg.swan_loaded')); }
   }catch(e){ toast(tt('msg.preset_err', e.message)); }
 }
@@ -569,18 +574,47 @@ export async function loadSongManifest(){
   }
   renderSongList();
 }
-/* 曲JSON（notes＝[midi, 拍数]）→ イベント列 */
+/* 曲JSONの伴奏コード（1小節1個）。"C" / "Am" / "F#" / "Bb" / "G7" / {root:0,q:'maj'} を受ける。
+   scheduleBar が扱えるのは長三和音・短三和音だけなので、7th 等の付加は無視して maj/min に落とす。 */
+export function parseChord(v){
+  if(!v) return null;
+  if(typeof v==='object'){
+    if(typeof v.root!=='number') return null;
+    return {root:((v.root%12)+12)%12, q:(v.q==='min')?'min':'maj'};
+  }
+  const m=String(v).trim().match(/^([A-Ga-g])([#♯b♭]?)(.*)$/);
+  if(!m) return null;
+  const base={c:0,d:2,e:4,f:5,g:7,a:9,b:11}[m[1].toLowerCase()];
+  const acc=(m[2]==='#'||m[2]==='♯') ? 1 : (m[2]==='b'||m[2]==='♭') ? -1 : 0;
+  const min=/^(m|min|-)(?!aj)/i.test(m[3]);          /* maj7 を短三和音にしない */
+  return {root:(((base+acc)%12)+12)%12, q:min?'min':'maj'};
+}
+/* 小節数ぶんの配列にする。読めない要素は直前のコードを引き継ぐ（＝空欄で前を保持できる） */
+export function buildChords(list){
+  if(!Array.isArray(list) || !list.length) return null;
+  const out=[]; let last=null;
+  for(const v of list){ const c=parseChord(v) || last; out.push(c); last=c; }
+  const first=out.find(c=>c);
+  if(!first) return null;
+  return out.map(c=> c || first);
+}
+
+/* 曲JSON（notes＝[midi, 拍数]）→ イベント列。midi が 0/null の要素は休符 */
 export function buildSongFromData(data){
   const seq = (data && Array.isArray(data.notes)) ? data.notes : [];
   if(!seq.length) throw new Error('notes がありません');
   const beatsPerMeasure=data.beatsPerMeasure || 4;
   let onset=0;
-  const evs=seq.map((it,i)=>{
-    const p={midi:it[0], name:midiName(it[0])};
-    const ev={id:i, measure:Math.floor(onset/beatsPerMeasure)+1, onset, dur:it[1], pitches:[p], leadIdx:0, fing:null};
-    onset+=it[1];
-    return ev;
+  const evs=[];
+  seq.forEach(it=>{
+    const midi=it[0], dur=it[1];
+    if(midi){                                          /* 休符はイベントを作らず時間だけ進める */
+      const p={midi, name:midiName(midi)};
+      evs.push({id:evs.length, measure:Math.floor(onset/beatsPerMeasure)+1, onset, dur, pitches:[p], leadIdx:0, fing:null});
+    }
+    onset+=dur;
   });
+  if(!evs.length) throw new Error('notes がありません');
   evs.forEach(e=>{ e.fing=recommend(e.pitches[0].midi); });
   const maxM=Math.ceil(onset/beatsPerMeasure);
   const measures=[];
@@ -598,6 +632,8 @@ export async function loadSong(id, quiet){
     const parsed=buildSongFromData(data);
     setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
     setScore(parsed, 'song:'+id);
+    ST.songChords=buildChords(data.chords);   /* setScore が消すので、その後に入れる */
+    syncDock();
     if(!quiet){ closeDrawer(); toast(tt('msg.song_loaded', pickText(data.title) || pickText(s.title) || id)); }
   }catch(e){ toast(tt('msg.song_err', e.message)); }
 }

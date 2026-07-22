@@ -201,7 +201,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <!-- 画面左下のドック：テンポ / 伴奏 / オクターブ / ループ（ドロワーから移動） -->
 <div id="dock" class="dock" data-m="scale score">
   <button id="dkTempo" class="dockbtn" aria-label="<?php e('ui.dk_tempo_aria') ?>"><i>BPM</i><small id="dkTempoV">80</small></button>
-  <button id="enjoySw" class="dockbtn" data-m="scale" aria-label="<?php e('ui.dk_enjoy_aria') ?>"><i>🥁</i><small><?php e('ui.dk_enjoy') ?></small></button>
+  <button id="enjoySw" class="dockbtn" data-m="scale score" aria-label="<?php e('ui.dk_enjoy_aria') ?>"><i>🥁</i><small><?php e('ui.dk_enjoy') ?></small></button>
   <button id="dkOct" class="dockbtn" data-m="score" aria-label="<?php e('ui.dk_oct_aria') ?>"><i>Oct</i><small id="dkOctV"><?php e('ui.dk_oct_auto') ?></small></button>
   <button id="dkLoop" class="dockbtn" aria-label="<?php e('ui.dk_loop_aria') ?>"><i>🔁</i><small><?php e('ui.dk_loop') ?></small></button>
 </div>

@@ -39,6 +39,7 @@ export const ST = {
   /* 練習モード */
   loop: {on:false, from:1, to:4},
   enjoy: false,
+  songChords: null,      // 曲JSONの伴奏コード [{root,q},…]（1小節1個）。持たない譜面は null
   keyRoot: 0,
   scaleType: 'pop',
   scaleOct: 2,
