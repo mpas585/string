@@ -145,32 +145,44 @@ export function scheduleMetro(ctx, bus, tBar, bs, beats){
   for(let i=0;i<n;i++) metroClick(ctx, bus, tBar + i*bs, i===0);
 }
 
-/* 1小節ぶんの伴奏（next = 次のコード。ベースのアプローチ音に使う） */
-export function scheduleBar(ctx, B, tBar, bs, chord, next, beats){
+/* 1小節ぶんの伴奏（next = 次のコード。ベースのアプローチ音に使う）
+   unit = 1拍の長さ（4分音符＝1）。3/8 のように1拍が8分音符の譜面では 0.5 が入る。 */
+export function scheduleBar(ctx, B, tBar, bs, chord, next, beats, unit){
   const n=Math.max(1, Math.round(beats));
+  const u=(unit>0) ? unit : 1;
+  /* 刻みの細かさ。1拍が4分音符なら8分刻み(2)、8分音符ならそれ以上割らない(1)。
+     割り続けると 3/8 で実時間16分刻みになり、伴奏だけ倍速に聞こえる。 */
+  const sub=(u<1) ? 1 : 2;
 
   /* --- ドラム --- */
   for(let i=0;i<n;i++){
     const t=tBar+i*bs;
-    if(i%2===0) drKick(ctx, B.drum, t); else drSnare(ctx, B.drum, t);
-    drHat(ctx, B.drum, t, false);
-    drHat(ctx, B.drum, t+bs*0.5, i===n-1);
+    if(sub===2){
+      if(i%2===0) drKick(ctx, B.drum, t); else drSnare(ctx, B.drum, t);
+      drHat(ctx, B.drum, t, false);
+      drHat(ctx, B.drum, t+bs*0.5, i===n-1);
+    }else{
+      /* 1拍が8分音符：小節頭にキックだけ置き、各拍はハイハットのみ */
+      if(i===0) drKick(ctx, B.drum, t);
+      drHat(ctx, B.drum, t, i===n-1);
+    }
   }
-  if(n>=4){
+  if(sub===2 && n>=4){
     drKick(ctx, B.drum, tBar+bs*2.5);        /* 3拍ウラのキック */
   }
 
-  /* --- ベース：8分刻み・スタッカート --- */
+  /* --- ベース：8分刻み・スタッカート（1拍が8分音符の譜面では1拍1音） --- */
   const R = 36 + chord.root;              /* C2〜B2 */
   const nextR = 36 + (next ? next.root : chord.root);
   const approach = (nextR === R) ? R : (nextR > R ? nextR - 1 : nextR + 1);
-  const eighths = n*2;
-  const GATE = 0.24;                      /* 8分(0.5拍)のうち鳴らす長さ＝スタッカート */
-  for(let i=0;i<eighths;i++){
-    const t = tBar + i*0.5*bs;
-    const last = (i === eighths-1);
-    const m = last ? approach : R;        /* 最後の8分だけ次のコードへ半音アプローチ */
-    const v = (i%2===0) ? 1.0 : 0.62;     /* 表拍を強く＝刻みのノリ */
+  const steps = n*sub;
+  const step  = bs/sub;
+  const GATE  = (sub===2) ? 0.24 : 0.5;   /* 刻み1つのうち鳴らす長さ＝スタッカート */
+  for(let i=0;i<steps;i++){
+    const t = tBar + i*step;
+    const last = (i === steps-1);
+    const m = last ? approach : R;        /* 最後の刻みだけ次のコードへ半音アプローチ */
+    const v = (i%sub===0) ? 1.0 : 0.62;   /* 表拍を強く＝刻みのノリ */
     bassNote(ctx, B.bass, t, GATE*bs, m, v);
   }
 
@@ -234,7 +246,7 @@ export function stopPlay(){
       m.gain.setValueAtTime(m.gain.value, t);
       m.gain.linearRampToValueAtTime(0.0001, t+0.05);
     }catch(e){}
-    setTimeout(()=>{ try{ m.disconnect(); B.conv.disconnect(); }catch(e){} }, 250);
+    setTimeout(()=>{ try{ m.disconnect(); B.conv.disconnect(); if(B.limiter) B.limiter.disconnect(); }catch(e){} }, 250);
   }
   ST.buses=null; ST.master=null; ST.range=null; ST.queue=[];
   ST.playing=false; ST.current=null;
@@ -242,7 +254,7 @@ export function stopPlay(){
   render();
 }
 
-/* ===== 冒頭4カウント ===== */
+/* ===== 冒頭カウント（1小節ぶん） ===== */
 export function showCount(n){
   const el=document.getElementById('countin'), sp=document.getElementById('countnum');
   sp.textContent=n;
@@ -337,7 +349,8 @@ export function startPlay(fromBeat, noCount){
 
   const lead = wasPlaying ? 0.10 : 0.16;
   const doCount = ST.countIn && !noCount && !wasPlaying;
-  const countBeats = doCount ? 4 : 0;
+  const countN = Math.max(1, Math.round(ST.beatsPerMeasure || 4));   /* カウントは1小節ぶん */
+  const countBeats = doCount ? countN : 0;
   ST.t0 = ctx.currentTime + lead + countBeats*ST.beatSec - (from - ST.range.sB)*ST.beatSec;
 
   if(!ST.range.list.length && !ST.enjoy){
@@ -345,14 +358,14 @@ export function startPlay(fromBeat, noCount){
     stopPlay(); return;
   }
 
-  /* 冒頭4カウント（画面全体に数字＋クリック） */
+  /* 冒頭カウント＝1小節ぶん（画面全体に数字＋クリック） */
   if(doCount){
-    for(let i=0;i<4;i++){
+    for(let i=0;i<countN;i++){
       const at=ctx.currentTime + lead + i*ST.beatSec;
       metroClick(ctx, ST.buses.metro, at, i===0);
       ST.timers.push(setTimeout(()=> showCount(i+1), Math.max(0,(at-ctx.currentTime)*1000)));
     }
-    ST.timers.push(setTimeout(hideCount, Math.max(0,(lead + 4*ST.beatSec - 0.05)*1000)));
+    ST.timers.push(setTimeout(hideCount, Math.max(0,(lead + countN*ST.beatSec - 0.05)*1000)));
   } else {
     hideCount();
   }
@@ -413,7 +426,7 @@ export function pumpQueue(){
     } else if(it.kind==='bar'){
       const acc = ST.enjoy && enjoyOK();
       const n = it.prog.length;
-      if(acc) scheduleBar(ctx, B, it.t, bs, it.prog[it.bar%n], it.prog[(it.bar+1)%n], it.beats);
+      if(acc) scheduleBar(ctx, B, it.t, bs, it.prog[it.bar%n], it.prog[(it.bar+1)%n], it.beats, ST.beatUnit);
       /* メトロノーム：伴奏OFF時は常に。スケール練習は伴奏ONでも鳴らす（練習の基準） */
       if(!acc || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats);
     } else if(it.kind==='end'){
@@ -438,7 +451,10 @@ export function setTempo(v, live){
   v=Math.max(30,Math.min(160,v|0));
   ST.tempo=v;
   document.getElementById('tempo').value=v;
-  document.getElementById('tempoval').textContent=v+' bpm';
+  const nb=document.getElementById('tempoNum');
+  /* 値が変わる時だけ書く＝入力中のキャレットを飛ばさない。
+     打ち込み途中の範囲外（"1" など）はそもそも main.js 側で setTempo を呼ばない。 */
+  if(nb && nb.value!==String(v)) nb.value=v;
   syncDock();
   if(live && ST.playing){
     /* 再生中：現在位置を保って組み直す（リアルタイム反映） */

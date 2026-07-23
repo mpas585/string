@@ -22,7 +22,8 @@ export const ST = {
   mode: null,            // null | 'scale' | 'score'
   events: [],
   measures: [],          // [{num, start, end}] 単位=4分音符
-  beatsPerMeasure: 4,
+  beatsPerMeasure: 4,    // 4分音符=1 換算の1小節の長さ（MusicXML も beats*(4/beat-type) で正規化）
+  beatUnit: 1,           // 1拍の長さ（4分音符=1）。3/8 のように1拍が8分音符の譜面は 0.5
   tempo: 80,
   pref: 'low',
   selected: null,
@@ -46,6 +47,7 @@ export const ST = {
   /* チューナーモード */
   tunerMidi: null,
   tunerCents: 0,
+  tunerString: null,     // チューナーで基準にする弦 index。null＝自動判定（従来どおり）
   /* 再生メーター */
   seekRaf: 0,
   playhead: 0,          // 次に ▶ を押したときの開始拍
@@ -67,7 +69,7 @@ export const ST = {
   /* 音量 */
   volProfiles: {scale:Object.assign({},DEFAULT_VOL.scale), score:Object.assign({},DEFAULT_VOL.score)},
   vol: Object.assign({}, DEFAULT_VOL.score),
-  /* 4カウント・スリープ防止 */
+  /* 冒頭カウント・スリープ防止 */
   countIn: true,
   keepAwake: true,
   wakeLock: null,

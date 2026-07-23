@@ -14,7 +14,7 @@
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey } from './state.js';
-import { fracOf, midiName, zoneOf, fingerHint, NOTE_NAMES, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
+import { fracOf, midiName, zoneOf, fingerHint, strFingerText, NOTE_NAMES, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
 import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
 import { renderStaff } from './notation.js';
 import { buildScaleEvents, SCALE_LABEL } from './scale.js';
@@ -129,7 +129,16 @@ export function setMode(mode, keepDrawer){
     ST.tunerMidi=null; ST.tunerCents=0;
     if(!keepDrawer) closeDrawer();
     render();
-    if(!TUN.on) startTuner();
+    /* マイクがONになったらドロワーを閉じてチューナーを見せる（被って読めないため）。
+       startTuner は許可待ちの非同期なので、ONを確認してから閉じる。
+       許可が下りなかった時は開いたまま＝スイッチとヒントを触れる。 */
+    if(TUN.on) closeDrawer();
+    else startTuner().then(()=>{ if(TUN.on) closeDrawer(); });
+
+  } else {
+    /* モード未選択（＝入口画面に戻る）。チューナーの✕はここへ来る */
+    if(!keepDrawer) closeDrawer();
+    render();
   }
 }
 /* 横レイアウト（実際に横 or 強制横）をbodyクラスで管理 */
@@ -183,7 +192,7 @@ export function renderNow(ev){
   const el=document.getElementById('nowline');
   if(!ev || !ev.fing){ el.innerHTML=''; return; }
   const lead=ev.pitches[ev.leadIdx];
-  el.innerHTML = `<b>${lead.name}</b> · ${tt('msg.str_finger', STRNAME[ev.fing.str], ev.fing.finger)} · ${ev.fing.zone}`;
+  el.innerHTML = `<b>${lead.name}</b> · ${strFingerText(ev.fing.str, ev.fing.off, ev.fing.finger)} · ${ev.fing.zone}`;
 }
 
 export function renderEdit(ev){
@@ -374,6 +383,7 @@ export function setScore(parsed, scoreName){
   ST.songChords=null;                  /* 伴奏コードは譜面ごと。持つ曲は setScore の後で入れ直す */
   ST.measures=parsed.measures || [];
   ST.beatsPerMeasure=parsed.beatsPerMeasure || 4;
+  ST.beatUnit=(parsed.beatUnit>0) ? parsed.beatUnit : 1;
   ST.scoreName=scoreName || '';
   ST.selected=0; ST.current=null; ST.lastScrollId=null; ST.playhead=0;
   applyOctave();

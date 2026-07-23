@@ -218,7 +218,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="k"><?php e('ui.tempo_k') ?></div>
     <div class="v tempo">
       <input id="tempo" type="range" min="30" max="160" value="80">
-      <b id="tempoval">80 bpm</b>
+      <span class="numbox"><input id="tempoNum" type="number" min="30" max="160" step="1" value="80" inputmode="numeric"><i>bpm</i></span>
     </div>
   </div>
 </div>
@@ -427,6 +427,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <div id="tunerSheet" class="sheet">
   <div class="sheet-head">
     <span class="t"><?php e('ui.tuner_t') ?></span>
+    <button id="tunerClose" class="iconbtn" aria-label="<?php e('ui.tuner_close_aria') ?>">✕</button>
   </div>
   <div class="tun-main">
     <div id="tunHz" class="tun-hz">– Hz</div>
@@ -437,13 +438,37 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="mid"></div>
     <div id="tunNeedle" class="ndl"></div>
   </div>
-  <div class="tun-str">
-<?php foreach ($OPEN_LABELS as $i => $lbl): ?><span data-str="<?= $i ?>"><?= h($lbl) ?></span><?php endforeach; ?>
+  <!-- 締める／緩める（3つとも書いておき、CSS で1つだけ見せる） -->
+  <div id="tunDir" class="tun-dir">
+    <span class="d-low"><?php e('ui.tun_tighten') ?></span>
+    <span class="d-high"><?php e('ui.tun_loosen') ?></span>
+    <span class="d-ok"><?php e('ui.tun_intune') ?></span>
+    <span class="d-far"><?php e('ui.tun_far') ?></span>
   </div>
-  <!-- 入力レベル（緑の帯＝推奨インプットレベル） -->
+  <!-- 弦を選ぶと、その開放弦を基準に測る（自動判定の取り違えで締めすぎるのを防ぐ）。
+       もう一度押すと自動判定に戻る。 -->
+  <div class="tun-str-row">
+    <span class="tsl"><?php e('ui.tun_thick') ?></span>
+    <div class="tun-str">
+<?php $NSTR = count($OPEN_LABELS); foreach ($OPEN_LABELS as $i => $lbl): ?><button type="button" data-str="<?= $i ?>"><b><?php e('ui.tun_str_n', $NSTR - $i) ?></b><small><?= h($lbl) ?></small></button><?php endforeach; ?>
+    </div>
+    <span class="tsl"><?php e('ui.tun_thin') ?></span>
+  </div>
+  <div id="tunStrNote" class="tun-str-note"><?php e('ui.tun_pick_str') ?></div>
+  <!-- マイク入力レベル（緑の区間＝推奨） -->
   <div class="tun-in">
-    <div class="tun-in-t"><span><?php e('ui.tun_in') ?></span><b id="tunInMsg">–</b></div>
-    <div class="tun-in-bar"><div class="rec"></div><div id="tunLevel" class="lv"></div></div>
+    <div class="tun-in-t"><span>🎤 <?php e('ui.tun_in') ?></span><b id="tunInMsg">–</b></div>
+    <div class="tun-in-bar">
+      <div class="zones"></div>
+      <div id="tunLevel" class="lv"></div>
+      <div class="tick lo"></div>
+      <div class="tick hi"></div>
+    </div>
+    <div class="tun-in-scale">
+      <span class="s-lo"><?php e('ui.tun_in_lo') ?></span>
+      <span class="s-ok"><?php e('ui.tun_in_ok') ?></span>
+      <span class="s-hi"><?php e('ui.tun_in_hi') ?></span>
+    </div>
     <div class="tun-in-sub"><?php e('ui.tun_in_note') ?></div>
   </div>
   <div id="tunHint" class="tun-hint"></div>
@@ -460,7 +485,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
 </div>
 
-<!-- 冒頭4カウント（凡例はカウントダウンの下だけに出す＝カウントが終われば消える） -->
+<!-- 冒頭カウント＝1小節ぶん（凡例はカウントダウンの下だけに出す＝カウントが終われば消える） -->
 <div id="countin" class="countin">
   <span id="countnum">4</span>
   <div id="legend" class="legend"></div>

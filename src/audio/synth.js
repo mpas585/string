@@ -176,6 +176,23 @@ export function padChord(ctx, bus, t, dur, midis){
   });
 }
 
+/* チューナー：ピッチが合った合図（「ピコーン」＝低→高の2音ベル）。
+   ノイズバッファを使わないので、マイク用の別 AudioContext でもそのまま鳴らせる。 */
+export function chimeOK(ctx, bus, t){
+  [[1318.5, 0, 0.16], [1975.5, 0.075, 0.34]].forEach(([f, dly, dur])=>{
+    const at=t+dly;
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(0.20, at+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, at+dur);
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+    const h=ctx.createOscillator(); h.type='sine'; h.frequency.value=f*2.76;  /* 金属質の倍音 */
+    const hg=ctx.createGain(); hg.gain.value=0.18;
+    o.connect(g); h.connect(hg); hg.connect(g); g.connect(bus);
+    o.start(at); h.start(at); o.stop(at+dur+0.05); h.stop(at+dur+0.05);
+  });
+}
+
 /* メトロノーム（エンジョイモードOFF時） */
 export function metroClick(ctx, bus, t, accent){
   const o=ctx.createOscillator(); o.type='square';

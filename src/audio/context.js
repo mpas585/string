@@ -35,9 +35,23 @@ export function audio(){
 }
 /* 再生前に音源を用意（初回再生時の重い初期化を前倒し） */
 export function warmAudio(){ try{ audio(); }catch(e){} }
+/* 出力の底上げ。ST.vol.master は 0〜1 のユーザー音量なので、そこへこの係数を掛けてから
+   リミッターに通す。単純にゲインを上げるだけだとピークが割れるので、
+   リミッターとセットで「歪ませずに音圧だけ上げる」。 */
+export const MASTER_BOOST=2.4;
+export function makeLimiter(ctx){
+  const l=ctx.createDynamicsCompressor();
+  l.threshold.value=-3;    /* この上を叩く */
+  l.knee.value=0;          /* ハードリミット */
+  l.ratio.value=20;
+  l.attack.value=0.003;
+  l.release.value=0.15;
+  return l;
+}
 /* 音量バス。チェロの胴鳴りは「楽器の性質」なので1音ごとではなくバスに置く（CPU大幅削減） */
 export function makeBuses(ctx){
-  const master=ctx.createGain(); master.gain.value=ST.vol.master; master.connect(ctx.destination);
+  const limiter=makeLimiter(ctx); limiter.connect(ctx.destination);
+  const master=ctx.createGain(); master.gain.value=ST.vol.master*MASTER_BOOST; master.connect(limiter);
   const conv=ctx.createConvolver(); conv.buffer=IRBUF;
   const wet=ctx.createGain(); wet.gain.value=0.28;
   conv.connect(wet); wet.connect(master);
@@ -52,7 +66,7 @@ export function makeBuses(ctx){
   const b3=ctx.createBiquadFilter(); b3.type='peaking'; b3.frequency.value=1350; b3.Q.value=1.8; b3.gain.value=3;
   const leadIn=ctx.createGain(); leadIn.gain.value=ST.vol.lead;
   leadIn.connect(b1); b1.connect(b2); b2.connect(b3); b3.connect(leadOut);
-  return {master, conv, wet, lead:leadIn,
+  return {master, limiter, conv, wet, lead:leadIn,
     drum : mk(ST.vol.drum , 0.10),
     bass : mk(ST.vol.bass , 0.06),
     chord: mk(ST.vol.chord, 0.42),
@@ -62,6 +76,7 @@ export function applyVolumes(){
   if(!ST.buses || !ST.ctx) return;
   const t=ST.ctx.currentTime;
   for(const k of ['master','lead','drum','bass','chord','metro']){
-    try{ ST.buses[k].gain.setTargetAtTime(ST.vol[k], t, 0.02); }catch(e){}
+    const v = (k==='master') ? ST.vol[k]*MASTER_BOOST : ST.vol[k];
+    try{ ST.buses[k].gain.setTargetAtTime(v, t, 0.02); }catch(e){}
   }
 }

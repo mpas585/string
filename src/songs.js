@@ -619,7 +619,8 @@ export function buildSongFromData(data){
   const maxM=Math.ceil(onset/beatsPerMeasure);
   const measures=[];
   for(let mm=1;mm<=maxM;mm++) measures.push({num:mm, start:(mm-1)*beatsPerMeasure, end:mm*beatsPerMeasure});
-  return {events:evs, measures, beatsPerMeasure};
+  /* beatUnit＝1拍の長さ（4分音符=1）。3/8 など1拍が8分音符の曲は 0.5 を持たせる */
+  return {events:evs, measures, beatsPerMeasure, beatUnit:(data.beatUnit>0 ? data.beatUnit : 1)};
 }
 export async function loadSong(id, quiet){
   const s=SONGS[id];

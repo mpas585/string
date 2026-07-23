@@ -11,10 +11,11 @@
   公開API: renderBoard（署名変化時に指板を作り直し＋音符描画）, pluckString/pluckEvent,
            optionsFor/recommend, applyZoom/zoomFit/zoomFitPositions, scrollBoardToActive, yOf/offOfY, FB。
 */
-import { OPEN, STRNAME, fracOf, midiName, zoneOf, fingerHint, tt } from './util.js';
+import { OPEN, STRNAME, fracOf, midiName, zoneOf, fingerHint, strFingerText, tt } from './util.js';
 import { ST } from './state.js';
 import { toast } from './dom.js';
 import { midiFreq } from './audio/synth.js';
+import { MASTER_BOOST, makeLimiter } from './audio/context.js';
 import { renderNow } from './modes.js';
 
 /* ===== ゾーン別の運指候補と推奨 ===== */
@@ -295,12 +296,17 @@ export function zoomFit(){
 /* ===== 弦タップ発音（押している間だけ鳴る）＋ タップ座標 — 元 L3155–3227 ===== */
 /* 発音は弦ごとに独立させる。ブリッジ側優先（＝off が大きい指を鳴らす）は
    「同じ弦の中」での話で、別の弦を押さえたらその弦も同時に鳴る。 */
-export let liveCtx=null;
+export let liveCtx=null, liveOut=null;
 export const liveVoices=[null,null,null,null];    /* 弦index -> {o1,o2,g} */
 export function ensureLiveCtx(){
   if(!liveCtx){
     const AC=window.AudioContext||window.webkitAudioContext;
     liveCtx=new AC();
+  }
+  if(!liveOut){
+    /* 再生側（audio/context.js）と同じ底上げ。指板タップだけ音が小さいのを揃える */
+    const lim=makeLimiter(liveCtx); lim.connect(liveCtx.destination);
+    liveOut=liveCtx.createGain(); liveOut.gain.value=MASTER_BOOST; liveOut.connect(lim);
   }
   if(liveCtx.state==='suspended'){ try{ liveCtx.resume(); }catch(e){} }
   return liveCtx;
@@ -317,7 +323,7 @@ export function holdStart(str, midi){
   const g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
   g.gain.linearRampToValueAtTime(0.20,t+0.03);
-  o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(ctx.destination);
+  o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(liveOut);
   o1.start(t); o2.start(t);
   liveVoices[str]={o1,o2,g};
 }
@@ -365,7 +371,7 @@ export function showHoldDot(pos){
   dot.setAttribute('opacity', '0.95');
   const el=document.getElementById('nowline');
   const z=zoneOf(pos.off);
-  el.innerHTML=`<b>${midiName(pos.midi)}</b> · ${tt('msg.str_finger', STRNAME[pos.str], fingerHint(pos.off))} · ${z.zone}`;
+  el.innerHTML=`<b>${midiName(pos.midi)}</b> · ${strFingerText(pos.str, pos.off)} · ${z.zone}`;
 }
 export function hideHoldDot(str){
   if(str==null){

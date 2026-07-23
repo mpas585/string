@@ -100,7 +100,8 @@ export function syncSettingsUI(){
   document.getElementById('scaleType').value=ST.scaleType;
   document.getElementById('scaleOct').value=String(ST.scaleOct);
   document.getElementById('tempo').value=ST.tempo;
-  document.getElementById('tempoval').textContent=ST.tempo+' bpm';
+  const tnum=document.getElementById('tempoNum');
+  if(tnum) tnum.value=ST.tempo;
   document.getElementById('countSw').classList.toggle('on', ST.countIn);
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
   const langEl=document.getElementById('langSel');

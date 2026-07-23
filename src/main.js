@@ -14,7 +14,7 @@ import { applyVolumes } from './audio/context.js';
 import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
 import { loadScales } from './scale.js';
-import { startTuner, stopTuner, TUN } from './tuner.js';
+import { startTuner, stopTuner, pickTunerString, TUN } from './tuner.js';
 import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 import { tt } from './util.js';
 
@@ -29,6 +29,18 @@ on('scrim','click', closeDrawer);
 on('pdfOpen','click', openPdfOverlay);
 on('pdfClose','click', closePdfOverlay);
 on('tempo','input', e=>{ setTempo(+e.target.value, true); saveSettings(); });
+/* 数値入力：打ち込み途中（空欄・1桁）で勝手に補正しない。確定時にだけ範囲へ丸める */
+on('tempoNum','input', e=>{
+  const v=parseInt(e.target.value,10);
+  if(!isFinite(v) || v<30 || v>160) return;
+  setTempo(v, true); saveSettings();
+});
+on('tempoNum','change', e=>{
+  const v=parseInt(e.target.value,10);
+  setTempo(isFinite(v) ? v : ST.tempo, true);
+  e.target.value=ST.tempo;
+  saveSettings();
+});
 document.querySelectorAll('.pref').forEach(b=> b.addEventListener('click', ()=> setPref(b.dataset.pref)));
 on('pdfprev','click', ()=>{ if(pdfPage>1){ setPdfPage(pdfPage-1); renderPdfPage();} });
 on('pdfnext','click', ()=>{ if(pdfDoc&&pdfPage<pdfDoc.numPages){ setPdfPage(pdfPage+1); renderPdfPage();} });
@@ -306,8 +318,19 @@ on('dockScrim','click', closeDockModal);
 document.querySelectorAll('[data-dkclose]').forEach(b=> b.addEventListener('click', closeDockModal));
 
 /* ===== ゲーム / チューナー ===== */
-on('micSw','click', ()=>{
-  if(TUN.on) stopTuner(); else startTuner();
+on('micSw','click', async ()=>{
+  if(TUN.on){ stopTuner(); return; }
+  await startTuner();
+  /* ONになったらドロワーを閉じてチューナーを見せる（ドロワーが被って読めないため）。
+     許可が下りなかった時は開いたままにして、ヒントを読めるようにする。 */
+  if(TUN.on) closeDrawer();
+});
+/* チューナーの✕：マイクを止めて入口画面（モード選択）へ戻る。stopTuner は setMode 側で呼ばれる */
+on('tunerClose','click', ()=> setMode(null));
+/* 弦チップ：その弦の開放音を基準にする（自動判定の取り違えで締めすぎるのを防ぐ）。
+   同じ弦をもう一度押すと自動判定に戻る。 */
+document.querySelectorAll('.tun-str [data-str]').forEach(el=>{
+  el.addEventListener('click', ()=> pickTunerString(+el.dataset.str));
 });
 
 /* ===== 歯車：指板の表示設定 ===== */

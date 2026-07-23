@@ -74,3 +74,12 @@ export function fingerHint(off){
   if(off>12) return FINGER_HIGH;
   return '?';
 }
+
+/* 「○線○指」の文章。開放弦（off=0）は指番号ではないので別の言い回しにする
+   （'%s線%s指' に開放の記号を入れると「A線開指」のような日本語にならない文になるため）。
+   指板の丸や五線譜に出す記号そのものは fingerHint のままで良い。 */
+export function strFingerText(strIdx, off, finger){
+  const name=STRNAME[strIdx];
+  if(off===0) return tt('msg.str_open', name);
+  return tt('msg.str_finger', name, (finger!=null) ? finger : fingerHint(off));
+}

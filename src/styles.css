@@ -49,6 +49,15 @@
   .tempo{display:flex; align-items:center; gap:8px; flex:1; min-width:180px}
   .tempo input[type=range]{flex:1; accent-color:var(--accent)}
   .tempo b{font-family:var(--mono); color:var(--accent); min-width:58px; text-align:right; font-size:13px}
+  /* テンポ数値入力（スライダーと相互同期） */
+  .numbox{display:inline-flex; align-items:baseline; gap:3px; flex:0 0 auto}
+  .numbox input[type=number]{
+    width:52px; padding:5px 6px; text-align:right; font-family:var(--mono); font-size:14px;
+    color:var(--accent); background:var(--panel2); border:1px solid var(--line);
+    border-radius:7px; min-height:32px; -moz-appearance:textfield;
+  }
+  .numbox input[type=number]:focus{outline:none; border-color:var(--accent)}
+  .numbox i{font-style:normal; font-size:11px; color:var(--faint)}
   .board-full{
     position:fixed; left:0; right:0; z-index:1;
     top:calc(52px + env(safe-area-inset-top)); bottom:0;
@@ -315,12 +324,31 @@
   .tun-bar .ndl.ok{background:var(--good)}
   .tun-tgt{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; font-size:12px; color:var(--muted)}
   .tun-tgt b{font-family:var(--mono); color:var(--accent); font-size:15px}
-  .tun-str{display:flex; gap:6px; justify-content:center; margin-top:8px}
-  .tun-str span{
-    font-family:var(--mono); font-size:12px; padding:5px 10px; border-radius:7px;
-    background:var(--panel2); border:1px solid var(--line); color:var(--muted);
+  /* 太い弦 ←[ 4弦 3弦 2弦 1弦 ]→ 細い弦。左が一番太い弦（開放が一番低い） */
+  .tun-str-row{display:flex; align-items:center; justify-content:center; gap:7px; margin-top:8px}
+  .tun-str-row .tsl{
+    flex:0 0 auto; font-size:10px; line-height:1.25; color:var(--faint);
+    text-align:center; max-width:42px;
   }
-  .tun-str span.on{border-color:var(--accent); color:var(--accent); background:#332813}
+  .tun-str{display:flex; gap:6px; justify-content:center}
+  .tun-str [data-str]{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+    padding:6px 9px; border-radius:9px; min-height:46px; min-width:46px;
+    background:var(--panel2); border:1px solid var(--line); color:var(--muted);
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    box-shadow:0 2px 0 rgba(0,0,0,.35);      /* 押せることが分かるよう少し浮かせる */
+  }
+  .tun-str [data-str] b{font-size:13px; font-weight:700; line-height:1.1; color:var(--ink)}
+  .tun-str [data-str] small{font-family:var(--mono); font-size:10px; line-height:1.1; opacity:.75}
+  .tun-str [data-str]:active{transform:translateY(1px); box-shadow:0 1px 0 rgba(0,0,0,.35)}
+  /* .hit＝いま鳴っている音に近い開放弦（自動判定の目安。従来の見え方） */
+  .tun-str [data-str].hit{border-color:var(--accent); background:#332813}
+  .tun-str [data-str].hit b{color:var(--accent)}
+  /* .on＝手動で選んだ基準弦。自動より強く見せる */
+  .tun-str [data-str].on{border-color:var(--accent); background:var(--accent)}
+  .tun-str [data-str].on b{color:#241a08}
+  .tun-str [data-str].on small{color:#241a08; opacity:.8}
+  .tun-str-note{font-size:10px; color:var(--faint); text-align:center; margin-top:5px; line-height:1.5}
   .tun-hint{
     display:none; margin-top:9px; padding:8px 10px; border-radius:8px; font-size:11px; line-height:1.6;
     background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--danger); color:var(--muted);
@@ -375,7 +403,13 @@
   .vol span{flex:0 0 76px; font-size:12px; color:var(--muted)}
   .vol input[type=range]{flex:1; accent-color:var(--accent); min-width:0}
   .vol b{flex:0 0 26px; font-family:var(--mono); font-size:11px; color:var(--accent); text-align:right}
-  .gearpanel{max-height:calc(100vh - 80px); overflow-y:auto}
+  /* スマホは 100vh がURLバーを含む“最大の”高さなので、パネル下端が画面外に出て
+     音量の下（メトロノーム・初期値に戻す）まで届かなかった。
+     dvh＝実際に見えている高さ。非対応ブラウザは上の vh 版が効く。 */
+  .gearpanel{max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch}
+  .gearpanel{max-height:calc(100dvh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px)}
+  /* 最後の項目がスクロール端でぴったり切れて見えないよう、少し余白を足す */
+  .gearpanel > :last-child{margin-bottom:4px}
 
   /* ---- 運指編集シート ---- */
   .edit-sheet .edit{background:transparent; border:none; padding:0}
@@ -554,7 +588,7 @@
   .seek .head{box-shadow:0 0 10px rgba(231,178,75,.7), 0 1px 5px rgba(0,0,0,.5)}
   .seek .fill{background:linear-gradient(90deg,#8a6e30,#e7b24b)}
 
-  /* ======== 冒頭4カウント ======== */
+  /* ======== 冒頭カウント（1小節ぶん） ======== */
   .countin{
     position:fixed; inset:0; z-index:80; display:none;
     flex-direction:column; align-items:center; justify-content:center;
@@ -630,6 +664,19 @@
   .dkmodal .field2{margin-bottom:0}
   .dkmodal .sub{margin:7px 0 0}
 
+  /* ======== チューナー：締める／緩める ======== */
+  /* 3つの文言を重ねて置き、#tunDir のクラスで1つだけ表示する */
+  .tun-dir{
+    display:flex; justify-content:center; align-items:center; min-height:26px;
+    margin-top:9px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  }
+  .tun-dir span{display:none; padding:4px 12px; border-radius:8px; border:1px solid transparent}
+  .tun-dir.low  .d-low {display:inline-block; color:var(--alt);    border-color:var(--alt);    background:rgba(217,164,65,.12)}
+  .tun-dir.high .d-high{display:inline-block; color:var(--accent); border-color:var(--accent); background:rgba(217,164,65,.12)}
+  .tun-dir.ok   .d-ok  {display:inline-block; color:var(--good);   border-color:var(--good);   background:rgba(90,190,120,.14)}
+  /* 選んだ弦から半音以上ずれている＝別の弦／オクターブ違いの疑い。締める指示は出さない */
+  .tun-dir.far  .d-far {display:inline-block; color:var(--danger); border-color:var(--danger); background:rgba(217,105,74,.16)}
+
   /* ======== チューナー：インプットボリュームゲージ ======== */
   .tun-in{margin-top:10px}
   .tun-in-t{
@@ -641,14 +688,30 @@
   .tun-in-t b.ok{color:var(--good)}
   .tun-in-t b.hot{color:var(--danger)}
   .tun-in-bar{
-    position:relative; height:10px; background:var(--panel2);
+    position:relative; height:14px; background:var(--panel2);
     border:1px solid var(--line); border-radius:6px; overflow:hidden;
   }
-  /* 推奨インプットレベル帯（-30dB〜-9dB） */
-  .tun-in-bar .rec{position:absolute; top:0; bottom:0; left:50%; width:35%; background:var(--good); opacity:.22}
-  .tun-in-bar .lv{position:absolute; top:0; bottom:0; left:0; width:0; background:var(--alt); transition:width .06s linear}
-  .tun-in-bar .lv.ok{background:var(--good)}
-  .tun-in-bar .lv.hot{background:var(--danger)}
+  /* -60dB〜0dB を全幅に割り当て。-30dB=50% / -9dB=85% が推奨区間の両端。
+     下の .zones（暗い下地）と .lv（点灯部）は同じ配色なので、
+     「どこまで伸ばせばいいか」がバーを見ただけで分かる。 */
+  .tun-in-bar .zones, .tun-in-bar .lv{
+    position:absolute; top:0; bottom:0; left:0; right:0;
+    background:linear-gradient(90deg,
+      #3d4450 0%, #4a5566 46%,
+      var(--good) 52%, var(--good) 80%,
+      var(--alt) 88%, var(--danger) 100%);
+  }
+  .tun-in-bar .zones{opacity:.20}
+  .tun-in-bar .lv{clip-path:inset(0 100% 0 0); transition:clip-path .06s linear}
+  /* 推奨区間の区切り線（-30dB / -9dB） */
+  .tun-in-bar .tick{position:absolute; top:0; bottom:0; width:1px; background:var(--ink); opacity:.55}
+  .tun-in-bar .tick.lo{left:50%}
+  .tun-in-bar .tick.hi{left:85%}
+  /* 目盛りの文字。区切り線と同じ位置で区切る */
+  .tun-in-scale{display:flex; font-size:9px; color:var(--faint); margin-top:3px; line-height:1.4}
+  .tun-in-scale .s-lo{width:50%; text-align:left}
+  .tun-in-scale .s-ok{width:35%; text-align:center; color:var(--good)}
+  .tun-in-scale .s-hi{width:15%; text-align:right}
   .tun-in-sub{font-size:10px; color:var(--faint); margin-top:4px; line-height:1.5}
 
   /* ======== 入口の説明ブロック（/{言語}/{楽器}/index.php の説明ページ部分） ======== */

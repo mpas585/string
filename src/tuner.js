@@ -12,12 +12,23 @@
   ※ modes は Batch5 後半で作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST } from './state.js';
-import { OPEN, STRNAME, midiName, fingerHint, tt } from './util.js';
+import { OPEN, STRNAME, midiName, fingerHint, strFingerText, tt } from './util.js';
 import { FB, yOf, optionsFor, pluckString } from './fingerboard.js';
+import { chimeOK } from './audio/synth.js';
 import { toast } from './dom.js';
 import { render, micUnavailableReason, setTunerHint, syncSheet, syncMicUI } from './modes.js';
 
-export const TUN={on:false, ctx:null, stream:null, analyser:null, buf:null, raf:0, last:0, hist:[]};
+export const TUN={on:false, ctx:null, stream:null, analyser:null, buf:null, raf:0, last:0, hist:[],
+                  out:null, wasOK:false, lastChime:0};
+/* 合図の音を出す。マイク用 AudioContext をそのまま使う（出力先は付いていないので繋ぐ） */
+export function tunerBus(){
+  if(!TUN.ctx) return null;
+  if(!TUN.out){
+    TUN.out=TUN.ctx.createGain(); TUN.out.gain.value=1;
+    TUN.out.connect(TUN.ctx.destination);
+  }
+  return TUN.out;
+}
 export function detectPitch(buf, sr){
   let rms=0;
   for(let i=0;i<buf.length;i++) rms += buf[i]*buf[i];
@@ -72,6 +83,7 @@ export async function startTuner(){
     TUN.on=true; TUN.ctx=ctx; TUN.stream=stream; TUN.analyser=an;
     TUN.buf=new Float32Array(an.fftSize);
     TUN.hist=[]; TUN.last=0;
+    TUN.out=null; TUN.wasOK=false; TUN.lastChime=0;
     setTunerHint(null);
     syncMicUI(); syncSheet();
     if(ST.mode==='tuner') render();
@@ -90,8 +102,11 @@ export function stopTuner(){
   if(TUN.stream){ TUN.stream.getTracks().forEach(t=>{ try{t.stop();}catch(e){} }); }
   if(TUN.ctx){ try{ TUN.ctx.close(); }catch(e){} }
   TUN.ctx=null; TUN.stream=null; TUN.analyser=null; TUN.buf=null;
+  TUN.out=null; TUN.wasOK=false; TUN.lastChime=0;
   ST.tunerMidi=null; ST.tunerCents=0;
+  ST.tunerString=null; syncTunerString();     /* 次に開いた時は自動判定から始める */
   updateInputLevel(0, 0);
+  setTunerDir(null);
   syncMicUI(); syncSheet();
   if(ST.mode==='tuner'){ paintTunerDots(null, 0); render(); }
 }
@@ -119,9 +134,18 @@ export function paintTunerDots(midi, cents){
     lbl.setAttribute('opacity','1');
   }
 }
+/* ===== 締める／緩める の案内 =====
+   state: null（検出なし）／'low'（音が低い＝弦を締める）／'high'（音が高い＝緩める）／'ok'
+   文言は HTML 側に3つとも書いてあり、CSS でどれを見せるかを切り替える（JS に文言を持たない）。 */
+export function setTunerDir(state){
+  const el=document.getElementById('tunDir');
+  if(!el) return;
+  el.className='tun-dir' + (state ? ' '+state : '');
+}
 /* ===== インプットボリュームゲージ =====
    RMS を dB に直して -60dB〜0dB をバー全幅に割り当てる。
-   推奨インプットレベルは -30dB〜-9dB（CSS の .tun-in-bar .rec ＝ left:50% / width:35% と一致）。 */
+   推奨インプットレベルは -30dB〜-9dB。バーは全幅のグラデーションを clip-path で
+   左から見せる方式なので、同じ色＝常に同じレベルを指す（CSS の目盛りと位置が一致する）。 */
 export const IN_MIN_DB=-60, IN_REC_LO=-30, IN_REC_HI=-9;
 export function inputPct(db){
   return Math.max(0, Math.min(100, (db - IN_MIN_DB) / (0 - IN_MIN_DB) * 100));
@@ -131,15 +155,14 @@ export function updateInputLevel(rms, peak){
   const msg=document.getElementById('tunInMsg');
   if(!bar || !msg) return;
   if(!TUN.on){
-    bar.style.width='0%'; bar.className='lv';
+    bar.style.clipPath='inset(0 100% 0 0)';
     msg.textContent='–'; msg.className='';
     return;
   }
   const db=20*Math.log10(Math.max(rms, 1e-6));
   const hot=(peak>=0.98) || (db>IN_REC_HI);
   const ok =!hot && (db>=IN_REC_LO);
-  bar.style.width=inputPct(db).toFixed(1)+'%';
-  bar.className='lv' + (hot ? ' hot' : (ok ? ' ok' : ''));
+  bar.style.clipPath='inset(0 '+(100-inputPct(db)).toFixed(1)+'% 0 0)';
   msg.textContent = hot ? tt('msg.lvl_too_loud')
                   : ok  ? 'OK'
                   : (db < IN_MIN_DB+8) ? tt('msg.lvl_too_quiet') : tt('msg.lvl_louder');
@@ -168,14 +191,16 @@ export function updateTunerUI(f){
   const cEl=document.getElementById('tunCent');
   const hEl=document.getElementById('tunHz');
   const ndl=document.getElementById('tunNeedle');
-  const strs=document.querySelectorAll('.tun-str span');
+  const strs=document.querySelectorAll('.tun-str [data-str]');
 
   if(f<=0){
     nEl.textContent='–'; nEl.classList.remove('ok');
     cEl.textContent='– cent'; hEl.textContent='– Hz';
     ndl.style.left='50%'; ndl.classList.remove('ok');
-    strs.forEach(s=>s.classList.remove('on'));
+    strs.forEach(s=>s.classList.remove('hit'));
     TUN.hist=[];
+    setTunerDir(null);
+    TUN.wasOK=false;
     if(ST.mode==='tuner' && ST.tunerMidi!=null){
       ST.tunerMidi=null; ST.tunerCents=0;
       paintTunerDots(null, 0);
@@ -189,11 +214,17 @@ export function updateTunerUI(f){
   const fm=sorted[Math.floor(sorted.length/2)];
 
   const midiF=69 + 12*Math.log2(fm/440);
-  const near=Math.round(midiF);
-  const cents=Math.round((midiF-near)*100);
-  const inTune=Math.abs(cents)<=6;
+  const det=Math.round(midiF);                 /* 実際に聞こえている音（指板・下部表示はこれ） */
+  /* 弦を選んでいればその開放弦が基準。選んでいなければ従来どおり一番近い音が基準。 */
+  const lock=(ST.tunerString!=null && OPEN[ST.tunerString]!=null) ? ST.tunerString : null;
+  const ref=(lock!=null) ? OPEN[lock] : det;
+  const cents=Math.round((midiF-ref)*100);
+  /* 半音以上ずれている＝別の弦かオクターブ違いを拾っている疑い。
+     ここで「締める」を出すと、その通りに巻いて弦を切ることがあるので出さない。 */
+  const far=(lock!=null) && Math.abs(cents)>100;
+  const inTune=!far && Math.abs(cents)<=6;
 
-  nEl.textContent=midiName(near);
+  nEl.textContent=midiName(far ? det : ref);
   nEl.classList.toggle('ok', inTune);
   cEl.textContent=(cents>0?'+':'')+cents+' cent';
   hEl.textContent=fm.toFixed(1)+' Hz';
@@ -201,24 +232,52 @@ export function updateTunerUI(f){
   ndl.style.left=pos+'%';
   ndl.classList.toggle('ok', inTune);
 
-  /* 開放弦の近さ */
+  /* 締める／緩める。低い＝張りが足りない＝締める、高い＝緩める */
+  setTunerDir(far ? 'far' : (inTune ? 'ok' : (cents<0 ? 'low' : 'high')));
+
+  /* 合ったら1回だけ「ピコーン」。読みが落ち着いてから鳴らし、連打はしない */
+  const nowMs=performance.now();
+  if(inTune && !TUN.wasOK && TUN.hist.length>=3 && nowMs-TUN.lastChime>1200){
+    const bus=tunerBus();
+    if(bus){ try{ chimeOK(TUN.ctx, bus, TUN.ctx.currentTime+0.01); }catch(e){} }
+    TUN.lastChime=nowMs;
+  }
+  TUN.wasOK=inTune;
+
+  /* 弦チップ：.on＝選択中（手動）、.hit＝いま鳴っている音に近い開放弦 */
   let bi=0, bd=1e9;
   OPEN.forEach((m,i)=>{ const d=Math.abs(midiF-m); if(d<bd){ bd=d; bi=i; } });
-  strs.forEach((s,i)=> s.classList.toggle('on', i===bi && bd<1.5));
+  strs.forEach((s,i)=>{
+    s.classList.toggle('on', lock===i);
+    s.classList.toggle('hit', lock===null && i===bi && bd<1.5);
+  });
 
   /* チューナーモード：指板に検出音の位置を描く */
   if(ST.mode==='tuner'){
-    if(ST.tunerMidi!==near){
-      const o=optionsFor(near);
+    if(ST.tunerMidi!==det){
+      const o=optionsFor(det);
       if(o.length) pluckString(o[0].str, o[0].off, 0.8);
     }
-    ST.tunerMidi=near; ST.tunerCents=cents;
-    paintTunerDots(near, cents);
-    const opts=optionsFor(near);
+    ST.tunerMidi=det; ST.tunerCents=Math.round((midiF-det)*100);
+    paintTunerDots(det, ST.tunerCents);
+    const opts=optionsFor(det);
     const where = opts.length
-      ? opts.map(o=> tt('msg.str_finger', STRNAME[o.str], o.finger)).join(' / ')
+      ? opts.map(o=> strFingerText(o.str, o.off, o.finger)).join(' / ')
       : tt('msg.out_of_range');
     document.getElementById('nowline').innerHTML =
-      `<b>${midiName(near)}</b> ${(cents>0?'+':'')+cents}¢ · ${where}`;
+      `<b>${midiName(det)}</b> ${(ST.tunerCents>0?'+':'')+ST.tunerCents}¢ · ${where}`;
   }
+}
+
+/* 弦チップのタップ：選択／解除（もう一度押すと自動判定に戻る） */
+export function pickTunerString(i){
+  ST.tunerString = (ST.tunerString===i) ? null : i;
+  syncTunerString();
+  TUN.wasOK=false;                    /* 基準が変わるので「合った」判定はやり直し */
+}
+export function syncTunerString(){
+  document.querySelectorAll('.tun-str [data-str]').forEach((s,i)=>{
+    s.classList.toggle('on', ST.tunerString===i);
+    if(ST.tunerString!=null) s.classList.remove('hit');
+  });
 }
