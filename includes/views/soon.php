@@ -20,7 +20,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <div id="app">
 <div class="picker" style="top:0">
   <div class="pk-logo"><?= h($INST['emoji']) ?></div>
-  <div class="pk-title"><?= h($INST['title_en']) ?></div>
+  <div class="pk-title"><?= h(APP_NAME) ?></div>
   <div class="pk-sub"><?= h(t('soon.title', $INST_NAME)) ?></div>
   <div class="drawer-note" style="max-width:400px; text-align:center"><?= h(t('soon.body')) ?></div>
   <a class="pk-card" href="<?= h($DEF_URL) ?>" style="text-decoration:none; margin-top:14px">

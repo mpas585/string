@@ -31,7 +31,7 @@ return [
     'viola'  => '中提琴',
   ],
 
-  'page_title' => '%s练习应用｜指板按弦位置・指法・调音器',
+  'page_title' => '%s练习应用｜指板按弦位置・指法・调音器｜GEN strings',
   'app_sub'    => '%s练习应用',
 
   'ui' => [

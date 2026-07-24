@@ -145,7 +145,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <!-- 入口：モード選択 ＋ 説明 -->
 <div id="picker" class="picker">
   <div class="pk-logo"><?= h($INST['emoji']) ?></div>
-  <h1 class="pk-title"><?= h($INST['title_en']) ?></h1>
+  <h1 class="pk-title"><?= h(APP_NAME) ?></h1>
   <div class="pk-sub"><?php e('app_sub', $INST_NAME) ?></div>
   <button class="pk-card" data-mode="scale">
     <span class="pk-ic">🎵</span><span class="pk-b"><?php e('ui.mode_scale') ?><small><?php e('ui.mode_scale_s') ?></small></span>

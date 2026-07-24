@@ -9,7 +9,7 @@ import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
 import { applyZoom, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
 import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, setPref } from './modes.js';
-import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, releaseWake, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
+import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
@@ -110,11 +110,13 @@ on('seek','pointerdown', e=>{
   try{ seekEl.setPointerCapture(e.pointerId); }catch(err){}
   const b=beatFromSeekEvent(e);
   setSeekHead(b); flashMeasure(b);          /* 移動先の小節を一瞬だけ大きく出す */
+  seekPreview(b);                           /* ストリップ・指板もその場で追従させる */
 });
 on('seek','pointermove', e=>{
   if(!seeking) return;
   const b=beatFromSeekEvent(e);
   setSeekHead(b); flashMeasure(b);
+  seekPreview(b);
 });
 function endSeek(e){
   if(!seeking) return;

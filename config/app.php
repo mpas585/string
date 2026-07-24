@@ -18,6 +18,9 @@
 if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 return [
+  /* アプリの正式名称。ブランド表記なので言語共通・翻訳しない */
+  'name'               => 'GEN strings',
+
   'langs'              => ['ja', 'en', 'es', 'zh'],
   'instruments'        => ['cello', 'violin', 'viola'],
   /* 一覧に無い値が来たときの既定。ルートの / からの転送先もこの組み合わせ */

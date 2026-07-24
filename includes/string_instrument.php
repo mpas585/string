@@ -25,6 +25,7 @@ if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) { http_r
 
 /* 対応言語・対応楽器は config/app.php が唯一の定義。増やすときはそこだけ直す */
 $APP_CFG = require APP_ROOT . '/config/app.php';
+define('APP_NAME',               $APP_CFG['name']);
 define('APP_LANGS',              $APP_CFG['langs']);
 define('APP_INSTRUMENTS',        $APP_CFG['instruments']);
 define('APP_DEFAULT_LANG',       $APP_CFG['default_lang']);

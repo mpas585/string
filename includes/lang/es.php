@@ -34,7 +34,7 @@ return [
     'viola'  => 'viola',
   ],
 
-  'page_title' => 'App de práctica de %s | diapasón, digitación y afinador',
+  'page_title' => 'App de práctica de %s | diapasón, digitación y afinador | GEN strings',
   'app_sub'    => 'App de práctica de %s',
 
   'ui' => [

@@ -108,11 +108,11 @@ export function drawBoardStatic(){
     ` L ${FB.vbW},${FB.vbH} L 0,${FB.vbH} Z`;
   /* 縁取りはしない。実物の輪郭ではなく上端だけの造形なので、
      線を引くと「ここが胴の縁」と読めてしまって誤解のもとになる。塗りだけで足りる */
-  parts.push(`<path d="${bodyPath}" fill="var(--wood)" opacity="0.26"/>`);
+  parts.push(`<path d="${bodyPath}" fill="var(--wood)" opacity="0.48"/>`);
 
   parts.push(`<rect x="${bx}" y="${FB.topY-14}" width="${bw}" height="${FB.botY-FB.topY+26}" rx="14" fill="var(--board)" stroke="var(--board-edge)"/>`);
   /* 板のうちボディに乗っている区間をわずかに温色へ。指板が胴の上を通っている感じを出す */
-  parts.push(`<rect x="${bx}" y="${yBody.toFixed(1)}" width="${bw}" height="${(FB.botY-yBody+12).toFixed(1)}" fill="var(--wood)" opacity="0.10"/>`);
+  parts.push(`<rect x="${bx}" y="${yBody.toFixed(1)}" width="${bw}" height="${(FB.botY-yBody+12).toFixed(1)}" fill="var(--wood)" opacity="0.18"/>`);
 
   const yLow=yOf(7), yMid=yOf(13);
   parts.push(`<rect x="${bx}" y="${FB.topY}" width="${bw}" height="${(yLow-FB.topY).toFixed(1)}" fill="var(--good)" opacity="0.045"/>`);

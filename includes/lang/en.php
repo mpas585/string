@@ -31,7 +31,7 @@ return [
     'viola'  => 'Viola',
   ],
 
-  'page_title' => '%s practice app | fingerboard positions, fingering and tuner',
+  'page_title' => '%s practice app | fingerboard positions, fingering and tuner | GEN strings',
   'app_sub'    => '%s practice app',
 
   'ui' => [

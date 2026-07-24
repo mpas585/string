@@ -131,6 +131,27 @@ export function beatFromSeekEvent(e){
   }
   return beat;
 }
+/* ドラッグ中のプレビュー。
+   seekTo() は render()→updateTransport() を通るのでシークヘッドが音符の位置へ吸着してしまい、
+   指の位置とつまみがずれる。ここは transportTick と同じ「軽量更新」だけを行い、
+   ストリップ（と譜面ビュー）を指の位置に追従させる。確定は指を離した時の seekTo()。 */
+export function seekPreview(beat){
+  if(!ST.events.length || ST.playing) return;
+  let idx=0, best=Infinity;
+  ST.events.forEach((ev,i)=>{
+    const d=Math.abs(ev.onset - beat);
+    if(d<best){ best=d; idx=i; }
+  });
+  if(idx===ST.selected) return;                /* 同じ音符の上では何もしない */
+  ST.selected=idx; ST.current=null;
+  const ev=ST.events[idx];
+  paintNotes(ev);                              /* 指板の点だけ塗り替える（SVGは作り直さない） */
+  renderNow(ev);
+  updateStripActive();                         /* チップの強調だけ差し替える */
+  scrollStripToActive();
+  scrollBoardToActive();
+  if(ST.view==='staff'){ updateStaffActive(); scrollStaffToActive(); }
+}
 export function seekTo(beat){
   if(!ST.events.length) return;
   let idx=0, best=Infinity;

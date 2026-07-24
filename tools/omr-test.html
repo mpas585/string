@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>五線検出テスト — string</title>
+<title>五線・符頭・音高テスト — GEN strings</title>
 <!--
-  tools/omr-test.html — 五線検出（src/omr/staff.js）の動作確認用。
+  tools/omr-test.html — OMR各段の動作確認用。
+    src/omr/staff.js    五線検出
+    src/omr/notehead.js 符頭検出
+    src/omr/pitch.js    音部記号・調号・音高
   本番UIには一切関与しない。しきい値を詰めるための実験台。
 
   ※ ESモジュールを使うので file:// では動かない。http(s) で開くこと。
@@ -40,7 +43,7 @@
 </head>
 <body>
 
-<h1>五線検出テスト</h1>
+<h1>五線・符頭・音高テスト</h1>
 
 <div class="bar">
   <label class="btn">PDFを選ぶ<input id="file" type="file" accept="application/pdf"></label>
@@ -56,6 +59,19 @@
   <label>ノド幅比 <input id="minGapRatio" type="number" value="0.02" min="0.005" max="0.2" step="0.005"></label>
   <label>間隔許容 <input id="spacingTol" type="number" value="0.25" min="0.05" max="0.6" step="0.05"></label>
   <label>傾き探索± <input id="skewRange" type="number" value="2.0" min="0" max="5" step="0.5"></label>
+  <label>符頭 横 <input id="headMinW" type="number" value="0.80" min="0.3" max="1.5" step="0.05"></label>
+  <label>符頭 縦 <input id="headMinH" type="number" value="0.58" min="0.3" max="1.2" step="0.02"></label>
+  <label><input id="doHeads" type="checkbox" checked> 符頭も検出</label>
+  <label><input id="doPitch" type="checkbox" checked> 音高も判定</label>
+  <label>音部記号
+    <select id="clefForce">
+      <option value="">自動</option>
+      <option value="bass">ヘ音に固定</option>
+      <option value="tenor">テノールに固定</option>
+      <option value="alto">アルトに固定</option>
+      <option value="treble">ト音に固定</option>
+    </select>
+  </label>
 </div>
 
 <pre id="log">PDFを選んでください。</pre>
@@ -76,8 +92,13 @@
 import { openPdf, renderPageForOmr, setPdfPage } from '../src/pdf.js';
 import * as PdfMod from '../src/pdf.js';
 import { detectStaves, drawOverlay } from '../src/omr/staff.js';
+import { detectNoteheads, drawNoteheadOverlay } from '../src/omr/notehead.js';
+import { assignPitches } from '../src/omr/pitch.js';
 
 const $ = (id)=> document.getElementById(id);
+const NN = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const nameOf = (m)=> NN[((m%12)+12)%12] + (Math.floor(m/12)-1);
+const nameRange = (pt)=> `${nameOf(pt.summary.range.min)}–${nameOf(pt.summary.range.max)}`;
 const log = (s)=> { $('log').textContent = s; };
 let lastResult = null;
 
@@ -122,6 +143,27 @@ $('run').addEventListener('click', async ()=>{
     const t2 = performance.now();
     lastResult = r;
 
+    /* 符頭。五線が取れていないと帯が決まらないので、段が0なら飛ばす */
+    let nh = null, t3 = t2;
+    if($('doHeads').checked && r.staves.length){
+      log('符頭を検出中…');
+      nh = detectNoteheads(page.imageData, r, {
+        headMinW : num('headMinW'),
+        headMinH : num('headMinH'),
+      });
+      t3 = performance.now();
+    }
+
+    /* 音高。符頭が無いと何も決まらない */
+    let pt = null, t4 = t3;
+    if(nh && $('doPitch').checked){
+      log('音部記号と調号を判定中…');
+      pt = assignPitches(page.imageData, r, nh, {
+        clefOverride: $('clefForce').value || null,
+      });
+      t4 = performance.now();
+    }
+
     /* 画面幅に合わせて縮小表示し、その上に検出結果を重ねる */
     const view = $('view');
     const shown = Math.min(1000, document.body.clientWidth - 30);
@@ -133,6 +175,7 @@ $('run').addEventListener('click', async ()=>{
     ctx.drawImage(bmp, 0, 0, view.width, view.height);
     bmp.close();
     drawOverlay(ctx, r, scale);
+    if(nh) drawNoteheadOverlay(ctx, nh, r, scale);
 
     const sp = r.summary.spacing;
     log([
@@ -141,13 +184,32 @@ $('run').addEventListener('click', async ()=>{
       `列  ${r.columns.length}  [${r.columns.map(c=>`${c.x0}–${c.x1} (${c.skewDeg.toFixed(3)}°)`).join('  ')}]`,
       `五線  ${r.staves.length} 段` + (sp ? `   線間隔 d = ${sp.min.toFixed(1)} / ${sp.med.toFixed(1)} / ${sp.max.toFixed(1)} px（最小/中央/最大）` : ''),
       ``,
-      `描画 ${(t1-t0).toFixed(0)}ms   検出 ${(t2-t1).toFixed(0)}ms`,
+      nh ? `符頭  ${nh.summary.total} 個（黒 ${nh.summary.filled} / 白 ${nh.summary.hollow}）` : `符頭  —`,
+      pt ? `音高  ${pt.heads.length} 個   音域 ${pt.summary.range ? nameRange(pt) : '—'}` +
+           `   記号の一部として捨てた符頭 ${pt.summary.dropped} 個` +
+           (pt.summary.lowConfidence.length ? `   ⚠ 記号が怪しい段: ${pt.summary.lowConfidence.join(',')}` : '') : '',
       ``,
-      r.staves.map((s,i)=> `  [${i}] col=${s.col}  x ${s.x0}–${s.x1}  y ${s.lines[0].toFixed(0)}–${s.lines[4].toFixed(0)}  d=${s.d.toFixed(2)}`).join('\n'),
+      `描画 ${(t1-t0).toFixed(0)}ms   五線 ${(t2-t1).toFixed(0)}ms` + (nh ? `   符頭 ${(t3-t2).toFixed(0)}ms` : '') + (pt ? `   音高 ${(t4-t3).toFixed(0)}ms` : ''),
+      ``,
+      r.staves.map((s,i)=> {
+        const head = `  [${i}] col=${s.col}  x ${s.x0}–${s.x1}  y ${s.lines[0].toFixed(0)}–${s.lines[4].toFixed(0)}  d=${s.d.toFixed(2)}`;
+        if(!nh) return head;
+        const list = nh.byStaff[i] || [];
+        if(!pt){
+          /* 段数(step)の並び。第1線=0、上へ1ずつ。白玉は () で囲む */
+          const seq = list.map(n=> n.filled ? String(n.step) : `(${n.step})`).join(' ');
+          return `${head}  符頭${String(list.length).padStart(3)}\n       ${seq}`;
+        }
+        const st = pt.staves[i];
+        const mine = pt.heads.filter(n=> n.staff===i);
+        const key = st.key.count ? `${st.key.count}${st.key.sign>0?'♯':'♭'}` : '調号なし';
+        const seq = mine.map(n=> n.filled ? n.name : `(${n.name})`).join(' ');
+        return `${head}  ${st.clef}${st.forced?'(固定)':`(高さ${st.detected.height}d 余裕${st.detected.margin})`}  ${key}  符頭${String(mine.length).padStart(3)}\n       ${seq}`;
+      }).join('\n'),
     ].join('\n'));
 
     /* コンソールからも触れるようにしておく（しきい値を詰めるとき用） */
-    window.omr = { page, result: r };
+    window.omr = { page, result: r, heads: nh, pitch: pt };
   }catch(err){
     log('失敗: ' + err.message);
     console.error(err);
