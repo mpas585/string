@@ -821,3 +821,26 @@
   .pk-faq dt{font-size:12px; font-weight:700; color:var(--ink); margin-top:12px}
   .pk-faq dt::before{content:"Q. "; color:var(--accent)}
   .pk-faq dd{margin:4px 0 0; font-size:11px; color:var(--muted); line-height:1.75}
+
+  /* ======== 小節フラッシュ（シークバーで小節を移動した時に一瞬だけ出す） ======== */
+  /* .show を付けた瞬間はほぼ即時に表示し、外した時だけゆっくり消える＝フェードアウト。
+     ドラッグ中は連続で呼ばれるので、出しっぱなしのまま数字だけが変わる。 */
+  .mflash{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:50;
+    background:rgba(20,17,12,.86); border:1px solid var(--accent-dim); border-radius:14px;
+    padding:14px 26px; box-shadow:0 10px 28px rgba(0,0,0,.55);
+    font-family:var(--mono); font-size:26px; font-weight:800; letter-spacing:.04em;
+    color:var(--accent); white-space:nowrap;
+    opacity:0; pointer-events:none; transition:opacity .45s ease;
+  }
+  .mflash.show{opacity:1; transition:opacity .06s ease}
+
+  /* ======== 曲を練習：入口から入った時の案内モーダル ======== */
+  /* dkmodal は本来ドック用に左下固定。入口からの案内は画面中央に置く（#mInst と同じ扱い） */
+  #mScoreStart{
+    left:50%; right:auto; top:50%; bottom:auto;
+    transform:translate(-50%,-50%);
+    width:min(320px, calc(100vw - 48px));
+  }
+  .startrow{display:flex; flex-direction:column; gap:8px}
+  .startrow button{width:100%; justify-content:center; min-height:52px; font-size:14px; border-radius:11px}

@@ -292,6 +292,19 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <?php endforeach; ?>
 </div>
 
+<!-- 曲を練習：入口から入った時の案内（押すとドロワーが横から出る） -->
+<div id="mScoreStart" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('ui.m_score_start') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="startrow">
+    <button data-sub="songs"><?php e('ui.sub_songs') ?></button>
+    <button data-sub="load"><?php e('ui.sub_load') ?></button>
+  </div>
+  <div class="sub"><?php e('ui.score_start_note') ?></div>
+</div>
+
 <!-- ハンバーガードロワー（操作パネル） -->
 <div id="scrim" class="scrim"></div>
 <aside id="drawer" class="drawer">
@@ -514,6 +527,9 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <span id="countnum"></span>
   <div id="legend" class="legend"></div>
 </div>
+
+<!-- 小節フラッシュ（シークバーで小節を移動した時に一瞬だけ出す） -->
+<div id="mflash" class="mflash" aria-hidden="true"></div>
 
 <div id="toast" class="toast"></div>
 

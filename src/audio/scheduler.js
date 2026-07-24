@@ -71,6 +71,16 @@ export function setSeekHead(beat){
   document.getElementById('seekHead').style.left=pct+'%';
   document.getElementById('tmCur').textContent=measureOfBeat(beat);
 }
+/* シークバーで小節を移動した時に、移動先の小節を一瞬だけ大きく出す。
+   ドラッグ中は連続で呼ばれる＝出しっぱなしのまま数字が変わり、手を離すと消える。 */
+export function flashMeasure(beat){
+  const el=document.getElementById('mflash');
+  if(!el || !ST.measures.length) return;
+  el.textContent=tt('msg.measure_flash', measureOfBeat(beat));
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t=setTimeout(()=> el.classList.remove('show'), 700);
+}
 /* 再生中の位置更新 */
 export function transportTick(){
   if(!ST.playing || !ST.ctx || !ST.range){ ST.seekRaf=0; return; }

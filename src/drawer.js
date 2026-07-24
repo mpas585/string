@@ -212,3 +212,5 @@ export function closeDockModal(){
   document.querySelectorAll('.dkmodal').forEach(m=> m.classList.remove('open'));
   document.getElementById('dockScrim').classList.remove('open');
 }
+/* 曲を練習：入口（モード選択）から入った時に出す案内モーダル（曲を選ぶ / 譜面を読み込む） */
+export function openScoreStart(){ openDockModal('mScoreStart'); }

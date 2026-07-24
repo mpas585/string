@@ -9,7 +9,7 @@ import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
 import { applyZoom, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
 import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, setPref } from './modes.js';
-import { acquireWake, beatFromSeekEvent, currentBeat, isRotated, releaseWake, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
+import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, releaseWake, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
@@ -108,11 +108,13 @@ on('seek','pointerdown', e=>{
   seeking=true;
   const seekEl=document.getElementById('seek');
   try{ seekEl.setPointerCapture(e.pointerId); }catch(err){}
-  setSeekHead(beatFromSeekEvent(e));
+  const b=beatFromSeekEvent(e);
+  setSeekHead(b); flashMeasure(b);          /* 移動先の小節を一瞬だけ大きく出す */
 });
 on('seek','pointermove', e=>{
   if(!seeking) return;
-  setSeekHead(beatFromSeekEvent(e));
+  const b=beatFromSeekEvent(e);
+  setSeekHead(b); flashMeasure(b);
 });
 function endSeek(e){
   if(!seeking) return;
@@ -285,6 +287,13 @@ function setScoreSub(sub){
 on('scoreSubSeg','click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   setScoreSub(b.dataset.sub);
+});
+/* 入口から「曲を練習する」に入った時の案内モーダル → 押した子タブでドロワーを横から出す */
+on('mScoreStart','click', e=>{
+  const b=e.target.closest('[data-sub]'); if(!b) return;
+  closeDockModal();
+  setScoreSub(b.dataset.sub);
+  openDrawer();
 });
 on('songBtns','click', e=>{
   const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;

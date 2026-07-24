@@ -22,7 +22,7 @@ import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/sched
 import { paintTunerDots, startTuner, stopTuner, TUN } from './tuner.js';
 import { warmAudio } from './audio/context.js';
 import { toast } from './dom.js';
-import { closeDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, Store } from './drawer.js';
+import { closeDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, openScoreStart, Store } from './drawer.js';
 import { loadSample, renderTracks, midiFile, setMidiFile } from './songs.js';
 
 export function render(){
@@ -120,7 +120,9 @@ export function setMode(mode, keepDrawer){
     ST.enjoy=false;
     document.getElementById('enjoySw').classList.remove('on');
     loadSample(true);                       /* プリセット：G線上のアリア */
-    if(!keepDrawer) closeDrawer();
+    /* 入口（モード選択）から入った時は、曲の選び方を案内するモーダルを出す。
+       ドロワー内のタブ切替（keepDrawer）は、そのままドロワーに選択肢が出ているので不要。 */
+    if(!keepDrawer){ closeDrawer(); openScoreStart(); }
     toast(tt('msg.hint_swan'));
 
   } else if(mode==='tuner'){

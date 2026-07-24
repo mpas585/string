@@ -205,6 +205,19 @@
   <div id="loopInfo" class="sub">小節を指定して繰り返します（例：34〜40）</div>
 </div>
 
+<!-- 曲を練習：入口から入った時の案内（押すとドロワーが横から出る） -->
+<div id="mScoreStart" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt">🎼 曲を練習する</span>
+    <button class="iconbtn" data-dkclose aria-label="閉じる">✕</button>
+  </div>
+  <div class="startrow">
+    <button data-sub="songs">🎵 曲を選ぶ</button>
+    <button data-sub="load">📂 譜面を読み込む</button>
+  </div>
+  <div class="sub">曲を選ぶか、譜面ファイルを読み込みます</div>
+</div>
+
 <!-- ハンバーガードロワー（操作パネル） -->
 <div id="scrim" class="scrim"></div>
 <aside id="drawer" class="drawer">
@@ -426,6 +439,9 @@
   <span id="countnum"></span>
   <div id="legend" class="legend"></div>
 </div>
+
+<!-- 小節フラッシュ（シークバーで小節を移動した時に一瞬だけ出す） -->
+<div id="mflash" class="mflash" aria-hidden="true"></div>
 
 <div id="toast" class="toast"></div>
 
