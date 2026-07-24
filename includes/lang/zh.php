@@ -16,6 +16,7 @@ return [
     'mid'        => '中把位',
     'high'       => '高把位',
     'high_thumb' => '高把位(拇指)',
+    'body'       => '琴身接合',
   ],
   /* 指板のポジション標識のうち、言語で変わるもの（config の markers の '@xxx'） */
   'marker' => ['thumb' => '拇指'],
@@ -50,7 +51,10 @@ return [
     'landscape_note' => '五线谱在横屏下更易查看',
 
     'playback'       => '播放',
-    'countin'        => '开头一小节预备',
+    'countin'        => '开始预备拍',
+    'tun_ref_play'   => '🔊 播放基准音',
+    'tun_ref_stop'   => '⏹ 停止',
+    'tun_ref_oct'    => '高八度',
     'keepawake'      => '播放时不息屏',
 
     'zoom'           => '指板缩放',
@@ -90,6 +94,9 @@ return [
 
     'm_tempo'        => '⏱ 速度',
     'tempo_k'        => '快慢',
+    'tempo_dn'       => '放慢',
+    'tempo_up'       => '加快',
+    'tempo_reset'    => '⟲ 原速',
     'm_oct'          => 'Oct 八度',
     'oct_auto'       => '自动',
     'oct_orig'       => '原调',
@@ -99,6 +106,8 @@ return [
     'loop_sw'        => '循环播放',
     'loop_from'      => '起始小节',
     'loop_to'        => '结束小节',
+    'loop_dn'        => '后退一小节',
+    'loop_up'        => '前进一小节',
     'loop_info'      => '指定小节反复播放（例：34–40）',
 
     'seg_scale'      => '🎵 音阶',

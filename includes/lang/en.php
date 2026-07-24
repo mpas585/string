@@ -16,6 +16,7 @@ return [
     'mid'        => 'Mid',
     'high'       => 'High',
     'high_thumb' => 'High (thumb)',
+    'body'       => 'Body joint',
   ],
   /* 指板のポジション標識のうち、言語で変わるもの（config の markers の '@xxx'） */
   'marker' => ['thumb' => 'Thumb'],
@@ -50,7 +51,10 @@ return [
     'landscape_note' => 'The staff view is easier to read in landscape',
 
     'playback'       => 'Playback',
-    'countin'        => 'One-bar count-in',
+    'countin'        => 'Count-in',
+    'tun_ref_play'   => '🔊 Play reference',
+    'tun_ref_stop'   => '⏹ Stop',
+    'tun_ref_oct'    => '1 oct up',
     'keepawake'      => 'Keep screen awake while playing',
 
     'zoom'           => 'Fingerboard zoom',
@@ -90,6 +94,9 @@ return [
 
     'm_tempo'        => '⏱ Tempo',
     'tempo_k'        => 'Speed',
+    'tempo_dn'       => 'Slower',
+    'tempo_up'       => 'Faster',
+    'tempo_reset'    => '⟲ Original tempo',
     'm_oct'          => 'Oct Octave',
     'oct_auto'       => 'Auto',
     'oct_orig'       => 'Original',
@@ -99,6 +106,8 @@ return [
     'loop_sw'        => 'Loop playback',
     'loop_from'      => 'From bar',
     'loop_to'        => 'To bar',
+    'loop_dn'        => 'Back one bar',
+    'loop_up'        => 'Forward one bar',
     'loop_info'      => 'Repeats the bars you specify (e.g. 34–40)',
 
     'seg_scale'      => '🎵 Scales',

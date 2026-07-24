@@ -214,12 +214,19 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <span class="dk-tt"><?php e('ui.m_tempo') ?></span>
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
+  <div class="tempobig">
+    <button id="tempoDn" class="tstep" aria-label="<?php e('ui.tempo_dn') ?>">−</button>
+    <span class="numbox big"><input id="tempoNum" type="number" min="30" max="160" step="1" value="80" inputmode="numeric"><i>bpm</i></span>
+    <button id="tempoUp" class="tstep" aria-label="<?php e('ui.tempo_up') ?>">＋</button>
+  </div>
   <div class="field">
     <div class="k"><?php e('ui.tempo_k') ?></div>
     <div class="v tempo">
       <input id="tempo" type="range" min="30" max="160" value="80">
-      <span class="numbox"><input id="tempoNum" type="number" min="30" max="160" step="1" value="80" inputmode="numeric"><i>bpm</i></span>
     </div>
+  </div>
+  <div class="row controls">
+    <button id="tempoReset" class="ghost"><?php e('ui.tempo_reset') ?></button>
   </div>
 </div>
 
@@ -251,11 +258,19 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="field2">
       <div>
         <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px"><?php e('ui.loop_from') ?></div>
-        <input id="loopFrom" type="number" min="1" value="1">
+        <div class="stepper">
+          <button id="loopFromDn" class="sstep" aria-label="<?php e('ui.loop_dn') ?>">▼</button>
+          <input id="loopFrom" type="number" min="1" value="1">
+          <button id="loopFromUp" class="sstep" aria-label="<?php e('ui.loop_up') ?>">▲</button>
+        </div>
       </div>
       <div>
         <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px"><?php e('ui.loop_to') ?></div>
-        <input id="loopTo" type="number" min="1" value="4">
+        <div class="stepper">
+          <button id="loopToDn" class="sstep" aria-label="<?php e('ui.loop_dn') ?>">▼</button>
+          <input id="loopTo" type="number" min="1" value="4">
+          <button id="loopToUp" class="sstep" aria-label="<?php e('ui.loop_up') ?>">▲</button>
+        </div>
       </div>
     </div>
   </div>
@@ -436,6 +451,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
   <div class="tun-bar">
     <div class="mid"></div>
+    <div id="tunTrail" class="trl"></div>
     <div id="tunNeedle" class="ndl"></div>
   </div>
   <!-- 締める／緩める（3つとも書いておき、CSS で1つだけ見せる） -->
@@ -453,6 +469,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <?php $NSTR = count($OPEN_LABELS); foreach ($OPEN_LABELS as $i => $lbl): ?><button type="button" data-str="<?= $i ?>"><b><?php e('ui.tun_str_n', $NSTR - $i) ?></b><small><?= h($lbl) ?></small></button><?php endforeach; ?>
     </div>
     <span class="tsl"><?php e('ui.tun_thin') ?></span>
+  </div>
+  <!-- 参考の音程。マイクとは別の AudioContext なので、マイク未許可でも鳴らせる -->
+  <div class="tun-ref">
+    <button id="tunRef" type="button" class="tun-ref-btn">
+      <span class="r-play"><?php e('ui.tun_ref_play') ?></span>
+      <span class="r-stop"><?php e('ui.tun_ref_stop') ?></span>
+    </button>
+    <b id="tunRefNote">A4</b><small class="tun-ref-o"><?php e('ui.tun_ref_oct') ?></small>
   </div>
   <div id="tunStrNote" class="tun-str-note"><?php e('ui.tun_pick_str') ?></div>
   <!-- マイク入力レベル（緑の区間＝推奨） -->
@@ -487,7 +511,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 <!-- 冒頭カウント＝1小節ぶん（凡例はカウントダウンの下だけに出す＝カウントが終われば消える） -->
 <div id="countin" class="countin">
-  <span id="countnum">4</span>
+  <span id="countnum"></span>
   <div id="legend" class="legend"></div>
 </div>
 

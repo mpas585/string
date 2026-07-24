@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>五線検出テスト — string</title>
+<!--
+  tools/omr-test.html — 五線検出（src/omr/staff.js）の動作確認用。
+  本番UIには一切関与しない。しきい値を詰めるための実験台。
+
+  ※ ESモジュールを使うので file:// では動かない。http(s) で開くこと。
+     ローカルなら  python3 -m http.server 8000  → http://localhost:8000/tools/omr-test.html
+
+  src/pdf.js をそのまま読み込んで検証するため、pdf.js が触る要素
+  （#pdfcanvas / #pdfempty / #pdfpage / #pdfprev / #pdfnext / #toast）を
+  隠した状態で置いてある。スタブではなく本物の経路を通している。
+-->
+<style>
+  :root{ --bg:#14110c; --panel:#1e1a13; --line:#3a3229; --ink:#e8e0d2; --muted:#9a9086; --accent:#e7b24b; }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font:14px/1.6 system-ui,sans-serif; padding:14px}
+  h1{font-size:15px; margin:0 0 12px; color:var(--accent)}
+  .bar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px}
+  button,label.btn{background:var(--panel); color:var(--ink); border:1px solid var(--line);
+    border-radius:8px; padding:8px 12px; cursor:pointer; font-size:13px}
+  button:disabled{opacity:.4; cursor:default}
+  input[type=file]{display:none}
+  input[type=number]{width:70px; background:var(--panel); color:var(--ink);
+    border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-family:monospace}
+  .opts{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; font-size:12px; color:var(--muted)}
+  .opts label{display:flex; align-items:center; gap:5px}
+  pre{background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:10px; font-size:12px; overflow:auto; max-height:220px; margin:0 0 10px}
+  #view{max-width:100%; border:1px solid var(--line); border-radius:6px; background:#fff}
+  .hide{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
+  #toast{position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+    background:#000c; padding:8px 14px; border-radius:8px; opacity:0; transition:.2s}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<h1>五線検出テスト</h1>
+
+<div class="bar">
+  <label class="btn">PDFを選ぶ<input id="file" type="file" accept="application/pdf"></label>
+  <button id="prev" disabled>‹</button>
+  <span id="pg">– / –</span>
+  <button id="next" disabled>›</button>
+  <button id="run" disabled>検出する</button>
+</div>
+
+<div class="opts">
+  <label>dpi <input id="dpi" type="number" value="300" min="72" max="600" step="25"></label>
+  <label>線の長さ比 <input id="lineRatio" type="number" value="0.5" min="0.1" max="1" step="0.05"></label>
+  <label>ノド幅比 <input id="minGapRatio" type="number" value="0.02" min="0.005" max="0.2" step="0.005"></label>
+  <label>間隔許容 <input id="spacingTol" type="number" value="0.25" min="0.05" max="0.6" step="0.05"></label>
+  <label>傾き探索± <input id="skewRange" type="number" value="2.0" min="0" max="5" step="0.5"></label>
+</div>
+
+<pre id="log">PDFを選んでください。</pre>
+<canvas id="view"></canvas>
+
+<!-- src/pdf.js が参照する要素。本物のモジュールを通すために必要 -->
+<div class="hide">
+  <div id="pdfempty"></div>
+  <canvas id="pdfcanvas"></canvas>
+  <span id="pdfpage"></span>
+  <button id="pdfprev"></button>
+  <button id="pdfnext"></button>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" onerror="window.__noPdf=1"></script>
+<script type="module">
+import { openPdf, renderPageForOmr, setPdfPage } from '../src/pdf.js';
+import * as PdfMod from '../src/pdf.js';
+import { detectStaves, drawOverlay } from '../src/omr/staff.js';
+
+const $ = (id)=> document.getElementById(id);
+const log = (s)=> { $('log').textContent = s; };
+let lastResult = null;
+
+function num(id){ return parseFloat($(id).value); }
+
+function syncPager(){
+  const doc = PdfMod.pdfDoc;
+  const n = doc ? doc.numPages : 0;
+  $('pg').textContent = doc ? `${PdfMod.pdfPage} / ${n}` : '– / –';
+  $('prev').disabled = !doc || PdfMod.pdfPage <= 1;
+  $('next').disabled = !doc || PdfMod.pdfPage >= n;
+  $('run').disabled  = !doc;
+}
+
+$('file').addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  log('PDFを読み込み中…');
+  await openPdf(f);
+  syncPager();
+  log(`${PdfMod.pdfDoc.numPages} ページ。「検出する」を押してください。`);
+});
+
+$('prev').addEventListener('click', ()=>{ setPdfPage(PdfMod.pdfPage-1); syncPager(); });
+$('next').addEventListener('click', ()=>{ setPdfPage(PdfMod.pdfPage+1); syncPager(); });
+
+$('run').addEventListener('click', async ()=>{
+  $('run').disabled = true;
+  try{
+    const t0 = performance.now();
+    log('検出解像度で描画中…');
+    const page = await renderPageForOmr(PdfMod.pdfPage, { dpi: num('dpi') });
+    const t1 = performance.now();
+
+    log('五線を検出中…');
+    const r = detectStaves(page.imageData, {
+      lineRatio   : num('lineRatio'),
+      minGapRatio : num('minGapRatio'),
+      spacingTol  : num('spacingTol'),
+      skewRange   : num('skewRange'),
+    });
+    const t2 = performance.now();
+    lastResult = r;
+
+    /* 画面幅に合わせて縮小表示し、その上に検出結果を重ねる */
+    const view = $('view');
+    const shown = Math.min(1000, document.body.clientWidth - 30);
+    const scale = shown / r.w;
+    view.width  = Math.round(r.w * scale);
+    view.height = Math.round(r.h * scale);
+    const ctx = view.getContext('2d');
+    const bmp = await createImageBitmap(page.imageData);
+    ctx.drawImage(bmp, 0, 0, view.width, view.height);
+    bmp.close();
+    drawOverlay(ctx, r, scale);
+
+    const sp = r.summary.spacing;
+    log([
+      `ページ ${page.page}   ${r.w}×${r.h}px   実効 ${page.dpi.toFixed(0)}dpi`,
+      `二値化しきい値  ${r.threshold}`,
+      `列  ${r.columns.length}  [${r.columns.map(c=>`${c.x0}–${c.x1} (${c.skewDeg.toFixed(3)}°)`).join('  ')}]`,
+      `五線  ${r.staves.length} 段` + (sp ? `   線間隔 d = ${sp.min.toFixed(1)} / ${sp.med.toFixed(1)} / ${sp.max.toFixed(1)} px（最小/中央/最大）` : ''),
+      ``,
+      `描画 ${(t1-t0).toFixed(0)}ms   検出 ${(t2-t1).toFixed(0)}ms`,
+      ``,
+      r.staves.map((s,i)=> `  [${i}] col=${s.col}  x ${s.x0}–${s.x1}  y ${s.lines[0].toFixed(0)}–${s.lines[4].toFixed(0)}  d=${s.d.toFixed(2)}`).join('\n'),
+    ].join('\n'));
+
+    /* コンソールからも触れるようにしておく（しきい値を詰めるとき用） */
+    window.omr = { page, result: r };
+  }catch(err){
+    log('失敗: ' + err.message);
+    console.error(err);
+  }finally{
+    $('run').disabled = false;
+  }
+});
+</script>
+</body>
+</html>

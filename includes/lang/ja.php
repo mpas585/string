@@ -20,6 +20,7 @@ return [
     'mid'        => 'ミドル',
     'high'       => 'ハイ',
     'high_thumb' => 'ハイ(親指P)',
+    'body'       => 'ボディ接合',
   ],
   /* 指板のポジション標識のうち、言語で変わるもの（config の markers の '@xxx'） */
   'marker' => ['thumb' => '親指'],
@@ -56,7 +57,10 @@ return [
     'landscape_note' => '五線譜は横画面が見やすいです',
 
     'playback'       => '再生',
-    'countin'        => '冒頭に1小節カウント',
+    'countin'        => '開始カウント',
+    'tun_ref_play'   => '🔊 基準音を鳴らす',
+    'tun_ref_stop'   => '⏹ 止める',
+    'tun_ref_oct'    => '1oct上',
     'keepawake'      => '再生中はスリープさせない',
 
     'zoom'           => '指板ズーム',
@@ -96,6 +100,9 @@ return [
 
     'm_tempo'        => '⏱ テンポ',
     'tempo_k'        => '速さ',
+    'tempo_dn'       => '遅く',
+    'tempo_up'       => '速く',
+    'tempo_reset'    => '⟲ 元のテンポ',
     'm_oct'          => 'Oct オクターブ',
     'oct_auto'       => '自動',
     'oct_orig'       => '原曲',
@@ -105,6 +112,8 @@ return [
     'loop_sw'        => 'ループ再生',
     'loop_from'      => '開始小節',
     'loop_to'        => '終了小節',
+    'loop_dn'        => '1小節戻す',
+    'loop_up'        => '1小節進める',
     'loop_info'      => '小節を指定して繰り返します（例：34〜40）',
 
     'seg_scale'      => '🎵 スケール',

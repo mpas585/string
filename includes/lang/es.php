@@ -19,6 +19,7 @@ return [
     'mid'        => 'Media',
     'high'       => 'Alta',
     'high_thumb' => 'Alta (pulgar)',
+    'body'       => 'Unión del cuerpo',
   ],
   /* 指板のポジション標識のうち、言語で変わるもの（config の markers の '@xxx'） */
   'marker' => ['thumb' => 'Pulgar'],
@@ -53,7 +54,10 @@ return [
     'landscape_note' => 'La partitura se lee mejor en horizontal',
 
     'playback'       => 'Reproducción',
-    'countin'        => 'Cuenta de un compás al empezar',
+    'countin'        => 'Cuenta de entrada',
+    'tun_ref_play'   => '🔊 Tono de referencia',
+    'tun_ref_stop'   => '⏹ Parar',
+    'tun_ref_oct'    => '1 oct arriba',
     'keepawake'      => 'Mantener la pantalla activa',
 
     'zoom'           => 'Zoom del diapasón',
@@ -93,6 +97,9 @@ return [
 
     'm_tempo'        => '⏱ Tempo',
     'tempo_k'        => 'Velocidad',
+    'tempo_dn'       => 'Más lento',
+    'tempo_up'       => 'Más rápido',
+    'tempo_reset'    => '⟲ Tempo original',
     'm_oct'          => 'Oct Octava',
     'oct_auto'       => 'Auto',
     'oct_orig'       => 'Original',
@@ -102,6 +109,8 @@ return [
     'loop_sw'        => 'Repetir en bucle',
     'loop_from'      => 'Compás inicial',
     'loop_to'        => 'Compás final',
+    'loop_dn'        => 'Un compás atrás',
+    'loop_up'        => 'Un compás adelante',
     'loop_info'      => 'Repite los compases indicados (p. ej. 34–40)',
 
     'seg_scale'      => '🎵 Escalas',

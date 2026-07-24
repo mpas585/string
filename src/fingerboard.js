@@ -48,12 +48,27 @@ export function recommend(midi){
 const _I = (typeof window!=='undefined' && window.INSTRUMENT) ? window.INSTRUMENT : {};
 const MAXOFF = _I.maxOff || 30;   /* 既定30半音（白鳥のD6=A線29半音まで表示） */
 const BOARD = _I.board || {
-  vbW:320, vbH:1300,
+  /* vbW は左右の余白を対称にするための値。
+     板は bx=56 / bw=240 なので右端は 296。右の余白を左と同じ56にすると 352 になり、
+     板の中心 176 がちょうど 352/2 に一致する。
+     320 のままだと右余白が24しかなく、「親指」「12th」等のポジション名が切れる。 */
+  vbW:352, vbH:1300,
   bx:56, bw:240,                  /* 指板の左端と幅 */
   strX:[86,146,206,266], strW:[6.0,4.8,3.7,2.7],
   topY:64, botY:1250
 };
-export const FB = Object.assign({}, BOARD, { maxOff:MAXOFF, fmax:fracOf(MAXOFF) });
+/* ネックとボディの接合部（開放弦からの半音数）。
+   基準はボディストップ(400mm＝駒側)ではなく【ネックストップ】。
+   4/4チェロで 280mm / 弦長690mm = 0.4058 → fracOf の逆算で off 9.01。
+   ここで指板はほぼ2等分される: 0→9F=279.7mm、9→30F=288.3mm（比 0.97:1）。
+   ヴァイオリン属はネック:ボディ=2:3 で揃うため、どれも off≈9（ヴィオラ9.00 / ヴァイオリン8.74）。
+   config/{楽器}.php の 'body_off' で上書きできる。 */
+const BODYOFF = (_I.bodyOff != null) ? _I.bodyOff : 9;
+/* ボディ上端の弧の深さ（中央と左右端の高低差）。大きいほど急になる。
+   アプリは横方向が縦の約2.5倍に引き伸ばされているため、実寸から素直に換算すると
+   フレーム端までで31程度にしかならない。ここはその実寸相当の値を採る。 */
+const BODYCURVE = (_I.bodyCurve != null) ? _I.bodyCurve : 30;
+export const FB = Object.assign({}, BOARD, { maxOff:MAXOFF, fmax:fracOf(MAXOFF), bodyOff:BODYOFF, bodyCurve:BODYCURVE });
 export function yOf(off){
   const f = Math.min(fracOf(off), FB.fmax);
   return FB.topY + (f/FB.fmax)*(FB.botY-FB.topY);
@@ -79,12 +94,34 @@ export function drawBoardStatic(){
   const parts=[];
   const bx=FB.bx, bw=FB.bw, br=bx+bw;
   parts.push(`<svg class="fb" viewBox="0 0 ${FB.vbW} ${FB.vbH}" xmlns="http://www.w3.org/2000/svg">`);
+
+  /* ===== 楽器のボディ =====
+     接合部から先が親指ポジション。それを形で分かるようにする。
+     実寸比ではボディ幅が指板の7倍以上あり viewBox に到底収まらないので、
+     胴の輪郭ではなく【上端だけ】を「中央が最も高く左右へ緩やかに下がる弧」として描く。
+     実物も接合部が最高点でそこから肩が下がるので、見え方としては素直。
+     二次ベジェ M 0,(y+c) Q cx,(y-c) vbW,(y+c) は t=0.5 で頂点が y に一致する。 */
+  const yBody=yOf(FB.bodyOff), bc=FB.bodyCurve;
+  const bodyPath=
+    `M 0,${(yBody+bc).toFixed(0)}`+
+    ` Q ${(FB.vbW/2).toFixed(0)},${(yBody-bc).toFixed(0)} ${FB.vbW},${(yBody+bc).toFixed(0)}`+
+    ` L ${FB.vbW},${FB.vbH} L 0,${FB.vbH} Z`;
+  /* 縁取りはしない。実物の輪郭ではなく上端だけの造形なので、
+     線を引くと「ここが胴の縁」と読めてしまって誤解のもとになる。塗りだけで足りる */
+  parts.push(`<path d="${bodyPath}" fill="var(--wood)" opacity="0.26"/>`);
+
   parts.push(`<rect x="${bx}" y="${FB.topY-14}" width="${bw}" height="${FB.botY-FB.topY+26}" rx="14" fill="var(--board)" stroke="var(--board-edge)"/>`);
+  /* 板のうちボディに乗っている区間をわずかに温色へ。指板が胴の上を通っている感じを出す */
+  parts.push(`<rect x="${bx}" y="${yBody.toFixed(1)}" width="${bw}" height="${(FB.botY-yBody+12).toFixed(1)}" fill="var(--wood)" opacity="0.10"/>`);
 
   const yLow=yOf(7), yMid=yOf(13);
   parts.push(`<rect x="${bx}" y="${FB.topY}" width="${bw}" height="${(yLow-FB.topY).toFixed(1)}" fill="var(--good)" opacity="0.045"/>`);
   parts.push(`<rect x="${bx}" y="${yLow.toFixed(1)}" width="${bw}" height="${(yMid-yLow).toFixed(1)}" fill="var(--accent)" opacity="0.045"/>`);
   parts.push(`<rect x="${bx}" y="${yMid.toFixed(1)}" width="${bw}" height="${(FB.botY-yMid).toFixed(1)}" fill="var(--danger)" opacity="0.045"/>`);
+
+  /* 接合線。ここから先はネックを握れない＝親指ポジション */
+  parts.push(`<line x1="${bx}" y1="${yBody.toFixed(1)}" x2="${br}" y2="${yBody.toFixed(1)}" stroke="var(--wood)" stroke-width="2.4"/>`);
+  parts.push(`<text x="${br-4}" y="${(yBody-7).toFixed(1)}" fill="var(--wood)" font-size="10" text-anchor="end" font-family="var(--mono)">${tt('zone.body')}</text>`);
 
   if(ST.frets) for(let off=1; off<=FB.maxOff; off++){
     const y=yOf(off);

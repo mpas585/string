@@ -14,7 +14,7 @@ import { applyVolumes } from './audio/context.js';
 import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
 import { loadScales } from './scale.js';
-import { startTuner, stopTuner, pickTunerString, TUN } from './tuner.js';
+import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 import { tt } from './util.js';
 
@@ -41,6 +41,11 @@ on('tempoNum','change', e=>{
   e.target.value=ST.tempo;
   saveSettings();
 });
+/* ±1 の微調整とリセット。範囲の丸めは setTempo 側でやるのでここでは素通し */
+on('tempoDn','click', ()=>{ setTempo(ST.tempo-1, true); saveSettings(); });
+on('tempoUp','click', ()=>{ setTempo(ST.tempo+1, true); saveSettings(); });
+/* リセット先は「読み込んだ譜面のテンポ」（setScore で控えている） */
+on('tempoReset','click', ()=>{ setTempo(ST.tempoOrig || 80, true); saveSettings(); });
 document.querySelectorAll('.pref').forEach(b=> b.addEventListener('click', ()=> setPref(b.dataset.pref)));
 on('pdfprev','click', ()=>{ if(pdfPage>1){ setPdfPage(pdfPage-1); renderPdfPage();} });
 on('pdfnext','click', ()=>{ if(pdfDoc&&pdfPage<pdfDoc.numPages){ setPdfPage(pdfPage+1); renderPdfPage();} });
@@ -301,6 +306,17 @@ on('loopSw','click', ()=>{
 });
 on('loopFrom','change', setLoopRange);
 on('loopTo','change', setLoopRange);
+/* 小節の ▲▼。値を1つ動かすだけで、範囲の丸め（1〜小節数・終了>=開始）は setLoopRange に任せる */
+function stepLoop(id, d){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.value=(parseInt(el.value,10) || 1) + d;
+  setLoopRange();
+}
+on('loopFromDn','click', ()=> stepLoop('loopFrom', -1));
+on('loopFromUp','click', ()=> stepLoop('loopFrom',  1));
+on('loopToDn','click',   ()=> stepLoop('loopTo',   -1));
+on('loopToUp','click',   ()=> stepLoop('loopTo',    1));
 
 on('enjoySw','click', ()=>{
   ST.enjoy=!ST.enjoy;
@@ -329,6 +345,8 @@ on('micSw','click', async ()=>{
 on('tunerClose','click', ()=> setMode(null));
 /* 弦チップ：その弦の開放音を基準にする（自動判定の取り違えで締めすぎるのを防ぐ）。
    同じ弦をもう一度押すと自動判定に戻る。 */
+on('tunRef','click', toggleReference);
+syncReferenceUI();                       /* 起動時に基準音のラベルを埋める */
 document.querySelectorAll('.tun-str [data-str]').forEach(el=>{
   el.addEventListener('click', ()=> pickTunerString(+el.dataset.str));
 });

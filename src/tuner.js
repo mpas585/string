@@ -14,7 +14,7 @@
 import { ST } from './state.js';
 import { OPEN, STRNAME, midiName, fingerHint, strFingerText, tt } from './util.js';
 import { FB, yOf, optionsFor, pluckString } from './fingerboard.js';
-import { chimeOK } from './audio/synth.js';
+import { chimeOK, midiFreq } from './audio/synth.js';
 import { toast } from './dom.js';
 import { render, micUnavailableReason, setTunerHint, syncSheet, syncMicUI } from './modes.js';
 
@@ -29,6 +29,74 @@ export function tunerBus(){
   }
   return TUN.out;
 }
+/* ===== 基準音（参考の音程を鳴らす） =====
+   マイク用の TUN.ctx とは別の AudioContext を使う。
+   マイクを許可していなくても基準音だけは鳴らせるようにするため。 */
+let refCtx=null, refOut=null, refVoice=null;
+function ensureRefCtx(){
+  if(!refCtx){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) return null;
+    refCtx=new AC();
+    refOut=refCtx.createGain(); refOut.gain.value=1; refOut.connect(refCtx.destination);
+  }
+  if(refCtx.state==='suspended'){ try{ refCtx.resume(); }catch(e){} }
+  return refCtx;
+}
+/* 基準となる開放弦。未選択なら一番細い弦（チェロならA線）を既定にする */
+export function refMidi(){
+  const i=(ST.tunerString!=null && OPEN[ST.tunerString]!=null) ? ST.tunerString : OPEN.length-1;
+  return OPEN[i];
+}
+/* 実際に鳴らす高さ。開放弦そのままだと低すぎて端末のスピーカーで聞こえないので
+   1オクターブ上げる（チェロのC線 65Hz → 131Hz、A線 220Hz → 440Hz）。
+   オクターブ違いでも合わせる基準としては同じなので、唸りの聞き取りに支障はない。 */
+export const REF_OCT = 12;
+export function refSoundMidi(){ return refMidi() + REF_OCT; }
+export function stopReference(){
+  if(!refVoice) return;
+  const v=refVoice; refVoice=null;
+  try{
+    const t=v.ctx.currentTime;
+    v.g.gain.cancelScheduledValues(t);
+    v.g.gain.setValueAtTime(v.g.gain.value, t);
+    v.g.gain.linearRampToValueAtTime(0.0001, t+0.10);   /* ぶつ切りにしない */
+    v.o1.stop(t+0.16); v.o2.stop(t+0.16);
+  }catch(e){}
+  syncReferenceUI();
+}
+export function playReference(){
+  const ctx=ensureRefCtx();
+  if(!ctx) return;
+  stopReference();
+  const t=ctx.currentTime, f=midiFreq(refSoundMidi());
+  /* 純正弦波だと唸り（beat）が聞き取りにくいので、オクターブ上を少しだけ足す */
+  const o1=ctx.createOscillator(); o1.type='sine';     o1.frequency.setValueAtTime(f,   t);
+  const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.setValueAtTime(f*2, t);
+  const g2=ctx.createGain(); g2.gain.value=0.10;
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.15, t+0.06);
+  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(refOut);
+  o1.start(t); o2.start(t);
+  refVoice={ctx,o1,o2,g};
+  syncReferenceUI();
+}
+export function toggleReference(){ refVoice ? stopReference() : playReference(); }
+/* 鳴らしたまま弦を選び直したら、止めずにその場で高さを変える */
+function retuneReference(){
+  if(!refVoice) return;
+  const t=refVoice.ctx.currentTime, f=midiFreq(refSoundMidi());
+  refVoice.o1.frequency.setTargetAtTime(f,   t, 0.02);
+  refVoice.o2.frequency.setTargetAtTime(f*2, t, 0.02);
+}
+export function syncReferenceUI(){
+  const b=document.getElementById('tunRef');
+  const n=document.getElementById('tunRefNote');
+  if(n) n.textContent=midiName(refSoundMidi());   /* 実際に鳴る高さを出す */
+  if(b) b.classList.toggle('on', !!refVoice);
+}
+
 export function detectPitch(buf, sr){
   let rms=0;
   for(let i=0;i<buf.length;i++) rms += buf[i]*buf[i];
@@ -103,6 +171,7 @@ export function stopTuner(){
   if(TUN.ctx){ try{ TUN.ctx.close(); }catch(e){} }
   TUN.ctx=null; TUN.stream=null; TUN.analyser=null; TUN.buf=null;
   TUN.out=null; TUN.wasOK=false; TUN.lastChime=0;
+  stopReference();                            /* シートを閉じたら基準音も止める */
   ST.tunerMidi=null; ST.tunerCents=0;
   ST.tunerString=null; syncTunerString();     /* 次に開いた時は自動判定から始める */
   updateInputLevel(0, 0);
@@ -191,12 +260,14 @@ export function updateTunerUI(f){
   const cEl=document.getElementById('tunCent');
   const hEl=document.getElementById('tunHz');
   const ndl=document.getElementById('tunNeedle');
+  const trl=document.getElementById('tunTrail');     /* 残像。針より遅く追従する */
   const strs=document.querySelectorAll('.tun-str [data-str]');
 
   if(f<=0){
     nEl.textContent='–'; nEl.classList.remove('ok');
     cEl.textContent='– cent'; hEl.textContent='– Hz';
     ndl.style.left='50%'; ndl.classList.remove('ok');
+    if(trl){ trl.style.left='50%'; trl.classList.remove('ok'); }
     strs.forEach(s=>s.classList.remove('hit'));
     TUN.hist=[];
     setTunerDir(null);
@@ -231,6 +302,7 @@ export function updateTunerUI(f){
   const pos=Math.max(0, Math.min(100, 50 + (cents/50)*50));
   ndl.style.left=pos+'%';
   ndl.classList.toggle('ok', inTune);
+  if(trl){ trl.style.left=pos+'%'; trl.classList.toggle('ok', inTune); }
 
   /* 締める／緩める。低い＝張りが足りない＝締める、高い＝緩める */
   setTunerDir(far ? 'far' : (inTune ? 'ok' : (cents<0 ? 'low' : 'high')));
@@ -273,6 +345,7 @@ export function updateTunerUI(f){
 export function pickTunerString(i){
   ST.tunerString = (ST.tunerString===i) ? null : i;
   syncTunerString();
+  retuneReference(); syncReferenceUI();   /* 基準音も選んだ弦に合わせる */
   TUN.wasOK=false;                    /* 基準が変わるので「合った」判定はやり直し */
 }
 export function syncTunerString(){

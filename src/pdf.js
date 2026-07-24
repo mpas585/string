@@ -36,3 +36,34 @@ export async function renderPdfPage(){
   document.getElementById('pdfprev').disabled=pdfPage<=1;
   document.getElementById('pdfnext').disabled=pdfPage>=pdfDoc.numPages;
 }
+
+/* ===== OMR用：検出解像度でのオフスクリーン描画 =====
+   表示用の renderPdfPage() は最大900px幅に合わせて縮小するため、1ページに五線が
+   20段以上あるスキャンだと線間隔が3〜4pxしか出ず、水平投影が成立しない。
+   検出は別スケール（既定300dpi相当）で描く。表示用 #pdfcanvas には一切触れない。 */
+export const OMR_DPI = 300;
+export async function renderPageForOmr(pageNo, opts = {}){
+  if(!pdfDoc) throw new Error(tt('msg.pdf_not_open'));
+  const { dpi = OMR_DPI, maxPixels = 40e6 } = opts;
+  const no = pageNo || pdfPage;
+  const page = await pdfDoc.getPage(no);
+  const vp1 = page.getViewport({scale:1});
+  let scale = dpi/72;
+  /* 端末のメモリ上限で落ちないよう、総画素数で頭を打つ */
+  const px = (vp1.width*scale)*(vp1.height*scale);
+  if(px > maxPixels) scale *= Math.sqrt(maxPixels/px);
+  const vp = page.getViewport({scale});
+
+  const cv = document.createElement('canvas');   /* DOMに挿さない＝表示に影響しない */
+  cv.width = Math.ceil(vp.width);
+  cv.height = Math.ceil(vp.height);
+  const ctx = cv.getContext('2d', {willReadFrequently:true});
+  /* PDFの地は透明なので、白で埋めてから描く。埋めないと二値化で全面インク扱いになる */
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  await page.render({canvasContext:ctx, viewport:vp}).promise;
+
+  const imageData = ctx.getImageData(0,0,cv.width,cv.height);
+  cv.width = cv.height = 0;                      /* 明示的に解放（モバイルで効く） */
+  return { imageData, width:imageData.width, height:imageData.height,
+           scale, dpi:scale*72, page:no };
+}

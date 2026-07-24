@@ -25,6 +25,7 @@ export const ST = {
   beatsPerMeasure: 4,    // 4分音符=1 換算の1小節の長さ（MusicXML も beats*(4/beat-type) で正規化）
   beatUnit: 1,           // 1拍の長さ（4分音符=1）。3/8 のように1拍が8分音符の譜面は 0.5
   tempo: 80,
+  tempoOrig: 80,          /* 読み込んだ譜面本来のテンポ（テンポリセットの戻り先） */
   pref: 'low',
   selected: null,
   current: null,

@@ -37,9 +37,14 @@ return [
   /* 指板に表示する開放弦からの半音数の上限（src/fingerboard.js FB.maxOff と同値） */
   'max_off'  => 30,
 
-  /* 指板SVGの寸法（src/fingerboard.js の FB）。viewBox 320×1300 を基準にした座標 */
+  /* 指板SVGの寸法（src/fingerboard.js の FB）。viewBox 352×1300 を基準にした座標（vbW=352 で板の左右余白が対称になる） */
+  /* ネックとボディの接合部（開放弦からの半音数。src/fingerboard.js FB.bodyOff）。
+     ネックストップ 280mm / 弦長 690mm = 0.4058 → off 9.01。
+     ※ボディストップ400mmは駒側の寸法なので、ここに使うと接合部が下へずれる */
+  'body_off' => 9,
+
   'board' => [
-    'vbW'  => 320, 'vbH'  => 1300,
+    'vbW'  => 352, 'vbH'  => 1300,
     'bx'   => 56,  'bw'   => 240,          /* 指板の左端と幅 */
     'strX' => [86, 146, 206, 266],         /* 各弦のX座標 */
     'strW' => [6.0, 4.8, 3.7, 2.7],        /* 各弦の描画太さ */

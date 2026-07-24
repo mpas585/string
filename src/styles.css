@@ -58,6 +58,19 @@
   }
   .numbox input[type=number]:focus{outline:none; border-color:var(--accent)}
   .numbox i{font-style:normal; font-size:11px; color:var(--faint)}
+  /* テンポモーダルの大きい入力（指で押しやすくする） */
+  .tempobig{display:flex; align-items:center; justify-content:center; gap:14px; margin:4px 0 14px}
+  .tempobig .tstep{
+    width:60px; height:60px; flex:0 0 auto; border-radius:16px; font-size:28px; line-height:1;
+    color:var(--accent); background:var(--panel2); border:1px solid var(--line); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;
+  }
+  .tempobig .tstep:active{background:var(--accent); color:#241a08; border-color:var(--accent)}
+  .numbox.big{align-items:baseline; gap:5px}
+  .numbox.big input[type=number]{
+    width:110px; font-size:32px; min-height:60px; padding:4px 10px; text-align:center; border-radius:14px;
+  }
+  .numbox.big i{font-size:13px}
   .board-full{
     position:fixed; left:0; right:0; z-index:1;
     top:calc(52px + env(safe-area-inset-top)); bottom:0;
@@ -311,6 +324,11 @@
   body[data-mode="tuner"] .sheet{box-shadow:none; border-radius:0; border-top-width:1px}
   body[data-mode="tuner"] .tun-note{font-size:48px; min-width:110px}
   body[data-mode="tuner"] .tun-cent{font-size:16px}
+  body[data-mode="tuner"] .tun-bar{height:52px; border-radius:12px}
+  body[data-mode="tuner"] .tun-bar .ndl{top:4px; bottom:4px; width:11px; border-radius:6px}
+  body[data-mode="tuner"] .tun-bar .trl{top:7px; bottom:7px; width:11px; border-radius:6px}
+  body[data-mode="tuner"] .tun-dir{font-size:21px; min-height:58px}
+  body[data-mode="tuner"] .tun-dir span{padding:11px 22px}
   .sheet-head{display:flex; align-items:center; gap:8px; margin-bottom:8px}
   .sheet-head .t{flex:1; font-size:12px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase}
   .tun-main{display:flex; align-items:baseline; gap:10px; justify-content:center; margin-bottom:6px}
@@ -318,10 +336,26 @@
   .tun-note.ok{color:var(--good)}
   .tun-cent{font-family:var(--mono); font-size:14px; color:var(--muted); min-width:64px}
   .tun-hz{font-family:var(--mono); font-size:12px; color:var(--faint); min-width:70px; text-align:right}
-  .tun-bar{position:relative; height:12px; background:var(--panel2); border:1px solid var(--line); border-radius:7px; overflow:hidden}
-  .tun-bar .mid{position:absolute; left:50%; top:0; bottom:0; width:2px; background:var(--accent-dim); transform:translateX(-1px)}
-  .tun-bar .ndl{position:absolute; top:1px; bottom:1px; width:5px; border-radius:3px; background:var(--danger); left:50%; transition:left .07s linear}
+  .tun-bar{position:relative; height:30px; background:var(--panel2); border:1px solid var(--line); border-radius:9px; overflow:hidden}
+  .tun-bar .mid{position:absolute; left:50%; top:0; bottom:0; width:3px; background:var(--accent-dim); transform:translateX(-1.5px)}
+  /* 残像。針より遅い transition で追従させ、どちらへどれだけ動いたかを残す */
+  .tun-bar .trl{
+    position:absolute; top:4px; bottom:4px; width:8px; border-radius:4px; left:50%;
+    background:var(--danger); opacity:.30; filter:blur(3px); pointer-events:none;
+    transition:left .5s cubic-bezier(.2,.75,.25,1);
+  }
+  .tun-bar .trl.ok{background:var(--good)}
+  .tun-bar .ndl{position:absolute; top:2px; bottom:2px; width:8px; border-radius:4px; background:var(--danger); left:50%; transition:left .07s linear}
   .tun-bar .ndl.ok{background:var(--good)}
+  /* 基準音 */
+  .tun-ref{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:9px}
+  .tun-ref-btn{min-height:44px; padding:8px 18px; font-size:14px}
+  .tun-ref-btn .r-stop{display:none}
+  .tun-ref-btn.on{border-color:var(--accent); background:var(--accent); color:#241a08}
+  .tun-ref-btn.on .r-play{display:none}
+  .tun-ref-btn.on .r-stop{display:inline}
+  .tun-ref b{font-family:var(--mono); font-size:17px; color:var(--accent); min-width:42px; text-align:center}
+  .tun-ref-o{font-size:10px; color:var(--faint); margin-left:-5px}
   .tun-tgt{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; font-size:12px; color:var(--muted)}
   .tun-tgt b{font-family:var(--mono); color:var(--accent); font-size:15px}
   /* 太い弦 ←[ 4弦 3弦 2弦 1弦 ]→ 細い弦。左が一番太い弦（開放が一番低い） */
@@ -662,15 +696,30 @@
   .dk-head .iconbtn{width:32px; height:32px; min-height:32px; font-size:14px}
   .dkmodal .field{margin-bottom:0}
   .dkmodal .field2{margin-bottom:0}
+  /* ループ小節の ▲▼ ステッパー。モーダル内は縦積みにして幅を確保する */
+  .dkmodal .field2{flex-direction:column; gap:10px}
+  .stepper{display:flex; align-items:center; gap:7px}
+  .stepper .sstep{
+    width:48px; height:48px; flex:0 0 auto; border-radius:12px; font-size:15px; line-height:1;
+    color:var(--accent); background:var(--panel2); border:1px solid var(--line); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;
+  }
+  .stepper .sstep:active{background:var(--accent); color:#241a08; border-color:var(--accent)}
+  .stepper input[type=number]{flex:1; min-width:0; min-height:48px; font-size:19px; padding:6px 8px}
+  .stepper .sstep:disabled{opacity:.35; cursor:default}
+  .stepper .sstep:disabled:active{background:var(--panel2); color:var(--accent); border-color:var(--line)}
+  .dkmodal .field2.off{opacity:.45}
+  .dkmodal .field2.off input[type=number]{cursor:default}
   .dkmodal .sub{margin:7px 0 0}
 
   /* ======== チューナー：締める／緩める ======== */
   /* 3つの文言を重ねて置き、#tunDir のクラスで1つだけ表示する */
   .tun-dir{
-    display:flex; justify-content:center; align-items:center; min-height:26px;
-    margin-top:9px; font-size:13px; font-weight:700; letter-spacing:.02em;
+    /* 文言が出ていない時も高さを保つ。可変だと下の行が動いて目障りになる */
+    display:flex; justify-content:center; align-items:center; min-height:46px;
+    margin-top:9px; font-size:17px; font-weight:700; letter-spacing:.02em;
   }
-  .tun-dir span{display:none; padding:4px 12px; border-radius:8px; border:1px solid transparent}
+  .tun-dir span{display:none; padding:9px 18px; border-radius:10px; border:1px solid transparent; line-height:1.4}
   .tun-dir.low  .d-low {display:inline-block; color:var(--alt);    border-color:var(--alt);    background:rgba(217,164,65,.12)}
   .tun-dir.high .d-high{display:inline-block; color:var(--accent); border-color:var(--accent); background:rgba(217,164,65,.12)}
   .tun-dir.ok   .d-ok  {display:inline-block; color:var(--good);   border-color:var(--good);   background:rgba(90,190,120,.14)}

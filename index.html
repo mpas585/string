@@ -54,7 +54,7 @@
   <div class="sub" style="margin:-3px 0 8px">五線譜は横画面が見やすいです</div>
 
   <div class="gp-t">再生</div>
-  <div id="countSw" class="sw on"><span>冒頭に1小節カウント</span><span class="knob"></span></div>
+  <div id="countSw" class="sw on"><span>開始カウント</span><span class="knob"></span></div>
   <div id="awakeSw" class="sw on"><span>再生中はスリープさせない</span><span class="knob"></span></div>
 
   <div class="gp-t" style="margin-top:12px">指板ズーム</div>
@@ -142,12 +142,19 @@
     <span class="dk-tt">⏱ テンポ</span>
     <button class="iconbtn" data-dkclose aria-label="閉じる">✕</button>
   </div>
+  <div class="tempobig">
+    <button id="tempoDn" class="tstep" aria-label="遅く">−</button>
+    <span class="numbox big"><input id="tempoNum" type="number" min="30" max="160" step="1" value="80" inputmode="numeric"><i>bpm</i></span>
+    <button id="tempoUp" class="tstep" aria-label="速く">＋</button>
+  </div>
   <div class="field">
     <div class="k">速さ</div>
     <div class="v tempo">
       <input id="tempo" type="range" min="30" max="160" value="80">
-      <span class="numbox"><input id="tempoNum" type="number" min="30" max="160" step="1" value="80" inputmode="numeric"><i>bpm</i></span>
     </div>
+  </div>
+  <div class="row controls">
+    <button id="tempoReset" class="ghost">⟲ 元のテンポ</button>
   </div>
 </div>
 
@@ -179,11 +186,19 @@
     <div class="field2">
       <div>
         <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">開始小節</div>
-        <input id="loopFrom" type="number" min="1" value="1">
+        <div class="stepper">
+          <button id="loopFromDn" class="sstep" aria-label="1小節戻す">▼</button>
+          <input id="loopFrom" type="number" min="1" value="1">
+          <button id="loopFromUp" class="sstep" aria-label="1小節進める">▲</button>
+        </div>
       </div>
       <div>
         <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px">終了小節</div>
-        <input id="loopTo" type="number" min="1" value="4">
+        <div class="stepper">
+          <button id="loopToDn" class="sstep" aria-label="1小節戻す">▼</button>
+          <input id="loopTo" type="number" min="1" value="4">
+          <button id="loopToUp" class="sstep" aria-label="1小節進める">▲</button>
+        </div>
       </div>
     </div>
   </div>
@@ -348,6 +363,7 @@
   </div>
   <div class="tun-bar">
     <div class="mid"></div>
+    <div id="tunTrail" class="trl"></div>
     <div id="tunNeedle" class="ndl"></div>
   </div>
   <!-- 締める／緩める（3つとも書いておき、CSS で1つだけ見せる） -->
@@ -365,6 +381,14 @@
       <button type="button" data-str="0"><b>4弦</b><small>C2</small></button><button type="button" data-str="1"><b>3弦</b><small>G2</small></button><button type="button" data-str="2"><b>2弦</b><small>D3</small></button><button type="button" data-str="3"><b>1弦</b><small>A3</small></button>
     </div>
     <span class="tsl">細い弦</span>
+  </div>
+  <!-- 参考の音程。マイクとは別の AudioContext なので、マイク未許可でも鳴らせる -->
+  <div class="tun-ref">
+    <button id="tunRef" type="button" class="tun-ref-btn">
+      <span class="r-play">🔊 基準音を鳴らす</span>
+      <span class="r-stop">⏹ 止める</span>
+    </button>
+    <b id="tunRefNote">A4</b><small class="tun-ref-o">1oct上</small>
   </div>
   <div id="tunStrNote" class="tun-str-note">弦を選ぶとその音を基準に測ります（もう一度押すと自動）</div>
   <!-- マイク入力レベル（緑の区間＝推奨） -->
@@ -399,7 +423,7 @@
 
 <!-- 冒頭カウント＝1小節ぶん（凡例はカウントダウンの下だけに出す＝カウントが終われば消える） -->
 <div id="countin" class="countin">
-  <span id="countnum">4</span>
+  <span id="countnum"></span>
   <div id="legend" class="legend"></div>
 </div>
 

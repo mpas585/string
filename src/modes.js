@@ -379,6 +379,8 @@ export function setOctave(v){
 
 /* 譜面をセット（共通処理：運指の自動復元・ループ範囲の初期化） */
 export function setScore(parsed, scoreName){
+  /* 各読み込み経路は setScore の直前に setTempo() を呼ぶので、ここが譜面本来のテンポ */
+  ST.tempoOrig=ST.tempo;
   ST.parsed=parsed;
   ST.songChords=null;                  /* 伴奏コードは譜面ごと。持つ曲は setScore の後で入れ直す */
   ST.measures=parsed.measures || [];
@@ -445,6 +447,12 @@ export function syncLoopUI(){
   fromEl.max=Math.max(1,mCount);
   toEl.max=Math.max(1,mCount);
   document.getElementById('loopSw').classList.toggle('on', ST.loop.on);
+  /* ループOFFのあいだは小節指定を触れなくする（押しても何も起きない入力を残さない） */
+  ['loopFrom','loopTo','loopFromDn','loopFromUp','loopToDn','loopToUp'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.disabled=!ST.loop.on;
+  });
+  document.querySelector('#mLoop .field2')?.classList.toggle('off', !ST.loop.on);
   const info=document.getElementById('loopInfo');
   if(ST.mode==='scale'){
     info.textContent = mCount ? tt('msg.loop_scale_all', mCount) : tt('msg.loop_need_scale');
