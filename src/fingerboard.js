@@ -11,7 +11,7 @@
   公開API: renderBoard（署名変化時に指板を作り直し＋音符描画）, pluckString/pluckEvent,
            optionsFor/recommend, applyZoom/zoomFit/zoomFitPositions, scrollBoardToActive, yOf/offOfY, FB。
 */
-import { OPEN, STRNAME, fracOf, midiName, zoneOf, fingerHint, strFingerText, tt } from './util.js';
+import { OPEN, STRNAME, NOTE_NAMES, fracOf, midiName, zoneOf, fingerHint, strFingerText, tt } from './util.js';
 import { ST } from './state.js';
 import { toast } from './dom.js';
 import { midiFreq } from './audio/synth.js';
@@ -46,9 +46,11 @@ export function recommend(midi){
    未注入のときは従来どおりチェロの値。fmax は maxOff に追従させる
    （別々に持つと、maxOff を変えても座標変換が旧値のままになるため）。 */
 const _I = (typeof window!=='undefined' && window.INSTRUMENT) ? window.INSTRUMENT : {};
-/* 指板の下端。実物の指板長（4/4チェロで約580mm、弦長680mm）に合わせて off 33。
-   白鳥の最高音 D6（A線 off29 = ナットから552.6mm）も範囲内。 */
-const MAXOFF = _I.maxOff || 33;
+/* 指板の下端。実物の指板の先端に合わせる。
+   4/4チェロは 指板長 578〜583mm / 弦長 690〜700mm（Strobel の寸法表は 580 / 695）。
+   580/695 = 83.5% → 12*log2(1/(1-0.835)) = 31.1 → off 31（ナットから 579.0mm）。
+   白鳥の最高音 D6（A線 off29 = 564.8mm）も範囲内。 */
+const MAXOFF = _I.maxOff || 31;
 const BOARD = _I.board || {
   /* vbW は左右の余白を対称にするための値。
      板は bx=56 / bw=240 なので右端は 296。右の余白を左と同じ56にすると 352 になり、
@@ -60,17 +62,21 @@ const BOARD = _I.board || {
   topY:64, botY:1250
 };
 /* ネックとボディの接合部（開放弦からの半音数）。
-   基準はボディストップ(400mm＝駒側)ではなく【ネックストップ】。
-   4/4チェロは ネック長280mm : ボディストップ400mm ＝ 7:10（弦長680mm）なので、
-   12*log2(680/400) = off 9.186（ナットから 280/680 = 41.2% の位置）。
-   板の中では 0→接合部=280.0mm、接合部→下端(off33)=298.9mm となり、接合部は板の48.4%。
-   ヴァイオリン属はネック:ボディ=2:3 で揃うため、どれも off≈9（ヴィオラ9.00 / ヴァイオリン8.74）。
+   基準は【ナット → 表板の上端】＝ネック長。4/4チェロで 280mm。
+   製作比 7:10 からは 12*log2(17/10)=9.19、実寸 280/695=40.3% からは 8.93。
+   （280+400=680 に対し公表弦長が690〜700あるのは、駒で弦が立ち上がるぶん
+     実振動長が2直線の和より長くなるため。）間をとって off 9 とする。
+   板の中では 0→接合部=281.8mm、接合部→下端(off31)=297.2mm ＝ 接合部は板の48.7%。
+   ヴァイオリン・ヴィオラはネック:ストップ=2:3 なので off≈8.8（比率8.84 / 実寸8.74）。
    config/{楽器}.php の 'body_off' で上書きできる。 */
-const BODYOFF = (_I.bodyOff != null) ? _I.bodyOff : 9.19;
+const BODYOFF = (_I.bodyOff != null) ? _I.bodyOff : 9;
 /* ボディ上端の弧の深さ（中央と左右端の高低差）。大きいほど急になる。
    アプリは横方向が縦の約2.5倍に引き伸ばされているため、実寸から素直に換算すると
    フレーム端までで31程度にしかならない。ここはその実寸相当の値を採る。 */
 const BODYCURVE = (_I.bodyCurve != null) ? _I.bodyCurve : 30;
+/* 指板に薄く重ねる音名で「幹音」を選ぶための集合（C D E F G A B の度数）。
+   NOTE_NAMES は言語で Do Re Mi 等に差し替わるので、文字列ではなく度数で判定する。 */
+const NATURAL = new Set([0, 2, 4, 5, 7, 9, 11]);
 export const FB = Object.assign({}, BOARD, { maxOff:MAXOFF, fmax:fracOf(MAXOFF), bodyOff:BODYOFF, bodyCurve:BODYCURVE });
 export function yOf(off){
   const f = Math.min(fracOf(off), FB.fmax);
@@ -132,8 +138,17 @@ export function drawBoardStatic(){
     const w=isMark?1.8:0.9, col=isMark?'#5a4b39':'#332b22';
     parts.push(`<line x1="${bx}" y1="${y.toFixed(1)}" x2="${br}" y2="${y.toFixed(1)}" stroke="${col}" stroke-width="${w}"/>`);
     parts.push(`<text x="${bx-6}" y="${(y+3.5).toFixed(1)}" fill="${isMark?'var(--muted)':'var(--faint)'}" font-size="10" text-anchor="end" font-family="var(--mono)">${off}</text>`);
-    FB.strX.forEach(x=>{
+    FB.strX.forEach((x,i)=>{
       parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="2.2" fill="var(--string)" opacity="${isMark?0.30:0.14}"/>`);
+      /* 音名を指板の上に薄く重ねる（左端の数字レールはそのまま残す）。
+         ・幹音だけにする：行が約半分になって密度が下がり、♯♭付きの2文字が出ない
+         ・弦の真上に置くと弦（最大6幅）に文字が分断されるので、右へ9ずらす
+         ・行間は off20 で26、off31 で14しかない。字は9で、これ以上大きくすると重なる
+         ・濃さは板(--board)に対してコントラスト比 2.6:1。フレット番号(5.5:1)より
+           はっきり下、ゾーン名(3.3:1)より薄い＝読めるが前に出てこない位置づけ */
+      const pc = ((OPEN[i] + off) % 12 + 12) % 12;
+      if(!NATURAL.has(pc)) return;
+      parts.push(`<text x="${(x+9).toFixed(1)}" y="${(y+3.2).toFixed(1)}" fill="var(--faint)" opacity="0.6" font-size="9" text-anchor="start" font-family="var(--mono)">${NOTE_NAMES[pc]}</text>`);
     });
   }
   if(ST.frets) MARKERS.forEach(mk=>{
