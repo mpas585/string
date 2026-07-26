@@ -204,13 +204,9 @@ export function openPdfOverlay(){ document.getElementById('pdfOverlay').classLis
 export function closePdfOverlay(){ document.getElementById('pdfOverlay').classList.remove('open'); }
 
 /* ===== 画面左下ドックのモーダル（テンポ / オクターブ / ループ） ===== */
-export function openDockModal(id){
-  document.querySelectorAll('.dkmodal').forEach(m=> m.classList.toggle('open', m.id===id));
-  document.getElementById('dockScrim').classList.add('open');
-}
-export function closeDockModal(){
-  document.querySelectorAll('.dkmodal').forEach(m=> m.classList.remove('open'));
-  document.getElementById('dockScrim').classList.remove('open');
-}
+/* モーダルの開閉は dom.js へ移した（トップページからも使うため）。
+   これまでどおり drawer.js から import できるよう、そのまま再輸出する。 */
+import { openDockModal, closeDockModal } from './dom.js';
+export { openDockModal, closeDockModal };
 /* 曲を練習：入口（モード選択）から入った時に出す案内モーダル（曲を選ぶ / 譜面を読み込む） */
 export function openScoreStart(){ openDockModal('mScoreStart'); }

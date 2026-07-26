@@ -62,11 +62,12 @@ string/
 │  └─ scales/
 │     └─ scales.json     # スケール定義（起動時に先読み）
 └─ src/
-   ├─ main.js            # エントリ。init順序・移植ロードマップ
+   ├─ main.js            # エントリ（アプリ本体 /{言語}/{楽器}/）。init順序・移植ロードマップ
+   ├─ home.js            # エントリ（楽器選択トップ /{言語}/）。会員とPWAだけを配線する
    ├─ styles.css         # 元<style>の移植先（index.htmlの<link>で読む）
    ├─ state.js           # ST(状態) + 定数（OPEN弦, NOTE_NAMES 等）
    ├─ util.js            # 純粋関数（midiName 等）＋楽器定数（window.INSTRUMENT から受取）
-   ├─ dom.js             # $ / on ヘルパ、要素参照
+   ├─ dom.js             # $ / on ヘルパ、要素参照、.dkmodal の開閉（トップと共用）
    ├─ fingerboard.js     # 指板描画
    ├─ scale.js           # スケール生成（buildScaleEvents, SCALES）
    ├─ drawer.js          # ドロワー（open/close, タブ, 子タブ, 設定UI）
@@ -264,6 +265,12 @@ fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCAL
 * アイコンは `public/icons/`。差し替えるときは**ファイル名を変える**こと（.htaccess で30日キャッシュ）。
 
 ## 会員（ニックネーム＋暗証番号4桁）
+
+入口は2か所（アプリ本体＝歯車のいちばん上／トップ＝右上）。**要素IDを同じ（`accWho` `accBtn`
+`accOut` と `#mAccount` 一式）にしてあるので `src/account.js` を両方でそのまま共用している。**
+そのためモーダルの開閉 `openDockModal` / `closeDockModal` は drawer.js から dom.js へ移した
+（drawer.js からも再輸出しているので既存の import はそのまま）。
+
 
 `includes/auth.php`（実処理）/ `api/auth.php`（JSON API）/ `src/account.js`（画面）。入口は歯車のいちばん上。
 

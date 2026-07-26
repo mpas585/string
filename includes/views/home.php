@@ -60,9 +60,23 @@ foreach (APP_INSTRUMENTS as $ins) {
   <meta name="apple-mobile-web-app-title" content="<?= h(APP_NAME) ?>">
 
   <link rel="stylesheet" href="<?= h($BASE) ?>src/styles.css">
+
+  <script>
+    /* トップで使うのは会員まわりと PWA の案内だけなので、辞書は ui と account に絞って渡す
+       （アプリ本体のページは includes/views/app.php が $T 全体を渡している） */
+    window.APP = <?= json_encode(['lang' => $LANG, 'name' => APP_NAME], $JSON) ?>;
+    window.T   = <?= json_encode(['ui' => $T['ui'], 'account' => $T['account']], $JSON) ?>;
+  </script>
 </head>
 <body class="home">
 <main class="hm">
+  <!-- 会員（アプリ本体では歯車のいちばん上。表示の書き換えは src/account.js） -->
+  <div class="hm-acc">
+    <span id="accWho" class="accwho"><?php e('ui.acc_guest') ?></span>
+    <button id="accBtn" class="ghost"><?php e('ui.acc_login') ?></button>
+    <button id="accOut" class="ghost" hidden><?php e('ui.acc_logout') ?></button>
+  </div>
+
   <header class="hm-head">
     <div class="hm-logo"><?= h($LOGO) ?></div>
     <h1 class="hm-title"><?= h(APP_NAME) ?></h1>
@@ -95,6 +109,32 @@ foreach (APP_INSTRUMENTS as $ins) {
     <small>&copy; <?= date('Y') ?> <?= h(APP_NAME) ?></small>
   </footer>
 </main>
-<script type="module" src="<?= h($BASE) ?>src/pwa.js"></script>
+<div id="dockScrim" class="dkscrim"></div>
+
+<!-- ログイン／新規登録。切替は src/account.js が同じフォームで行う -->
+<div id="mAccount" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span id="accTitle" class="dk-tt"><?php e('ui.m_account') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="fmrow">
+    <label for="accNick"><?php e('account.nick') ?></label>
+    <input id="accNick" type="text" maxlength="20" autocomplete="nickname" placeholder="<?php e('account.nick_ph') ?>">
+  </div>
+  <div class="fmrow">
+    <label for="accPin"><?php e('account.pin') ?></label>
+    <input id="accPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="････">
+  </div>
+  <div class="row controls">
+    <button id="accSubmit" class="primary" style="flex:1; justify-content:center"><?php e('account.login') ?></button>
+  </div>
+  <button id="accSwap" class="linkbtn"><?php e('account.to_register') ?></button>
+  <div id="accMsg" class="fmmsg" role="status"></div>
+  <div class="sub"><?php e('account.note') ?></div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module" src="<?= h($BASE) ?>src/home.js"></script>
 </body>
 </html>

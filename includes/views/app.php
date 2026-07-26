@@ -90,15 +90,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
   <hr class="sep">
 
-  <div class="gp-t"><?php e('ui.lang_label') ?></div>
-  <select id="langSel">
-<?php foreach (APP_LANGS as $l):
-        $ln = require APP_ROOT . '/includes/lang/' . $l . '.php'; ?>
-    <option value="<?= h($l) ?>"<?= $l === $LANG ? ' selected' : '' ?>><?= h($ln['name']) ?></option>
-<?php endforeach; ?>
-  </select>
-  <div class="sub" style="margin:6px 0 10px"><?php e('ui.lang_note') ?></div>
-
   <div class="gp-t"><?php e('ui.view') ?></div>
   <div class="seg2" id="viewSeg">
     <button data-view="board"><?php e('ui.view_board') ?></button>
@@ -147,6 +138,17 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="row controls">
     <button id="contactBtn" class="ghost" style="flex:1; justify-content:center"><?php e('ui.contact') ?></button>
   </div>
+
+  <!-- ===== 言語（いちばん下）===== -->
+  <hr class="sep">
+  <div class="gp-t"><?php e('ui.lang_label') ?></div>
+  <select id="langSel">
+<?php foreach (APP_LANGS as $l):
+        $ln = require APP_ROOT . '/includes/lang/' . $l . '.php'; ?>
+    <option value="<?= h($l) ?>"<?= $l === $LANG ? ' selected' : '' ?>><?= h($ln['name']) ?></option>
+<?php endforeach; ?>
+  </select>
+  <div class="sub" style="margin:6px 0 10px"><?php e('ui.lang_note') ?></div>
 </div>
 
 <div id="empty" class="empty">

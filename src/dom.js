@@ -20,3 +20,15 @@ export function on(id, ev, fn){
   el.addEventListener(ev, fn);
   return el;
 }
+
+/* ===== ドック上のモーダル（.dkmodal）の開閉 =====
+   もとは drawer.js にあったが、楽器選択トップ（/{言語}/）からも会員モーダルを開くため、
+   依存の無い dom.js へ移した。drawer.js からも従来どおり import できる（再輸出している）。 */
+export function openDockModal(id){
+  document.querySelectorAll('.dkmodal').forEach(m=> m.classList.toggle('open', m.id===id));
+  const sc=document.getElementById('dockScrim'); if(sc) sc.classList.add('open');
+}
+export function closeDockModal(){
+  document.querySelectorAll('.dkmodal').forEach(m=> m.classList.remove('open'));
+  const sc=document.getElementById('dockScrim'); if(sc) sc.classList.remove('open');
+}
