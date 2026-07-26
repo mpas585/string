@@ -25,7 +25,7 @@
   依存なし（ImageData と detectStaves() の結果を受け取るだけ）。
 */
 
-import { binarize } from './staff.js';
+import { binarize, staffSpanX } from './staff.js';
 
 /* ===== 小物 ===== */
 
@@ -211,6 +211,7 @@ export function detectNoteheads(imageData, staffResult, opts = {}) {
     holeMinW = 0.22, holeMaxW = 1.15,
     holeMinH = 0.14, holeMaxH = 0.85,
     mergeX = 0.55, mergeY = 0.30,
+    mergeHollowX = 0.85, mergeHollowY = 0.42,
   } = opts;
 
   const { bin, w, h } = binarize(imageData, opts);
@@ -221,6 +222,15 @@ export function detectNoteheads(imageData, staffResult, opts = {}) {
     const d = st.d;
     const band = eraseStaffLines(cropStaffBand(bin, w, h, st), st, opts);
     const { ink, lw, lh, bx0, by0 } = band;
+    /* 白玉の穴だけは【五線を消す前】の画像でも探す。
+       間（スペース）に置かれた白玉は、楕円の上端と下端が五線の線そのものに重なっている。
+       線を消すと輪の上下が切れて穴が外へ漏れ、白玉が丸ごと落ちる。
+       実測: 全音符と2分音符が2つ、これで消えていた（線の上に乗った白玉だけ残っていた）。
+       線を残したままなら、輪の左右＋線の上下で穴が閉じるので拾える。 */
+    const rawInk = cropStaffBand(bin, w, h, st).ink;
+    /* 線を残した画像は、五線の左にあるパート名の文字の内側（"e" や "o" の穴）まで拾う。
+       線が引かれている範囲の内側だけを見て弾く。 */
+    const spanX = staffSpanX(bin, w, h, st);
     const found = [];
 
     if (lw > 2 && lh > 2) {
@@ -257,25 +267,46 @@ export function detectNoteheads(imageData, staffResult, opts = {}) {
         });
       }
 
-      /* --- 白玉：インクに囲まれた白い穴 --- */
-      const holeMask = new Uint8Array(lw * lh);
-      for (let i = 0; i < holeMask.length; i++) holeMask[i] = ink[i] ? 0 : 1;
+      /* --- 白玉：インクに囲まれた白い穴。線を消した画像と消す前の画像の両方で探す --- */
       const holeMin = Math.max(3, Math.round(d * d * 0.04));
-      for (const c of components(holeMask, lw, lh, holeMin)) {
-        if (touchesEdge(c, lw, lh)) continue;         /* 外の余白と繋がっている＝穴ではない */
-        const cw = c.x1 - c.x0 + 1, ch = c.y1 - c.y0 + 1;
-        if (cw < d * holeMinW || cw > d * holeMaxW) continue;
-        if (ch < d * holeMinH || ch > d * holeMaxH) continue;
-        found.push({ lx: c.sx / c.n, ly: c.sy / c.n, filled: false, w: cw, h: ch });
-      }
+      const findHoles = (src, rawPass) => {
+        const holeMask = new Uint8Array(lw * lh);
+        for (let i = 0; i < holeMask.length; i++) holeMask[i] = src[i] ? 0 : 1;
+        for (const c of components(holeMask, lw, lh, holeMin)) {
+          if (touchesEdge(c, lw, lh)) continue;       /* 外の余白と繋がっている＝穴ではない */
+          const cw = c.x1 - c.x0 + 1, ch = c.y1 - c.y0 + 1;
+          if (cw < d * holeMinW || cw > d * holeMaxW) continue;
+          if (ch < d * holeMinH || ch > d * holeMaxH) continue;
+          if (rawPass) {
+            /* 線を残した画像を見るのは【間（スペース）に置かれた白玉】を拾うためだけ。
+               線の上に乗った白玉は、線を消した画像の側でちゃんと取れている。
+               対象を間に限らないと、連桁の下にできる「符幹2本＋五線2本で囲まれた空き」まで
+               白玉として拾ってしまう（実測: 16分音符の連桁の下で3個の偽の白玉が出た）。 */
+            if ((bx0 + c.x0) < spanX.x0) continue;         /* 五線の左の文字の内側を除く */
+            const cy = (by0 + c.sy / c.n) - (bx0 + c.sx / c.n) * st.tan;
+            const step = Math.round((st.lines[4] - cy) / (d / 2));
+            if (step % 2 === 0) continue;                  /* 偶数＝線の上。ここでは扱わない */
+          }
+          found.push({ lx: c.sx / c.n, ly: c.sy / c.n, filled: false, w: cw, h: ch });
+        }
+      };
+      findHoles(ink);
+      findHoles(rawInk, true);  /* 重複はこの後の merged で畳まれる */
     }
 
     /* --- 重なりを畳む。和音は縦に d/2 で並ぶので mergeY は d/2 未満にすること --- */
     found.sort((a, b) => a.lx - b.lx || a.ly - b.ly);
     const merged = [];
     for (const f of found) {
+      /* 白玉は「線を消した画像」と「消す前の画像」の両方から出てくるので、同じ符頭でも
+         穴の形が少し違い、重心が離れる。白玉どうしだけは広めの窓で畳む
+         （符頭1個ぶんより広げないこと。和音は縦に d/2 で並ぶ） */
+      const bothHollow = !f.filled;
+      const wx = d * (bothHollow ? mergeHollowX : mergeX);
+      const wy = d * (bothHollow ? mergeHollowY : mergeY);
       const prev = merged.find(m =>
-        Math.abs(m.lx - f.lx) < d * mergeX && Math.abs(m.ly - f.ly) < d * mergeY);
+        (bothHollow ? !m.filled : true) &&
+        Math.abs(m.lx - f.lx) < wx && Math.abs(m.ly - f.ly) < wy);
       if (prev) { if (f.filled) prev.filled = true; continue; }
       merged.push(f);
     }

@@ -522,6 +522,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <b id="pdfpage">– / –</b>
     <button id="pdfnext" class="iconbtn" disabled>›</button>
     <span class="sp"></span>
+    <!-- 表示中のページを読み取って譜面にする（src/omr-import.js）。リズムは推定 -->
+    <button id="pdfImport" class="ghost" disabled><?php e('ui.pdf_import') ?></button>
   </div>
   <div class="pdf-scroll">
     <div class="note-note"><?php er('ui.pdf_note_html') ?></div>

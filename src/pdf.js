@@ -70,6 +70,7 @@ export async function renderPdfPage(){
   document.getElementById('pdfpage').textContent=`${pdfPage} / ${pdfDoc.numPages}`;
   document.getElementById('pdfprev').disabled=pdfPage<=1;
   document.getElementById('pdfnext').disabled=pdfPage>=pdfDoc.numPages;
+  const imp=document.getElementById('pdfImport'); if(imp) imp.disabled=false;
 }
 
 /* ===== OMR用：検出解像度でのオフスクリーン描画 =====

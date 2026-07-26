@@ -156,7 +156,8 @@ return [
     'drawer_note_html' => 'La posición del dedo se calcula con la proporción de la cuerda (1 − 2<sup>−semitonos/12</sup>). Los nombres de posición y los números de dedo son orientativos.<br>Todo funciona en local: no se envía ningún dato fuera del dispositivo.',
 
     'pdf_open'       => '📄 Abrir',
-    'pdf_note_html'  => 'El PDF es <b>solo de referencia</b>. El reconocimiento óptico de partituras no es posible solo en el navegador, así que la digitación y la reproducción se importan desde MusicXML.',
+    'pdf_import'     => 'Importar',
+    'pdf_note_html'  => 'El PDF se puede <b>ver como referencia</b> y con <b>Importar</b> se leen las notas de la página (solo altura y orden; <b>el ritmo se deduce de las cabezas llenas/huecas</b>, no se leen corchetes, barras, silencios ni compases). Para datos exactos de digitación y reproducción, importa MusicXML.',
     'pdf_empty'      => 'Elige un archivo PDF para verlo aquí',
 
     'tuner_t'        => 'Afinador / detección de altura',
@@ -268,6 +269,13 @@ return [
     'skip_to_first'        => 'A la primera nota (compás %s / %s)',
     'midi_tracks'          => 'MIDI: %s pistas — elige una de la lista',
     'score_loaded'         => 'Cargado: %s eventos',
+    /* ===== Lectura de partituras PDF (src/omr-import.js). tt() solo sustituye %s ===== */
+    'omr_run'              => 'Leyendo la partitura...',
+    'omr_nostaff'          => 'No se encontraron pentagramas. El escaneo puede estar torcido o ser de baja resolución',
+    'omr_nonote'           => 'No se encontraron notas',
+    'omr_done'             => 'Se importaron %s notas de %s pentagramas (el ritmo se deduce de las cabezas llenas/huecas)',
+    'omr_lowconf'          => ' / la clave es dudosa en %s pentagramas',
+    'omr_fail'             => 'No se pudo leer la partitura: %s',
     'fing_restored_suffix' => ' / digitación restaurada',
     'swan_loaded'          => 'El cisne cargado',
     'preset_err'           => 'Error al cargar el preajuste: %s',

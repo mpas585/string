@@ -73,7 +73,8 @@ export function binarize(imageData, opts = {}) {
  */
 export function detectColumns(bin, w, h, opts = {}) {
   const {
-    inkRatio = 0.004,    /* この割合未満のインクしかない列を「空」とみなす */
+    inkRatio = 0.004,    /* ページ高に対する割合。空判定のしきい値の上限として使う */
+    colInkRatio = 0.15,  /* 実測インク量（非ゼロ列の中央値）に対する割合 */
     minGapRatio = 0.02,  /* 空列がこの幅ぶん続いたらノドか外余白と判定 */
     minColRatio = 0.12,  /* これより細い列は破棄（ノイズ・ページ番号） */
   } = opts;
@@ -84,7 +85,16 @@ export function detectColumns(bin, w, h, opts = {}) {
     for (let x = 0; x < w; x++) if (bin[row + x]) prof[x]++;
   }
 
-  const inkMin = Math.max(1, Math.floor(h * inkRatio));
+  /* 「空」の判定は【実際に観測されたインク量】を基準にする。
+     ページ高に対する割合だけで決めると、段数の少ないページや最終段が短いページで
+     「五線1段ぶん（線5本＝十数px）」がしきい値を下回り、本文の途中が列の切れ目に化ける。
+     実測: 全幅1段＋途中まで1段のページが3つの断片に割れ、右半分の音符が丸ごと落ちた。
+     しきい値は従来値を上限として、実測の中央値に応じて下げるだけにする。 */
+  const nz = [];
+  for (let x = 0; x < w; x++) if (prof[x]) nz.push(prof[x]);
+  nz.sort((a, b) => a - b);
+  const medCol = nz.length ? nz[nz.length >> 1] : 0;
+  const inkMin = Math.max(1, Math.min(Math.floor(h * inkRatio), Math.round(medCol * colInkRatio)));
   const minGap = Math.max(2, Math.floor(w * minGapRatio));
   const minCol = Math.floor(w * minColRatio);
 
@@ -273,6 +283,34 @@ export function detectStaves(imageData, opts = {}) {
       spacing: ds.length ? { min: Math.min(...ds), med: median(ds), max: Math.max(...ds) } : null,
     },
   };
+}
+
+/**
+ * 五線の線が実際に引かれている x の範囲。
+ *
+ * 帯の x 範囲（＝列の幅）には、五線の左側にあるパート名や段番号などの文字も入る。
+ * それを音部記号と取り違えると、記号の判定も「曲の始まり位置」も全部ずれる
+ * （実測: パート名 "Cello" を音部記号と誤認し、本物の記号と拍子記号が符頭に化けた）。
+ * 五線の線は譜面の始まりからしか引かれていないので、線のある範囲を見れば切り分けられる。
+ *
+ * @param {number} [need=4] 5本のうち何本あれば「五線がある」とみなすか
+ * @returns {{x0:number, x1:number}}
+ */
+export function staffSpanX(bin, w, h, st, need = 4) {
+  let x0 = null, x1 = null;
+  const xa = Math.max(0, Math.floor(st.x0)), xb = Math.min(w, Math.ceil(st.x1));
+  for (let x = xa; x < xb; x++) {
+    let hit = 0;
+    for (let k = 0; k < 5; k++) {
+      const y = Math.round(st.lines[k] + x * st.tan);
+      for (let dy = -1; dy <= 1; dy++) {          /* 線は数px太いので上下を少し見る */
+        const yy = y + dy;
+        if (yy >= 0 && yy < h && bin[yy * w + x]) { hit++; break; }
+      }
+    }
+    if (hit >= need) { if (x0 === null) x0 = x; x1 = x; }
+  }
+  return { x0: x0 === null ? xa : x0, x1: x1 === null ? xb : x1 };
 }
 
 /** 五線の第i線が、実座標の x でどの y を通るか。 */

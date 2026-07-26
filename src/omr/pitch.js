@@ -18,7 +18,7 @@
   依存は notehead.js の帯ユーティリティのみ。DOM も ST も参照しない。
 */
 
-import { binarize } from './staff.js';
+import { binarize, staffSpanX } from './staff.js';
 import { components, cropStaffBand, eraseStaffLines } from './notehead.js';
 
 /* ===== 音名まわり（ここは規則なので厳密に決まる） ===== */
@@ -128,10 +128,17 @@ function glyphsInBand(band, st, minW, minH) {
  *   margin … 2位との差（d単位）。小さいほど怪しい。0.4 未満なら手動で確認したい
  */
 export function detectClef(bin, w, h, st, opts = {}) {
-  const { clefWindow = 3.0, clefBassMax = 3.8, clefTrebleMin = 5.3 } = opts;
+  const { clefWindow = 3.0, clefBassMax = 3.8, clefTrebleMin = 5.3, clefReachIn = 0.2 } = opts;
   const d = st.d;
   const band = eraseStaffLines(cropStaffBand(bin, w, h, st), st, opts);
-  const glyphs = glyphsInBand(band, st, Math.round(d * 0.25), Math.round(d * 1.2));
+  const all = glyphsInBand(band, st, Math.round(d * 0.25), Math.round(d * 1.2));
+  /* 五線の左にあるパート名・段番号などの文字を記号と取り違えないよう、線の内側だけを見る */
+  const span = staffSpanX(bin, w, h, st);
+  /* 音部記号は必ず五線を跨ぐ。上端より完全に上にある塊（小節番号・発想記号・練習記号）は
+     記号ではないので外す。これを入れると外接矩形が上へ伸び、ヘ音記号が高さ判定で
+     ト音記号に化ける。実測: 小節番号のある段で 1.5d → 5.9d に膨らみ、段まるごと誤判定した。 */
+  const glyphs = all.filter(g => g.ycBot > st.lines[0] + d * clefReachIn
+                             && g.x1 >= span.x0);
   if (!glyphs.length) return { clef: 'bass', score: 0, margin: 0, box: null };
 
   /* 先頭の記号の塊。窓の中にある成分をまとめて1つの外接矩形にする
@@ -173,6 +180,76 @@ export function detectClef(bin, w, h, st, opts = {}) {
     margin: +margin.toFixed(3),
     box: { ...box, top: +top.toFixed(2), bottom: +bot.toFixed(2) },
   };
+}
+
+/* ===== 拍子記号 ===== */
+
+/**
+ * 調号の右にある拍子記号を見つける。見つからなければ null。
+ *
+ * 音符との区別:
+ *   拍子記号 … 第3線を挟んで【別々の連結成分】が上下に1つずつある。どちらも幅・高さがある
+ *   音符     … 符頭は1つの塊で、そこから伸びる符幹は幅 0.15d 程度しかない。
+ *              つまり上下どちらかが必ず細くなり、この条件を満たさない
+ *
+ * 音符を拍子記号と誤って捨てると音が消えてしまうので、判定は厳しめにして
+ * 「上下が揃ったときだけ」返す。ハ形（C・¢）は塊が1つなのでここでは拾わない
+ * ＝従来どおり通すだけで、音符が消える方向には倒れない。
+ *
+ * @param {number} fromX 調号の右端。ここより左は見ない
+ * @returns {{x0:number, x1:number}|null}
+ */
+export function detectTimeSig(bin, w, h, st, fromX, opts = {}) {
+  const { tsWindow = 2.2, tsMinH = 2.4, tsMaxW = 3.0, tsHalfFill = 0.5, tsHalfWidth = 0.8,
+          tsMidGap = 0.35 } = opts;
+  const d = st.d;
+  const band = eraseStaffLines(cropStaffBand(bin, w, h, st), st, opts);
+  const glyphs = glyphsInBand(band, st, Math.round(d * 0.3), Math.round(d * 0.5))
+    .filter(g => g.x0 >= fromX);
+  if (!glyphs.length) return null;
+
+  /* 先頭の塊と同じ位置に立っているものをまとめて1つの外接矩形にする。
+     上下の数字は五線の線を挟んで1つの連結成分に繋がることがあるので、
+     「塊が2つある」ではなく【上半分と下半分それぞれのインクの広がり】で判定する。 */
+  const x0 = glyphs[0].x0;
+  const win = glyphs.filter(g => g.x0 < x0 + d * tsWindow);
+  const gx0 = Math.min(...win.map(g => g.x0));
+  const gx1 = Math.max(...win.map(g => g.x1));
+  const top = Math.min(...win.map(g => g.ycTop));
+  const bot = Math.max(...win.map(g => g.ycBot));
+  if (bot - top < d * tsMinH) return null;            /* 五線をほぼ縦断していること */
+  if (gx1 - gx0 > d * tsMaxW) return null;            /* 拍子記号は幅が狭い */
+
+  /* 五線を消した画像で、上半分・下半分それぞれインクのある列がどれだけあるか数える。
+     拍子記号は上下とも数字なのでどちらも幅いっぱい。
+     音符は符幹側が幅 0.15d ほどしかないので、必ずどちらかが細くなる。 */
+  const colsWithInk = (ycA, ycB) => {
+    let c = 0;
+    for (let x = gx0; x <= gx1; x++) {
+      const lx = x - band.bx0;
+      if (lx < 0 || lx >= band.lw) continue;
+      for (let yc = Math.floor(ycA); yc <= Math.ceil(ycB); yc++) {
+        const ly = Math.round(yc + x * st.tan) - band.by0;
+        if (ly >= 0 && ly < band.lh && band.ink[ly * band.lw + lx]) { c++; break; }
+      }
+    }
+    return c;
+  };
+  const wpx = gx1 - gx0 + 1;
+  /* 第3線のすぐ上下は数えない。符頭が第3線に乗っていると、線を消した後も
+     符頭の上辺のインクが線の位置に残り、「上半分にも幅いっぱいのインクがある」と
+     誤って数えてしまう（実測: 符頭＋符幹を拍子記号と誤認し、本物の音符を捨てた）。
+     数字は中央線から 0.35d 以上離れた所まで広がっているので、除外しても判定は通る。 */
+  const upCols = colsWithInk(st.lines[0] - d * 0.3, st.lines[2] - d * tsMidGap);
+  const loCols = colsWithInk(st.lines[2] + d * tsMidGap, st.lines[4] + d * 0.3);
+  /* 割合だけだと、符頭＋符幹のような縦長の塊（矩形が狭い）でも比率が上がってしまう。
+     数字は上下とも 1.5d 以上の幅がある一方、符幹は 0.15d しかないので、
+     絶対的なインク幅でも足切りする。音符を拍子記号と誤って捨てないための保険。 */
+  if (upCols < d * tsHalfWidth || loCols < d * tsHalfWidth) return null;
+  const upFill = upCols / wpx, loFill = loCols / wpx;
+  if (upFill < tsHalfFill || loFill < tsHalfFill) return null;
+
+  return { x0: gx0, x1: gx1, upFill: +upFill.toFixed(2), loFill: +loFill.toFixed(2) };
 }
 
 /* ===== 調号 ===== */
@@ -271,9 +348,14 @@ export function assignPitches(imageData, staffResult, noteheadResult, opts = {})
      ♭の袋やヘ音記号の玉が符頭として拾われている。曲が始まる位置より左は捨てる。
      この判断は調号の右端が分かって初めてできるので、ここでやる。 */
   const startX = staves.map(s => {
+    const stf = staffResult.staves[s.staff];
     const base = (s.key && s.key.endX != null) ? s.key.endX
                : (s.detected.box ? s.detected.box.x1 : 0);
-    return base + staffResult.staves[s.staff].d * headGapAfterKey;
+    let x = base + stf.d * headGapAfterKey;
+    /* 拍子記号の数字も「丸くて太いもの」として符頭に拾われるので、あればその右まで進める */
+    const ts = detectTimeSig(bin, w, h, stf, x, opts);
+    if (ts) x = ts.x1 + stf.d * headGapAfterKey;
+    return x;
   });
   const dropped = noteheadResult.heads.filter(n => n.x < startX[n.staff]).length;
 

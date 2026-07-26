@@ -153,7 +153,8 @@ return [
     'drawer_note_html' => 'Stopping positions are derived from the string-length ratio (1 − 2<sup>−semitones/12</sup>). Position names and finger numbers are a guide only.<br>Everything runs locally; no data leaves your device.',
 
     'pdf_open'       => '📄 Open',
-    'pdf_note_html'  => 'PDF is <b>for reference only</b>. Optical music recognition is not possible in the browser alone, so fingering and playback data are imported from MusicXML.',
+    'pdf_import'     => 'Import',
+    'pdf_note_html'  => 'A PDF can be <b>viewed for reference</b>, and <b>Import</b> reads the notes off the page (pitch and order only &mdash; <b>rhythm is guessed from filled/hollow noteheads</b>; flags, beams, rests and barlines are not read). For accurate fingering and playback data, import MusicXML.',
     'pdf_empty'      => 'Choose a PDF file to display it here',
 
     'tuner_t'        => 'Tuner / pitch detection',
@@ -265,6 +266,13 @@ return [
     'skip_to_first'        => 'To the first note (bar %s / %s)',
     'midi_tracks'          => 'MIDI: %s tracks — pick one from the list',
     'score_loaded'         => 'Loaded: %s events',
+    /* ===== PDF score reading (src/omr-import.js). tt() only substitutes %s ===== */
+    'omr_run'              => 'Reading the score...',
+    'omr_nostaff'          => 'No staves found. The scan may be skewed or too low resolution',
+    'omr_nonote'           => 'No notes found',
+    'omr_done'             => 'Imported %s notes from %s staves (rhythm is guessed from filled/hollow noteheads)',
+    'omr_lowconf'          => ' / the clef is uncertain on %s staves',
+    'omr_fail'             => 'Could not read the score: %s',
     'fing_restored_suffix' => ' / fingering restored',
     'swan_loaded'          => 'The Swan loaded',
     'preset_err'           => 'Preset load error: %s',

@@ -153,7 +153,8 @@ return [
     'drawer_note_html' => '按弦位置由弦长比（1 − 2<sup>−半音/12</sup>）计算。把位名称与指法编号仅供参考。<br>全部在本地运行，不会将数据发送到设备之外。',
 
     'pdf_open'       => '📄 打开',
-    'pdf_note_html'  => 'PDF <b>仅供参考显示</b>。浏览器无法单独完成乐谱图像识别（OMR），因此指法与播放数据需从 MusicXML 导入。',
+    'pdf_import'     => '导入',
+    'pdf_note_html'  => 'PDF可<b>作为参考显示</b>，也可用<b>导入</b>读取页面上的音符（仅音高与顺序；<b>节奏由符头黑白推测</b>，不读取符尾、符杠、休止符与小节线）。需要准确的指法与播放数据时，请导入 MusicXML。',
     'pdf_empty'      => '选择 PDF 文件后将显示在这里',
 
     'tuner_t'        => '调音器 / 音准判定',
@@ -265,6 +266,13 @@ return [
     'skip_to_first'        => '跳到第一个音（第 %s 小节 / %s）',
     'midi_tracks'          => 'MIDI：%s 个音轨 → 可从列表选择',
     'score_loaded'         => '载入完成：%s 个事件',
+    /* ===== PDF乐谱读取（src/omr-import.js）。tt() 只替换 %s ===== */
+    'omr_run'              => '正在读取乐谱…',
+    'omr_nostaff'          => '未检测到五线谱。可能是扫描倾斜或分辨率过低',
+    'omr_nonote'           => '未检测到音符',
+    'omr_done'             => '已导入%s个音（%s行・节奏由符头黑白推测）',
+    'omr_lowconf'          => '／有%s行的谱号判断不确定',
+    'omr_fail'             => '读取失败：%s',
     'fing_restored_suffix' => ' / 已恢复指法',
     'swan_loaded'          => '已载入天鹅',
     'preset_err'           => '预设载入错误：%s',

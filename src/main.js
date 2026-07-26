@@ -19,6 +19,7 @@ import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 import { tt } from './util.js';
 import { initAccount, openAccount, submitAccount, swapAccountMode, logoutAccount } from './account.js';
 import { openContact, sendContact } from './contact.js';
+import { importPdfScore } from './omr-import.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
@@ -30,6 +31,7 @@ on('menu','click', openDrawer);
 on('drawerClose','click', closeDrawer);
 on('scrim','click', closeDrawer);
 on('pdfOpen','click', openPdfOverlay);
+on('pdfImport','click', importPdfScore);   /* 表示中のページを読み取って譜面にする */
 on('pdfClose','click', closePdfOverlay);
 on('tempo','input', e=>{ setTempo(+e.target.value, true); saveSettings(); });
 /* 数値入力：打ち込み途中（空欄・1桁）で勝手に補正しない。確定時にだけ範囲へ丸める */
