@@ -1,7 +1,9 @@
 <?php
 /*
-  index.php（ルート） — 言語を判定して /{言語}/{既定楽器}/ へ転送するだけ。
-  ページ本体は /{言語}/{楽器}/index.php → includes/string_instrument.php。
+  index.php（ルート） — 言語を判定して /{言語}/（楽器選択トップ）へ転送するだけ。
+  トップの中身は /{言語}/index.php → includes/home.php、
+  アプリ本体は /{言語}/{楽器}/index.php → includes/string_instrument.php。
+  ここは hreflang の x-default が指す言語中立URLでもある（実体は持たない）。
 */
 define('STRING_APP', 1);
 $APP     = require __DIR__ . '/config/app.php';
@@ -21,5 +23,5 @@ if (!in_array($lang, $langs, true)) {
   }
 }
 
-header('Location: ./' . $lang . '/' . $APP['default_instrument'] . '/', true, 302);
+header('Location: ./' . $lang . '/', true, 302);
 exit;

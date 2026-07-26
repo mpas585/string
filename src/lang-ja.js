@@ -31,8 +31,7 @@ window.T = window.T || {
     "low": "ロー",
     "mid": "ミドル",
     "high": "ハイ",
-    "high_thumb": "ハイ(親指P)",
-    "body": "ボディ接合"
+    "high_thumb": "ハイ(親指P)"
   },
   "marker": {
     "thumb": "親指"
@@ -103,7 +102,7 @@ window.T = window.T || {
     "tempo_dn": "遅く",
     "tempo_up": "速く",
     "tempo_reset": "⟲ 元のテンポ",
-    "m_oct": "Oct オクターブ",
+    "m_oct": "OCT オクターブ",
     "oct_auto": "自動",
     "oct_orig": "原曲",
     "m_loop": "🔁 ループ設定",

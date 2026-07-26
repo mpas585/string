@@ -1,16 +1,15 @@
 <?php
 /*
   sitemap.php — config/app.php の 言語 × 楽器 から sitemap を生成する。
+  ・/{言語}/（楽器選択トップ）と /{言語}/{楽器}/（アプリ）の両方を出力する
   ・ready=false の楽器（準備中ページ）は noindex なので出力しない
   ・各URLに全言語の xhtml:link を付ける（hreflang をサイトマップ側でも明示）
   ・既定楽器には x-default（＝Accept-Language で振り分けるルート）を付ける
 
   参照のさせ方: ドメイン直下の robots.txt に
-      Sitemap: https://（ドメイン）/cello-finger/sitemap.php
+      Sitemap: https://genstrings.sakura.ne.jp/sitemap.xml
   と書くか、Search Console にこのURLを登録する。
-  拡張子を .xml にしたい場合は .htaccess に
-      RewriteEngine On
-      RewriteRule ^sitemap\.xml$ sitemap.php [L]
+  /sitemap.xml → sitemap.php の書き換えはルートの .htaccess に入れてある。
 */
 define('STRING_APP', 1);
 $APP = require __DIR__ . '/config/app.php';
@@ -27,8 +26,8 @@ foreach ($APP['instruments'] as $i) {
   if (!empty($c['ready'])) { $instruments[] = $i; }
 }
 
-$url = function ($lang, $inst) use ($origin, $root) {
-  return $origin . $root . '/' . $lang . '/' . $inst . '/';
+$url = function ($lang, $inst = '') use ($origin, $root) {
+  return $origin . $root . '/' . $lang . '/' . ($inst === '' ? '' : $inst . '/');
 };
 $x = function ($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); };
 
@@ -36,6 +35,18 @@ header('Content-Type: application/xml; charset=UTF-8');
 echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
 ?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<?php /* 1) 言語別トップ（楽器選択）。x-default は言語判定して振り分けるルート */ ?>
+<?php foreach ($APP['langs'] as $lang): ?>
+  <url>
+    <loc><?= $x($url($lang)) ?></loc>
+<?php foreach ($APP['langs'] as $alt): ?>
+    <xhtml:link rel="alternate" hreflang="<?= $x($alt) ?>" href="<?= $x($url($alt)) ?>"/>
+<?php endforeach; ?>
+    <xhtml:link rel="alternate" hreflang="x-default" href="<?= $x($origin . $root . '/') ?>"/>
+    <priority>1.0</priority>
+  </url>
+<?php endforeach; ?>
+<?php /* 2) 楽器ごとのアプリ本体 */ ?>
 <?php foreach ($instruments as $inst): ?>
 <?php foreach ($APP['langs'] as $lang): ?>
   <url>
@@ -43,9 +54,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
 <?php foreach ($APP['langs'] as $alt): ?>
     <xhtml:link rel="alternate" hreflang="<?= $x($alt) ?>" href="<?= $x($url($alt, $inst)) ?>"/>
 <?php endforeach; ?>
-<?php if ($inst === $APP['default_instrument']): ?>
-    <xhtml:link rel="alternate" hreflang="x-default" href="<?= $x($origin . $root . '/') ?>"/>
-<?php endif; ?>
+    <priority>0.8</priority>
   </url>
 <?php endforeach; ?>
 <?php endforeach; ?>

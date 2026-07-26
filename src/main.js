@@ -17,6 +17,9 @@ import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 import { tt } from './util.js';
+import { initAccount, openAccount, submitAccount, swapAccountMode, logoutAccount } from './account.js';
+import { openContact, sendContact } from './contact.js';
+import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
 /* --- 取りこぼしていた基本配線（元 L3509–3520。fab=再生ボタン等） --- */
@@ -365,6 +368,19 @@ document.querySelectorAll('.tun-str [data-str]').forEach(el=>{
 /* ===== 歯車：指板の表示設定 ===== */
 on('gear','click', toggleGear);
 on('gearScrim','click', closeGear);
+
+/* ===== 歯車：会員（いちばん上）＝ ログイン / 新規登録 / ログアウト ===== */
+on('accBtn','click', openAccount);
+on('accOut','click', logoutAccount);
+on('accSubmit','click', submitAccount);
+on('accSwap','click', swapAccountMode);
+/* 暗証番号欄で Enter を押したらそのまま送る（フォーム要素を使っていないため自前で拾う） */
+on('accPin','keydown', e=>{ if(e.key==='Enter') submitAccount(); });
+on('accNick','keydown', e=>{ if(e.key==='Enter') document.getElementById('accPin').focus(); });
+
+/* ===== 歯車：お問い合わせ（いちばん下） ===== */
+on('contactBtn','click', openContact);
+on('ctSend','click', sendContact);
 on('zoom','input', e=> setZoom((+e.target.value||100)/100));
 on('zoomIn','click',   ()=> setZoom(ST.zoom*1.25));
 on('zoomOut','click',  ()=> setZoom(ST.zoom/1.25));
@@ -402,5 +418,7 @@ window.addEventListener('resize', ()=>{ if(pdfDoc && document.getElementById('pd
   syncLoopUI();
   render();
   applyZoom();
+  /* ログイン状態は描画に関係しないので、初期描画の後で取りに行く */
+  initAccount();
 })();
 window.addEventListener('orientationchange', ()=> setTimeout(applyZoom, 250));

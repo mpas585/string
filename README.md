@@ -24,26 +24,38 @@ python3 -m http.server 8000      # → http://localhost:8000
 
 ```
 string/
-├─ index.php             # ルート。言語判定 → /{言語}/cello/ へリダイレクト
-├─ sitemap.php           # config/app.php から sitemap を生成（ready=true の楽器のみ）
-├─ robots.txt            # ※ドメイン直下に移すこと。サブディレクトリでは無効
-├─ ja/ en/ es/ zh/       # 言語ディレクトリ
-│  ├─ index.php          # 楽器未指定 → 既定楽器へリダイレクト
-│  └─ cello/index.php    # $LANG と $INSTRUMENT を定義して基幹PHPを require するだけ
+├─ .htaccess            # Apache設定（https強制 / sitemap.xml・manifest.webmanifest の書き換え / 遮断 / キャッシュ）
+├─ index.php            # ルート。言語判定 → /{言語}/ へリダイレクト（x-default が指す言語中立URL）
+├─ manifest.php         # PWAマニフェスト。?lang= と ?inst= で start_url を出し分ける
+├─ sw.js                # Service Worker（ルート直下＝スコープ /）
+├─ sitemap.php          # config/app.php から sitemap を生成（トップ＋ready=trueの楽器）
+├─ robots.txt           # ドメイン直下に置くこと
+├─ ja/ en/ es/ zh/      # 言語ディレクトリ
+│  ├─ index.php         # 楽器選択トップ（$LANG を定義して includes/home.php を require）
+│  └─ cello/index.php   # $LANG と $INSTRUMENT を定義して基幹PHPを require するだけ
+├─ api/
+│  ├─ auth.php          # 会員（登録/ログイン/ログアウト/状態）の JSON API
+│  └─ contact.php       # お問い合わせ送信（mb_send_mail）
+├─ data/                # 非公開。.htaccess で遮断。SQLite とセッションの実体（gitには入れない）
 ├─ includes/
-│  ├─ string_instrument.php  # 基幹（約110行）。検証・config/言語の読込・ビューの振り分けのみ
+│  ├─ bootstrap.php         # 共通（config読込・言語・辞書・h/t/e/er・パス算出）
+│  ├─ home.php              # 楽器選択トップの基幹
+│  ├─ string_instrument.php # 楽器ページの基幹。検証・楽器configの読込・ビューの振り分け
+│  ├─ auth.php              # 会員の実処理（SQLite / password_hash / 失敗ロック）
 │  ├─ views/
+│  │  ├─ home.php        # 楽器選択トップのHTML
 │  │  ├─ app.php         # アプリ本体のHTMLシェル（旧 index.html）
 │  │  └─ soon.php        # 準備中の楽器（ready=false）のページ
 │  ├─ fingering.php      # ゾーン判定・指番号（JS の zoneOf/fingerHint と同じ規則）
 │  ├─ midi.php           # 音名・周波数・弦長比（JS の midiName/fracOf と同じ規則）
-│  └─ lang/{ja,en,es,zh}.php  # 文言・音名・ゾーンラベル
+│  └─ lang/{ja,en,es,zh}.php  # 文言・音名・ゾーンラベル・会員/問い合わせ/トップの文言
 ├─ config/
-│  ├─ app.php            # 対応言語・対応楽器・既定値（ここが唯一の定義）
+│  ├─ app.php            # 対応言語・対応楽器・既定値・問い合わせ宛先・DBパス（ここが唯一の定義）
 │  ├─ cello.php          # 開放弦・弦名・ゾーン境界・指番号テーブル（ready=true）
 │  ├─ violin.php         # 調弦のみ（ready=false ＝「準備中」ページ）
 │  └─ viola.php          # 同上
 ├─ public/               # そのまま配信される静的アセット（fetch対象）
+│  ├─ icons/             # PWA・ファビコン（192 / 512 / maskable / apple-touch）
 │  ├─ songs/
 │  │  ├─ manifest.json   # 曲一覧（先読み）
 │  │  └─ kirakira.json   # 1曲1ファイル（選択時に遅延fetch）
@@ -63,6 +75,9 @@ string/
    ├─ notation.js        # 五線譜レンダラ（静的import）
    ├─ tuner.js           # ピッチ検出（静的import）
    ├─ pdf.js             # PDF表示（pdfjsは基幹PHPでグローバル読み込み）
+   ├─ account.js         # 会員（歯車のいちばん上）。api/auth.php を叩く
+   ├─ contact.js         # お問い合わせ（歯車のいちばん下）。api/contact.php を叩く
+   ├─ pwa.js             # Service Worker登録 と「ホーム画面に追加」。※自分で配線する
    └─ audio/
       ├─ context.js      # 永続AudioContext, warmAudio, 音量バス
       ├─ synth.js        # 発音（チェロ/ドラム/ベース/コード/メトロノーム）
@@ -71,7 +86,18 @@ string/
 ```
 
 ### 多言語 / 多楽器（PHP 化）
-URL は `/{言語}/{楽器}/` の2階層固定。`/ja/cello/index.php` は次の3行だけ:
+URL は次の3段。`/` は実体を持たず、hreflang の x-default が指す言語中立URLとして使う。
+
+```
+/               → Accept-Language を見て /{言語}/ へ302
+/{言語}/         → 楽器選択トップ（includes/home.php → views/home.php）
+/{言語}/{楽器}/   → アプリ本体（includes/string_instrument.php → views/app.php）
+```
+
+言語・辞書・ヘルパ・パス算出は `includes/bootstrap.php` に集約してあり、トップと楽器ページの
+どちらもこれを読む（`$URL_DEPTH` に公開URLの階層数を渡す）。
+
+`/ja/cello/index.php` は次の3行だけ:
 
 ```php
 $LANG = 'ja'; $INSTRUMENT = 'cello';
@@ -221,6 +247,50 @@ fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCAL
 各バッチ完了時に `npm run dev` で動作確認 → 次へ。全ファイル通読はしない。
 
 ---
+
+## PWA（ホーム画面に保存したときの挙動）
+
+`manifest.php` + `sw.js` + `src/pwa.js` の3点。
+
+* マニフェストは**言語・楽器ごとに `start_url` を変える**必要があるので静的ファイルにできない。
+  `manifest.php?lang=ja&inst=cello` の形で各ページの `<link rel="manifest">` から引く
+  （`.htaccess` で `/manifest.webmanifest` からも引ける）。`scope` は設置ディレクトリのルート。
+* Service Worker は**ルート直下**に置く（置き場所がスコープの上限になるため）。
+  HTML はネットワーク優先（言語切替やログイン状態を古いまま見せない）、`src/` と `public/` は
+  stale-while-revalidate、`/api/` は一切キャッシュしない。**更新時は `sw.js` の `VER` を上げる。**
+* `src/pwa.js` は**このファイルだけ自分でイベント配線する**。アプリ本体（main.js 経由）と
+  楽器選択トップの両方から読まれるため、main.js の配線に載せられない。他モジュールに依存させないこと。
+* iOS には `beforeinstallprompt` が無いので、共有メニューからの手順を文字で案内するだけにしている。
+* アイコンは `public/icons/`。差し替えるときは**ファイル名を変える**こと（.htaccess で30日キャッシュ）。
+
+## 会員（ニックネーム＋暗証番号4桁）
+
+`includes/auth.php`（実処理）/ `api/auth.php`（JSON API）/ `src/account.js`（画面）。入口は歯車のいちばん上。
+
+* 保存は SQLite 1ファイル。場所は `config/app.php` の `db_path`（既定は `data/app.db`）。
+  **公開ディレクトリの外に置ける契約なら絶対パスにして `data/` ごと外へ移すこと。**
+  暗証番号は `password_hash` で保存し、平文では持たない。
+* 4桁は総当たりが容易なので、**5回連続で失敗すると5分ロック**する（`AUTH_LOCK_AFTER` / `AUTH_LOCK_SEC`）。
+* セッションの実体も `data/sessions/` に置く。共用サーバの共有 tmp に置くと他所の gc で消えるため。
+* **ページの生成時にはセッションを開かない。** ログイン状態は読み込み後に `api/auth.php?action=me` で
+  取りに行き、歯車の中の表示だけ差し替える（ページをキャッシュ可能なまま保つため）。
+* 更新系は POST かつ `X-Requested-With: fetch` 必須＝素のフォーム送信では叩けない（CSRF よけ）。
+* 会員向けの機能を足すときは `users.id` を外部キーにしたテーブルを増やす。
+
+## お問い合わせ
+
+`api/contact.php` + `src/contact.js` + `#mContact`。入口は歯車のいちばん下。
+
+* 宛先は `config/app.php` の `contact_to`。件名は必ず `[GEN strings] …` で始める（転送専用アドレスでの判別用）。
+* `From` は**自ドメインのアドレス**にすること（さくらは自ドメイン以外の From を弾く）。返信は `Reply-To` に入る。
+* ヘッダの改行除去（メールヘッダインジェクション対策）、罠フィールド、60秒の連投制限あり。
+
+## .htaccess
+
+ドメイン直下に置く前提。https強制（Service Worker とマイク入力の要件）、`/sitemap.xml` → `sitemap.php`、
+`/manifest.webmanifest` → `manifest.php`、`.db` 等の遮断、`sw.js` の no-cache、
+`Permissions-Policy: microphone=(self)`（チューナーが getUserMedia を使うため）、deflate と expires。
+**`php_value` / `php_flag` は書かない**（PHP が CGI/FPM 実行だと 500 になる）。
 
 ## コード秘匿について（結論）
 

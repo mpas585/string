@@ -26,4 +26,12 @@ return [
   /* 一覧に無い値が来たときの既定。ルートの / からの転送先もこの組み合わせ */
   'default_lang'       => 'ja',
   'default_instrument' => 'cello',
+
+  /* お問い合わせの宛先（転送専用アドレス）。件名の頭には上の 'name' が付く */
+  'contact_to'         => 'mail@genstrings.sakura.ne.jp',
+
+  /* 会員（ニックネーム＋暗証番号4桁）の SQLite ファイル。
+     公開ディレクトリの外に置ける契約なら、ここを絶対パスにして data/ ごと外へ移すこと。
+     例: '/home/（アカウント）/db/genstrings.db' */
+  'db_path'            => __DIR__ . '/../data/app.db',
 ];

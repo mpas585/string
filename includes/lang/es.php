@@ -19,7 +19,6 @@ return [
     'mid'        => 'Media',
     'high'       => 'Alta',
     'high_thumb' => 'Alta (pulgar)',
-    'body'       => 'Unión del cuerpo',
   ],
   /* 指板のポジション標識のうち、言語で変わるもの（config の markers の '@xxx'） */
   'marker' => ['thumb' => 'Pulgar'],
@@ -100,7 +99,7 @@ return [
     'tempo_dn'       => 'Más lento',
     'tempo_up'       => 'Más rápido',
     'tempo_reset'    => '⟲ Tempo original',
-    'm_oct'          => 'Oct Octava',
+    'm_oct'          => 'OCT Octava',
     'oct_auto'       => 'Auto',
     'oct_orig'       => 'Original',
     'm_loop'         => '🔁 Ajustes del bucle',
@@ -178,6 +177,18 @@ return [
     'tun_in_hi'      => 'Alto',
     'edit_t'         => '👇 Puedes cambiar la digitación',
     'edit_empty'     => 'Selecciona una nota para editar su digitación',
+    /* ===== Panel de ajustes: cuenta (arriba) / contacto (abajo) ===== */
+    'account'        => '👤 Cuenta',
+    'acc_guest'      => 'No has iniciado sesión',
+    'acc_hello'      => 'Hola, %s',
+    'acc_login'      => 'Iniciar sesión / Registrarse',
+    'acc_logout'     => 'Cerrar sesión',
+    'm_account'      => '👤 Iniciar sesión',
+    'contact'        => '✉ Contacto',
+    'm_contact'      => '✉ Contacto',
+    'install'        => '📲 Añadir a la pantalla de inicio',
+    'install_note'   => 'Se abre a pantalla completa, como una app',
+    'install_ios'    => 'Pulsa Compartir y luego «Añadir a pantalla de inicio» para usarla como una app',
   ],
 
   /* ===== JS 側の文言（src/*.js から tt('msg.xxx') で引く） ===== */
@@ -304,6 +315,73 @@ return [
       ['¿Puedo cambiar la digitación?', 'Toca una nota y aparecerán las alternativas. Tu elección se guarda automáticamente y puede exportarse e importarse.'],
     ],
     'note'  => 'Todo el proceso ocurre en tu dispositivo. No se envía ningún dato al exterior.',
+  ],
+
+  /* ===== Portada por idioma (selección de instrumento) = /{idioma}/ ===== */
+  'home' => [
+    'title'     => 'GEN strings | App de práctica para instrumentos de cuerda (violonchelo, violín, viola)',
+    'desc'      => 'Una app web que muestra dónde pisar en el diapasón, qué dedo usar y la afinación. Elige el instrumento que quieres practicar.',
+    'sub'       => 'App de práctica para instrumentos de cuerda',
+    'choose'    => 'Elige un instrumento',
+    'card_note' => 'Empezar a practicar',
+    'about_t'   => 'Qué es GEN strings',
+    'about'     => 'Convierte la pantalla del móvil en un diapasón para comprobar la posición, el número de dedo y la afinación mientras practicas. Incluye práctica de escalas, lectura de partituras (MusicXML / MIDI) y afinador. No hace falta instalar nada: funciona en el navegador.',
+  ],
+
+  /* ===== Cuentas (apodo + PIN de 4 cifras). api/auth.php devuelve estos textos ===== */
+  'account' => [
+    'nick'        => 'Apodo',
+    'nick_ph'     => 'p. ej. Masaki',
+    'pin'         => 'PIN (4 cifras)',
+    'login'       => 'Iniciar sesión',
+    'register'    => 'Crear cuenta',
+    'to_register' => '¿Primera vez? Crear cuenta',
+    'to_login'    => '¿Ya tienes cuenta? Inicia sesión',
+    'logout'      => 'Cerrar sesión',
+    'note'        => 'Es un acceso sencillo con apodo y PIN de 4 cifras. No reutilices un PIN de otro servicio ni introduzcas datos sensibles.',
+    'ok' => [
+      'registered' => 'Bienvenido, %s',
+      'login'      => 'Sesión iniciada como %s',
+      'logout'     => 'Sesión cerrada',
+    ],
+    'err' => [
+      'nick'    => 'El apodo debe tener entre 1 y 20 caracteres',
+      'pin'     => 'El PIN debe tener exactamente 4 cifras',
+      'taken'   => 'Ese apodo ya está en uso',
+      'empty'   => 'Introduce un apodo y un PIN',
+      'nomatch' => 'El apodo o el PIN no son correctos',
+      'locked'  => 'Demasiados intentos fallidos. Espera unos %d minutos e inténtalo de nuevo',
+      'method'  => 'No se pudo aceptar la solicitud. Vuelve a cargar la página',
+      'server'  => 'Ha ocurrido un problema en el servidor. Inténtalo más tarde',
+      'offline' => 'No se pudo conectar. Comprueba tu conexión',
+    ],
+  ],
+
+  /* ===== Formulario de contacto (api/contact.php) ===== */
+  'contact' => [
+    'name'    => 'Tu nombre',
+    'name_ph' => 'p. ej. Masaki Ueda',
+    'email'   => 'Correo (si quieres respuesta)',
+    'body'    => 'Mensaje',
+    'body_ph' => 'Sugerencias, errores, lo que quieras',
+    'send'    => 'Enviar',
+    'sending' => 'Enviando...',
+    'note'    => 'Los mensajes llegan a una dirección de solo reenvío. Añade tu correo si quieres respuesta.',
+    'ok'      => 'Enviado. ¡Gracias!',
+    'mail_subject' => 'Formulario de contacto (%s)',
+    'mail_name'  => 'Nombre',
+    'mail_email' => 'Correo',
+    'mail_lang'  => 'Idioma',
+    'mail_page'  => 'Página',
+    'err' => [
+      'empty'   => 'Introduce tu nombre y un mensaje',
+      'email'   => 'El correo no parece válido',
+      'long'    => 'El texto es demasiado largo',
+      'toofast' => 'Acabas de enviar un mensaje. Espera un momento',
+      'send'    => 'No se pudo enviar. Inténtalo más tarde',
+      'method'  => 'No se pudo aceptar la solicitud. Vuelve a cargar la página',
+      'offline' => 'No se pudo conectar. Comprueba tu conexión',
+    ],
   ],
 
   'soon' => [

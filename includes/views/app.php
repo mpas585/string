@@ -13,16 +13,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#1a1a2e">
+  <meta name="theme-color" content="#15110c">
   <title><?= h(t('page_title', $INST_NAME)) ?></title>
   <meta name="description" content="<?= h(t('intro.lead', $INST_NAME)) ?>">
   <link rel="canonical" href="<?= h($origin . $LANG_URLS[$LANG]) ?>">
 <?php foreach (APP_LANGS as $l): ?>
   <link rel="alternate" hreflang="<?= h($l) ?>" href="<?= h($origin . $LANG_URLS[$l]) ?>">
 <?php endforeach; ?>
-<?php if ($INSTRUMENT === APP_DEFAULT_INSTRUMENT): /* ルートは Accept-Language で振り分ける言語中立ページ。既定楽器のときだけ x-default を出す */ ?>
-  <link rel="alternate" hreflang="x-default" href="<?= h($origin . $rootPath . '/') ?>">
-<?php endif; ?>
+<?php /* x-default（言語中立URL）は楽器選択トップ /{言語}/ 側で出す。ここでは同じ楽器の各言語版だけを示す */ ?>
 
   <script type="application/ld+json">
 <?php
@@ -40,6 +38,15 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   echo json_encode($faq, $JSON | JSON_HEX_TAG | JSON_PRETTY_PRINT);
 ?>
   </script>
+
+  <!-- ホーム画面に保存したときにアプリとして起動するための情報（manifest.php が言語・楽器ごとに生成） -->
+  <link rel="manifest" href="<?= h($BASE) ?>manifest.php?lang=<?= h($LANG) ?>&amp;inst=<?= h($INSTRUMENT) ?>">
+  <link rel="icon" href="<?= h($BASE) ?>public/icons/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="<?= h($BASE) ?>public/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="<?= h(APP_NAME) ?>">
 
   <link rel="stylesheet" href="<?= h($BASE) ?>src/styles.css">
   <script>
@@ -71,6 +78,17 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <span class="gp-tt"><?php e('ui.settings') ?></span>
     <button id="gearClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
+
+  <!-- ===== 会員（いちばん上）=====
+       表示は api/auth.php?action=me の結果で src/account.js が書き換える。
+       PHP 側ではセッションを開かない（ページをキャッシュ可能なままにしておくため）。 -->
+  <div class="gp-t"><?php e('ui.account') ?></div>
+  <div id="accWho" class="accwho"><?php e('ui.acc_guest') ?></div>
+  <div class="row controls">
+    <button id="accBtn" class="ghost"><?php e('ui.acc_login') ?></button>
+    <button id="accOut" class="ghost" hidden><?php e('ui.acc_logout') ?></button>
+  </div>
+  <hr class="sep">
 
   <div class="gp-t"><?php e('ui.lang_label') ?></div>
   <select id="langSel">
@@ -118,6 +136,16 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="vol"><span><?php e('ui.vol_metro') ?></span><input id="volMetro" type="range" min="0" max="100" value="60"><b id="volMetroV">60</b></div>
   <div class="row controls" style="margin-top:8px">
     <button id="volReset" class="ghost" style="flex:1; justify-content:center"><?php e('ui.vol_reset') ?></button>
+  </div>
+
+  <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）／お問い合わせ（いちばん下）===== -->
+  <hr class="sep">
+  <div id="pwaBox" class="row controls" hidden>
+    <button id="pwaInstall" class="ghost" style="flex:1; justify-content:center"><?php e('ui.install') ?></button>
+  </div>
+  <div id="pwaNote" class="sub" hidden><?php e('ui.install_note') ?></div>
+  <div class="row controls">
+    <button id="contactBtn" class="ghost" style="flex:1; justify-content:center"><?php e('ui.contact') ?></button>
   </div>
 </div>
 
@@ -202,7 +230,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <div id="dock" class="dock" data-m="scale score">
   <button id="dkTempo" class="dockbtn" aria-label="<?php e('ui.dk_tempo_aria') ?>"><i>BPM</i><small id="dkTempoV">80</small></button>
   <button id="enjoySw" class="dockbtn" data-m="scale score" aria-label="<?php e('ui.dk_enjoy_aria') ?>"><i>🥁</i><small><?php e('ui.dk_enjoy') ?></small></button>
-  <button id="dkOct" class="dockbtn" data-m="score" aria-label="<?php e('ui.dk_oct_aria') ?>"><i>Oct</i><small id="dkOctV"><?php e('ui.dk_oct_auto') ?></small></button>
+  <button id="dkOct" class="dockbtn" data-m="score" aria-label="<?php e('ui.dk_oct_aria') ?>"><i>OCT</i><small id="dkOctV"><?php e('ui.dk_oct_auto') ?></small></button>
   <button id="dkLoop" class="dockbtn" aria-label="<?php e('ui.dk_loop_aria') ?>"><i>🔁</i><small><?php e('ui.dk_loop') ?></small></button>
 </div>
 
@@ -290,6 +318,55 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <span class="nm"><?= h(t('instrument.' . $ins)) ?><?php if (empty($ic['ready'])): ?><small><?php e('ui.inst_soon') ?></small><?php endif; ?></span>
   </a>
 <?php endforeach; ?>
+</div>
+
+<!-- 会員ログイン（歯車の「アカウント」から開く。中身の切替は src/account.js） -->
+<div id="mAccount" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span id="accTitle" class="dk-tt"><?php e('ui.m_account') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="fmrow">
+    <label for="accNick"><?php e('account.nick') ?></label>
+    <input id="accNick" type="text" maxlength="20" autocomplete="nickname" placeholder="<?php e('account.nick_ph') ?>">
+  </div>
+  <div class="fmrow">
+    <label for="accPin"><?php e('account.pin') ?></label>
+    <input id="accPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="････">
+  </div>
+  <div class="row controls">
+    <button id="accSubmit" class="primary" style="flex:1; justify-content:center"><?php e('account.login') ?></button>
+  </div>
+  <button id="accSwap" class="linkbtn"><?php e('account.to_register') ?></button>
+  <div id="accMsg" class="fmmsg" role="status"></div>
+  <div class="sub"><?php e('account.note') ?></div>
+</div>
+
+<!-- お問い合わせ（歯車のいちばん下から開く） -->
+<div id="mContact" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('ui.m_contact') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="fmrow">
+    <label for="ctName"><?php e('contact.name') ?></label>
+    <input id="ctName" type="text" maxlength="60" autocomplete="name" placeholder="<?php e('contact.name_ph') ?>">
+  </div>
+  <div class="fmrow">
+    <label for="ctMail"><?php e('contact.email') ?></label>
+    <input id="ctMail" type="email" maxlength="120" autocomplete="email" placeholder="you@example.com">
+  </div>
+  <div class="fmrow">
+    <label for="ctBody"><?php e('contact.body') ?></label>
+    <textarea id="ctBody" rows="5" maxlength="4000" placeholder="<?php e('contact.body_ph') ?>"></textarea>
+  </div>
+  <!-- 罠フィールド：人には見えない。埋まっていれば機械なので送信しない -->
+  <div class="hp" aria-hidden="true"><label for="ctSite">website</label><input id="ctSite" type="text" tabindex="-1" autocomplete="off"></div>
+  <div class="row controls">
+    <button id="ctSend" class="primary" style="flex:1; justify-content:center"><?php e('contact.send') ?></button>
+  </div>
+  <div id="ctMsg" class="fmmsg" role="status"></div>
+  <div class="sub"><?php e('contact.note') ?></div>
 </div>
 
 <!-- 曲を練習：入口から入った時の案内（押すとドロワーが横から出る） -->

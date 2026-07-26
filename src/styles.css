@@ -229,7 +229,9 @@
   /* pdf */
   .pdfbar{display:flex; align-items:center; gap:8px; margin-bottom:8px}
   .pdfbar b{font-family:var(--mono); font-size:13px; color:var(--muted)}
-  #pdfcanvas{width:100%; height:auto; background:#fff; border-radius:8px; display:block}
+  /* 幅は pdf.js 側が style.width で入れる（描画画素は実画素密度に合わせて別に持つ）。
+     ここで width:100% にすると、その指定を打ち消して引き伸ばしになるので max-width にする */
+  #pdfcanvas{max-width:100%; height:auto; background:#fff; border-radius:8px; display:block; margin:0 auto}
   .note-note{font-size:12px; color:var(--muted); background:var(--panel); border:1px solid var(--line);
     border-left:3px solid var(--accent-dim); border-radius:8px; padding:9px 11px; margin-bottom:10px; line-height:1.55}
   .toast{position:fixed; left:50%; bottom:92px; transform:translateX(-50%); background:#332813;
@@ -844,3 +846,84 @@
   }
   .startrow{display:flex; flex-direction:column; gap:8px}
   .startrow button{width:100%; justify-content:center; min-height:52px; font-size:14px; border-radius:11px}
+
+  /* ======== 会員（歯車のいちばん上）／お問い合わせ（いちばん下） ======== */
+  /* 歯車の中の状態表示。ログイン中だけ色を変える */
+  .accwho{font-size:12px; color:var(--faint); margin:-4px 0 8px; line-height:1.5;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .accwho.on{color:var(--accent)}
+
+  /* dkmodal は本来ドック用に左下固定。会員とお問い合わせは画面中央に置く（#mInst と同じ扱い） */
+  #mAccount, #mContact{
+    left:50%; right:auto; top:50%; bottom:auto;
+    transform:translate(-50%,-50%);
+    width:min(340px, calc(100vw - 40px));
+    max-height:calc(100dvh - 100px); overflow-y:auto; overscroll-behavior:contain;
+  }
+
+  /* 入力欄（ログイン／お問い合わせ共通） */
+  .fmrow{margin-bottom:10px}
+  .fmrow label{display:block; font-size:11px; color:var(--muted); margin-bottom:4px}
+  .fmrow input, .fmrow textarea{
+    width:100%; font:inherit; font-size:15px;   /* 16px 未満だと iOS が勝手に拡大する。15px + maximum-scale で抑える */
+    color:var(--ink); background:var(--panel2); border:1px solid var(--line); border-radius:9px;
+    padding:10px 11px; -webkit-appearance:none;
+  }
+  .fmrow textarea{resize:vertical; min-height:96px; line-height:1.6}
+  .fmrow input:focus, .fmrow textarea:focus{outline:none; border-color:var(--accent)}
+  .fmrow input::placeholder, .fmrow textarea::placeholder{color:var(--faint)}
+  #accPin{letter-spacing:.5em; font-family:var(--mono); text-align:center}
+
+  /* 送信結果・エラーの1行表示 */
+  .fmmsg{font-size:11px; color:var(--good); margin:6px 0 0; line-height:1.6; min-height:1em}
+  .fmmsg.err{color:var(--danger)}
+
+  /* 「新規登録はこちら」のような文中リンク風ボタン */
+  .linkbtn{
+    background:none; border:none; box-shadow:none; padding:6px 2px; margin:2px 0 0;
+    min-height:0; color:var(--accent); font-size:12px; text-decoration:underline; cursor:pointer;
+  }
+  .linkbtn:active{opacity:.6}
+
+  /* 罠フィールド（人には見せない。display:none だと埋めない機械があるので画面外へ逃がす） */
+  .hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
+
+  /* ======== 楽器選択トップ（/{言語}/ ・ views/home.php） ======== */
+  /* アプリ本体と違い、ここは普通のページとして縦スクロールさせる */
+  html.home, body.home{overflow:auto; height:auto; -webkit-overflow-scrolling:touch}
+  .hm{
+    max-width:520px; margin:0 auto; padding:
+      calc(28px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom));
+  }
+  .hm-head{text-align:center; margin-bottom:26px}
+  .hm-logo{font-size:84px; line-height:1}
+  .hm-title{font-size:24px; font-weight:800; letter-spacing:.06em; margin:6px 0 4px; color:var(--ink)}
+  .hm-sub{font-size:12px; color:var(--muted); letter-spacing:.06em; margin:0}
+  .hm-h{font-size:11px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase;
+    margin:0 0 10px; font-weight:600}
+  .hm-list{display:flex; flex-direction:column; gap:9px}
+  .hm-card{
+    display:flex; align-items:center; gap:14px; padding:14px 16px;
+    background:var(--panel); border:1px solid var(--line); border-radius:13px;
+    color:var(--ink); text-decoration:none; transition:.15s;
+  }
+  .hm-card:active{transform:translateY(1px); border-color:var(--accent)}
+  .hm-card.soon{opacity:.55}
+  .hm-card .ic{
+    flex:0 0 44px; height:44px; border-radius:11px; background:var(--panel2);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:22px;
+  }
+  .hm-card .b{flex:1; display:flex; flex-direction:column; gap:3px; font-size:16px; font-weight:700}
+  .hm-card .b small{font-size:11px; font-weight:400; color:var(--muted)}
+  .hm-card .cv{color:var(--accent); font-size:18px}
+  .hm-about{margin-top:28px; padding-top:18px; border-top:1px solid var(--line)}
+  .hm-about h2{font-size:13px; font-weight:700; color:var(--muted); margin:0 0 8px; letter-spacing:.04em}
+  .hm-about p{font-size:12px; color:var(--muted); line-height:1.85; margin:0}
+  .hm-foot{margin-top:26px; padding-top:16px; border-top:1px solid var(--line); text-align:center}
+  .hm-lang{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:12px}
+  .hm-lang a{
+    font-size:12px; color:var(--muted); text-decoration:none;
+    padding:6px 12px; border:1px solid var(--line); border-radius:999px; background:var(--panel2);
+  }
+  .hm-lang a.on{color:var(--accent); border-color:var(--accent-dim)}
+  .hm-foot small{font-size:10px; color:var(--faint)}

@@ -119,9 +119,9 @@ export function drawBoardStatic(){
   parts.push(`<rect x="${bx}" y="${yLow.toFixed(1)}" width="${bw}" height="${(yMid-yLow).toFixed(1)}" fill="var(--accent)" opacity="0.045"/>`);
   parts.push(`<rect x="${bx}" y="${yMid.toFixed(1)}" width="${bw}" height="${(FB.botY-yMid).toFixed(1)}" fill="var(--danger)" opacity="0.045"/>`);
 
-  /* 接合線。ここから先はネックを握れない＝親指ポジション */
+  /* 接合線。ここから先はネックを握れない＝親指ポジション。
+     線と胴の塗りだけで位置は読み取れるので、文字ラベル（旧 zone.body）は出さない */
   parts.push(`<line x1="${bx}" y1="${yBody.toFixed(1)}" x2="${br}" y2="${yBody.toFixed(1)}" stroke="var(--wood)" stroke-width="2.4"/>`);
-  parts.push(`<text x="${br-4}" y="${(yBody-7).toFixed(1)}" fill="var(--wood)" font-size="10" text-anchor="end" font-family="var(--mono)">${tt('zone.body')}</text>`);
 
   if(ST.frets) for(let off=1; off<=FB.maxOff; off++){
     const y=yOf(off);

@@ -1,8 +1,7 @@
 <?php
 /*
-  /{言語}/ — 楽器の指定が無いので既定楽器（config/app.php）へ転送する。
+  /ja/ — 楽器選択トップ。言語だけ指定して基幹PHPを呼ぶ。
+  画面の中身は includes/views/home.php、文言は includes/lang/ja.php。
 */
-define('STRING_APP', 1);
-$APP = require __DIR__ . '/../config/app.php';
-header('Location: ./' . $APP['default_instrument'] . '/', true, 302);
-exit;
+$LANG = 'ja';
+require __DIR__ . '/../includes/home.php';

@@ -16,7 +16,6 @@ return [
     'mid'        => 'Mid',
     'high'       => 'High',
     'high_thumb' => 'High (thumb)',
-    'body'       => 'Body joint',
   ],
   /* 指板のポジション標識のうち、言語で変わるもの（config の markers の '@xxx'） */
   'marker' => ['thumb' => 'Thumb'],
@@ -97,7 +96,7 @@ return [
     'tempo_dn'       => 'Slower',
     'tempo_up'       => 'Faster',
     'tempo_reset'    => '⟲ Original tempo',
-    'm_oct'          => 'Oct Octave',
+    'm_oct'          => 'OCT Octave',
     'oct_auto'       => 'Auto',
     'oct_orig'       => 'Original',
     'm_loop'         => '🔁 Loop settings',
@@ -175,6 +174,18 @@ return [
     'tun_in_hi'      => 'High',
     'edit_t'         => '👇 You can change the fingering',
     'edit_empty'     => 'Select a note to edit its fingering',
+    /* ===== Gear panel: account (top) / contact (bottom) ===== */
+    'account'        => '👤 Account',
+    'acc_guest'      => 'Not signed in',
+    'acc_hello'      => 'Hi, %s',
+    'acc_login'      => 'Sign in / Sign up',
+    'acc_logout'     => 'Sign out',
+    'm_account'      => '👤 Sign in',
+    'contact'        => '✉ Contact',
+    'm_contact'      => '✉ Contact',
+    'install'        => '📲 Add to Home Screen',
+    'install_note'   => 'Launches full screen, like an app',
+    'install_ios'    => 'Tap Share, then "Add to Home Screen", to use it like an app',
   ],
 
   /* ===== JS 側の文言（src/*.js から tt('msg.xxx') で引く） ===== */
@@ -301,6 +312,73 @@ return [
       ['Can I change the fingering myself?', 'Tap a note and the alternatives appear. Your choice is saved automatically, and can be exported and imported.'],
     ],
     'note'  => 'Everything runs on your device. No data is sent anywhere.',
+  ],
+
+  /* ===== Language home (instrument picker) = /{lang}/ ===== */
+  'home' => [
+    'title'     => 'GEN strings | Practice app for string instruments (cello, violin, viola)',
+    'desc'      => 'A web app that shows where to press on the fingerboard, which finger to use and how in tune you are. Pick the instrument you want to practise.',
+    'sub'       => 'Practice app for string instruments',
+    'choose'    => 'Choose an instrument',
+    'card_note' => 'Start practising',
+    'about_t'   => 'About GEN strings',
+    'about'     => 'Turns your phone screen into a fingerboard so you can check stopping positions, finger numbers and pitch while you practise. Includes scale practice, score loading (MusicXML / MIDI) and a tuner. No install needed; it runs in the browser.',
+  ],
+
+  /* ===== Accounts (nickname + 4-digit PIN). api/auth.php returns these too ===== */
+  'account' => [
+    'nick'        => 'Nickname',
+    'nick_ph'     => 'e.g. Masaki',
+    'pin'         => 'PIN (4 digits)',
+    'login'       => 'Sign in',
+    'register'    => 'Create account',
+    'to_register' => 'New here? Create an account',
+    'to_login'    => 'Already registered? Sign in',
+    'logout'      => 'Sign out',
+    'note'        => 'This is a lightweight sign-in with only a nickname and a 4-digit PIN. Do not reuse a PIN you use elsewhere, and do not enter sensitive information.',
+    'ok' => [
+      'registered' => 'Welcome, %s',
+      'login'      => 'Signed in as %s',
+      'logout'     => 'Signed out',
+    ],
+    'err' => [
+      'nick'    => 'The nickname must be 1 to 20 characters',
+      'pin'     => 'The PIN must be exactly 4 digits',
+      'taken'   => 'That nickname is already taken',
+      'empty'   => 'Enter a nickname and a PIN',
+      'nomatch' => 'That nickname or PIN is not correct',
+      'locked'  => 'Too many failed attempts. Please wait about %d minutes and try again',
+      'method'  => 'That request could not be accepted. Please reload the page',
+      'server'  => 'Something went wrong on the server. Please try again later',
+      'offline' => 'Could not reach the server. Please check your connection',
+    ],
+  ],
+
+  /* ===== Contact form (api/contact.php) ===== */
+  'contact' => [
+    'name'    => 'Your name',
+    'name_ph' => 'e.g. Masaki Ueda',
+    'email'   => 'Email (if you would like a reply)',
+    'body'    => 'Message',
+    'body_ph' => 'Feedback, bug reports, anything',
+    'send'    => 'Send',
+    'sending' => 'Sending...',
+    'note'    => 'Messages go to a forwarding-only address. Add your email if you would like a reply.',
+    'ok'      => 'Sent. Thank you!',
+    'mail_subject' => 'Contact form (%s)',
+    'mail_name'  => 'Name',
+    'mail_email' => 'Email',
+    'mail_lang'  => 'Language',
+    'mail_page'  => 'Page',
+    'err' => [
+      'empty'   => 'Enter your name and a message',
+      'email'   => 'That email address does not look valid',
+      'long'    => 'That is too long',
+      'toofast' => 'You just sent a message. Please wait a moment',
+      'send'    => 'Could not send. Please try again later',
+      'method'  => 'That request could not be accepted. Please reload the page',
+      'offline' => 'Could not reach the server. Please check your connection',
+    ],
   ],
 
   'soon' => [
