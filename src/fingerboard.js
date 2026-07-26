@@ -46,7 +46,9 @@ export function recommend(midi){
    未注入のときは従来どおりチェロの値。fmax は maxOff に追従させる
    （別々に持つと、maxOff を変えても座標変換が旧値のままになるため）。 */
 const _I = (typeof window!=='undefined' && window.INSTRUMENT) ? window.INSTRUMENT : {};
-const MAXOFF = _I.maxOff || 30;   /* 既定30半音（白鳥のD6=A線29半音まで表示） */
+/* 指板の下端。実物の指板長（4/4チェロで約580mm、弦長680mm）に合わせて off 33。
+   白鳥の最高音 D6（A線 off29 = ナットから552.6mm）も範囲内。 */
+const MAXOFF = _I.maxOff || 33;
 const BOARD = _I.board || {
   /* vbW は左右の余白を対称にするための値。
      板は bx=56 / bw=240 なので右端は 296。右の余白を左と同じ56にすると 352 になり、
@@ -61,7 +63,7 @@ const BOARD = _I.board || {
    基準はボディストップ(400mm＝駒側)ではなく【ネックストップ】。
    4/4チェロは ネック長280mm : ボディストップ400mm ＝ 7:10（弦長680mm）なので、
    12*log2(680/400) = off 9.186（ナットから 280/680 = 41.2% の位置）。
-   ここで指板はほぼ2等分される: 0→9F=279.7mm、9→30F=288.3mm（比 0.97:1）。
+   板の中では 0→接合部=280.0mm、接合部→下端(off33)=298.9mm となり、接合部は板の48.4%。
    ヴァイオリン属はネック:ボディ=2:3 で揃うため、どれも off≈9（ヴィオラ9.00 / ヴァイオリン8.74）。
    config/{楽器}.php の 'body_off' で上書きできる。 */
 const BODYOFF = (_I.bodyOff != null) ? _I.bodyOff : 9.19;
