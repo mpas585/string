@@ -120,7 +120,9 @@
 
   /* fingerboard */
   .fbsvg svg.fb{width:100%; height:auto; display:block; touch-action:pan-y}
-  body.zoomed .fbsvg svg.fb{touch-action:pan-x pan-y}
+  /* ズーム中も横方向のパンは許さない（指で横に流れて押弦位置がずれるため）。
+     はみ出したぶんは fingerboard.js の centerBoardH() が常に中央へ寄せる */
+  body.zoomed .fbsvg svg.fb{touch-action:pan-y}
   /* 指板のタップ／ドラッグでテキスト選択・長押しメニューが出ないようにする */
   .board-full, .fbsvg, .fbsvg svg.fb, .fbsvg svg.fb text, .staffview, .staffview svg{
     -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
@@ -961,3 +963,43 @@
   }
   .hm-lang a.on{color:var(--accent); border-color:var(--accent-dim)}
   .hm-foot small{font-size:10px; color:var(--faint)}
+
+  /* ======== 歯車：iPhoneの設定風サブメニュー（音量 / 指板ズーム） ======== */
+  /* ページは常に1枚だけ表示する。横から差し込むアニメーションで階層を感じさせる */
+  .gearpanel{overflow-x:hidden}
+  .gp-page{display:none}
+  .gp-page.on{display:block; animation:gpIn .18s ease}
+  .gp-page.on.back{animation:gpBack .18s ease}
+  @keyframes gpIn  {from{transform:translateX(16%); opacity:.35} to{transform:translateX(0); opacity:1}}
+  @keyframes gpBack{from{transform:translateX(-16%); opacity:.35} to{transform:translateX(0); opacity:1}}
+  /* 一覧の行（タップでサブメニューへ） */
+  .gp-row{
+    width:100%; justify-content:flex-start; gap:8px; margin-bottom:6px;
+    min-height:44px; font-size:13px; color:var(--ink);
+  }
+  .gp-row .v{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--accent)}
+  .gp-row .cv{flex:0 0 auto; color:var(--faint); font-size:15px; line-height:1}
+  /* サブメニューの見出し（‹ 戻る） */
+  .gp-back{
+    display:flex; align-items:center; gap:8px; margin:-2px -2px 10px;
+    padding-bottom:9px; border-bottom:1px solid var(--line);
+  }
+  .gp-back button{
+    background:none; border:none; box-shadow:none; padding:4px 2px; min-height:0;
+    color:var(--accent); font-size:13px;
+  }
+  .gp-back button:active{opacity:.6; transform:none}
+  .gp-back .t{flex:1; font-size:13px; font-weight:700; color:var(--ink); letter-spacing:.04em}
+
+  /* ======== 開始カウント：4 / 8 の切替 ======== */
+  #countSeg{margin-top:-2px}
+  .seg2.off{opacity:.45; pointer-events:none}
+
+  /* ======== 設定を変えたら ▶ で反映（スケール練習） ======== */
+  /* ドロワー(z-index:41)を開いたまま押せるように、光っている間だけ前面へ出す */
+  body.scale-dirty .fab{z-index:42}
+  .fab.attn{animation:fabattn 1.1s ease-in-out infinite}
+  @keyframes fabattn{
+    0%,100%{box-shadow:0 6px 0 #7d5d1c, 0 8px 26px rgba(231,178,75,.45), inset 0 2px 0 rgba(255,255,255,.5)}
+    50%    {box-shadow:0 6px 0 #7d5d1c, 0 0 0 9px rgba(231,178,75,.20), 0 8px 34px rgba(231,178,75,.85), inset 0 2px 0 rgba(255,255,255,.5)}
+  }

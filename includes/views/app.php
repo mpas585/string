@@ -79,75 +79,105 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <button id="gearClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
 
-  <!-- ===== 設定の保存（いちばん上）=====
-       ログインではなく「保存番号」。表示は src/account.js が LocalStorage の番号で書き換える。
-       PHP 側では何も出さない（ページをキャッシュ可能なままにしておくため）。 -->
-  <div class="gp-t"><?php e('ui.save') ?></div>
-  <div id="svWho" class="accwho"><?php e('ui.save_none') ?></div>
-  <div class="row controls">
-    <button id="svBtn" class="ghost"><?php e('ui.save_start') ?></button>
-  </div>
-  <hr class="sep">
+  <!-- ===== 一覧（メイン）=====
+       行数の多い項目（指板ズーム・音量）は行にして、押したらサブメニューへ差し替える。
+       表示するページは常に1枚だけ（.gp-page.on）。切替は src/drawer.js の openGearPage()。 -->
+  <div class="gp-page on" data-gp="main">
 
-  <div class="gp-t"><?php e('ui.view') ?></div>
-  <div class="seg2" id="viewSeg">
-    <button data-view="board"><?php e('ui.view_board') ?></button>
-    <button data-view="staff"><?php e('ui.view_staff') ?></button>
-  </div>
-  <div id="fretSw" class="sw on"><span><?php e('ui.frets') ?></span><span class="knob"></span></div>
-  <div id="landSw" class="sw"><span><?php e('ui.landscape') ?></span><span class="knob"></span></div>
-  <div class="sub" style="margin:-3px 0 8px"><?php e('ui.landscape_note') ?></div>
-
-  <div class="gp-t"><?php e('ui.playback') ?></div>
-  <div id="countSw" class="sw on"><span><?php e('ui.countin') ?></span><span class="knob"></span></div>
-  <div id="awakeSw" class="sw on"><span><?php e('ui.keepawake') ?></span><span class="knob"></span></div>
-
-  <div class="gp-t" style="margin-top:12px"><?php e('ui.zoom') ?></div>
-  <div class="field">
-    <div class="k"><?php e('ui.zoom_k') ?></div>
-    <div class="v tempo">
-      <input id="zoom" type="range" min="20" max="220" step="5" value="100">
-      <b id="zoomval">100%</b>
+    <!-- ===== 設定の保存（いちばん上）=====
+         ログインではなく「保存番号」。表示は src/account.js が LocalStorage の番号で書き換える。
+         PHP 側では何も出さない（ページをキャッシュ可能なままにしておくため）。 -->
+    <div class="gp-t"><?php e('ui.save') ?></div>
+    <div id="svWho" class="accwho"><?php e('ui.save_none') ?></div>
+    <div class="row controls">
+      <button id="svBtn" class="ghost"><?php e('ui.save_start') ?></button>
     </div>
-  </div>
-  <div class="row controls">
-    <button id="zoomOut" class="ghost">−</button>
-    <button id="zoomIn" class="ghost">＋</button>
-    <button id="zoomFit" class="ghost"><?php e('ui.zoom_fit') ?></button>
-    <button id="zoomReset" class="ghost"><?php e('ui.zoom_reset') ?></button>
-  </div>
+    <hr class="sep">
 
-  <div class="gp-t" style="margin-top:12px"><?php e('ui.volume') ?></div>
-  <div class="vol"><span><?php e('ui.vol_master') ?></span><input id="volMaster" type="range" min="0" max="100" value="70"><b id="volMasterV">70</b></div>
-  <div class="vol"><span><?php e('ui.vol_lead') ?></span><input id="volLead" type="range" min="0" max="100" value="80"><b id="volLeadV">80</b></div>
-  <div class="vol"><span><?php e('ui.vol_drum') ?></span><input id="volDrum" type="range" min="0" max="100" value="70"><b id="volDrumV">70</b></div>
-  <div class="vol"><span><?php e('ui.vol_bass') ?></span><input id="volBass" type="range" min="0" max="100" value="70"><b id="volBassV">70</b></div>
-  <div class="vol"><span><?php e('ui.vol_chord') ?></span><input id="volChord" type="range" min="0" max="100" value="60"><b id="volChordV">60</b></div>
-  <div class="vol"><span><?php e('ui.vol_metro') ?></span><input id="volMetro" type="range" min="0" max="100" value="60"><b id="volMetroV">60</b></div>
-  <div class="row controls" style="margin-top:8px">
-    <button id="volReset" class="ghost" style="flex:1; justify-content:center"><?php e('ui.vol_reset') ?></button>
-  </div>
+    <div class="gp-t"><?php e('ui.view') ?></div>
+    <div class="seg2" id="viewSeg">
+      <button data-view="board"><?php e('ui.view_board') ?></button>
+      <button data-view="staff"><?php e('ui.view_staff') ?></button>
+    </div>
+    <div id="fretSw" class="sw on"><span><?php e('ui.frets') ?></span><span class="knob"></span></div>
+    <div id="landSw" class="sw"><span><?php e('ui.landscape') ?></span><span class="knob"></span></div>
+    <div class="sub" style="margin:-3px 0 8px"><?php e('ui.landscape_note') ?></div>
 
-  <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）／お問い合わせ（いちばん下）===== -->
-  <hr class="sep">
-  <div id="pwaBox" class="row controls" hidden>
-    <button id="pwaInstall" class="ghost" style="flex:1; justify-content:center"><?php e('ui.install') ?></button>
-  </div>
-  <div id="pwaNote" class="sub" hidden><?php e('ui.install_note') ?></div>
-  <div class="row controls">
-    <button id="contactBtn" class="ghost" style="flex:1; justify-content:center"><?php e('ui.contact') ?></button>
-  </div>
+    <div class="gp-t"><?php e('ui.playback') ?></div>
+    <div id="countSw" class="sw on"><span><?php e('ui.countin') ?></span><span class="knob"></span></div>
+    <div class="seg2" id="countSeg">
+      <button data-count="4"><?php e('ui.countin_4') ?></button>
+      <button data-count="8"><?php e('ui.countin_8') ?></button>
+    </div>
+    <div id="awakeSw" class="sw on"><span><?php e('ui.keepawake') ?></span><span class="knob"></span></div>
 
-  <!-- ===== 言語（いちばん下）===== -->
-  <hr class="sep">
-  <div class="gp-t"><?php e('ui.lang_label') ?></div>
-  <select id="langSel">
+    <!-- サブメニューへ。右端の値は applyZoom() / syncVolRow() が書き換える -->
+    <button class="gp-row" data-gpopen="zoom">
+      <span><?php e('ui.zoom') ?></span><span class="v" id="zoomRowV">100%</span><span class="cv">›</span>
+    </button>
+    <button class="gp-row" data-gpopen="vol">
+      <span><?php e('ui.volume') ?></span><span class="v" id="volRowV">70%</span><span class="cv">›</span>
+    </button>
+
+    <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）／お問い合わせ（いちばん下）===== -->
+    <hr class="sep">
+    <div id="pwaBox" class="row controls" hidden>
+      <button id="pwaInstall" class="ghost" style="flex:1; justify-content:center"><?php e('ui.install') ?></button>
+    </div>
+    <div id="pwaNote" class="sub" hidden><?php e('ui.install_note') ?></div>
+    <div class="row controls">
+      <button id="contactBtn" class="ghost" style="flex:1; justify-content:center"><?php e('ui.contact') ?></button>
+    </div>
+
+    <!-- ===== 言語（いちばん下）===== -->
+    <hr class="sep">
+    <div class="gp-t"><?php e('ui.lang_label') ?></div>
+    <select id="langSel">
 <?php foreach (APP_LANGS as $l):
         $ln = require APP_ROOT . '/includes/lang/' . $l . '.php'; ?>
-    <option value="<?= h($l) ?>"<?= $l === $LANG ? ' selected' : '' ?>><?= h($ln['name']) ?></option>
+      <option value="<?= h($l) ?>"<?= $l === $LANG ? ' selected' : '' ?>><?= h($ln['name']) ?></option>
 <?php endforeach; ?>
-  </select>
-  <div class="sub" style="margin:6px 0 10px"><?php e('ui.lang_note') ?></div>
+    </select>
+    <div class="sub" style="margin:6px 0 10px"><?php e('ui.lang_note') ?></div>
+  </div>
+
+  <!-- ===== サブ：指板ズーム ===== -->
+  <div class="gp-page" data-gp="zoom">
+    <div class="gp-back">
+      <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
+      <span class="t"><?php e('ui.zoom') ?></span>
+    </div>
+    <div class="field">
+      <div class="k"><?php e('ui.zoom_k') ?></div>
+      <div class="v tempo">
+        <input id="zoom" type="range" min="20" max="220" step="5" value="100">
+        <b id="zoomval">100%</b>
+      </div>
+    </div>
+    <div class="row controls">
+      <button id="zoomOut" class="ghost">−</button>
+      <button id="zoomIn" class="ghost">＋</button>
+      <button id="zoomFit" class="ghost"><?php e('ui.zoom_fit') ?></button>
+      <button id="zoomReset" class="ghost"><?php e('ui.zoom_reset') ?></button>
+    </div>
+  </div>
+
+  <!-- ===== サブ：音量 ===== -->
+  <div class="gp-page" data-gp="vol">
+    <div class="gp-back">
+      <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
+      <span class="t"><?php e('ui.volume') ?></span>
+    </div>
+    <div class="vol"><span><?php e('ui.vol_master') ?></span><input id="volMaster" type="range" min="0" max="100" value="70"><b id="volMasterV">70</b></div>
+    <div class="vol"><span><?php e('ui.vol_lead') ?></span><input id="volLead" type="range" min="0" max="100" value="80"><b id="volLeadV">80</b></div>
+    <div class="vol"><span><?php e('ui.vol_drum') ?></span><input id="volDrum" type="range" min="0" max="100" value="70"><b id="volDrumV">70</b></div>
+    <div class="vol"><span><?php e('ui.vol_bass') ?></span><input id="volBass" type="range" min="0" max="100" value="70"><b id="volBassV">70</b></div>
+    <div class="vol"><span><?php e('ui.vol_chord') ?></span><input id="volChord" type="range" min="0" max="100" value="60"><b id="volChordV">60</b></div>
+    <div class="vol"><span><?php e('ui.vol_metro') ?></span><input id="volMetro" type="range" min="0" max="100" value="60"><b id="volMetroV">60</b></div>
+    <div class="row controls" style="margin-top:8px">
+      <button id="volReset" class="ghost" style="flex:1; justify-content:center"><?php e('ui.vol_reset') ?></button>
+    </div>
+  </div>
 </div>
 
 <div id="empty" class="empty">
@@ -301,6 +331,9 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
           <button id="loopToUp" class="sstep" aria-label="<?php e('ui.loop_up') ?>">▲</button>
         </div>
       </div>
+    </div>
+    <div class="row controls" style="margin-top:10px">
+      <button id="loopReset" class="ghost" style="flex:1; justify-content:center"><?php e('ui.loop_reset') ?></button>
     </div>
   </div>
   <div id="loopInfo" class="sub"><?php e('ui.loop_info') ?></div>
@@ -523,17 +556,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
   </div>
 
-  <!-- ========== 共通：推奨ポジション ========== -->
-  <div data-m="scale score">
-    <hr class="sep">
-    <div class="seclbl"><?php e('ui.pref') ?></div>
-    <div class="row controls" style="gap:6px">
-      <button class="pref on" data-pref="low"><?php e('zone.low') ?></button>
-      <button class="pref" data-pref="mid"><?php e('zone.mid') ?></button>
-      <button class="pref" data-pref="high"><?php e('zone.high') ?></button>
-    </div>
-
-  </div>
+  <!-- ========== 共通：推奨ポジション ==========
+       UIは廃止（常にロー優先＝ST.pref の初期値のまま）。
+       ST.pref / setPref() は src/modes.js に残してあるので、戻すときは
+       このブロックの HTML と main.js の .pref 配線をいっしょに戻すこと。 -->
 
   <!-- ========== コピー練習モード：添削・保存 ========== -->
   <div data-m="score">

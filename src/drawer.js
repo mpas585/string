@@ -48,7 +48,7 @@ export const VOL_BUMP=1;
 export function saveSettings(){
   Store.set(SETTINGS_KEY, JSON.stringify({
     view:ST.view, frets:ST.frets, landscape:ST.landscape, zoom:ST.zoom, octave:ST.octave, pref:ST.pref,
-    volProfiles:ST.volProfiles, volBump:VOL_BUMP, countIn:ST.countIn, keepAwake:ST.keepAwake,
+    volProfiles:ST.volProfiles, volBump:VOL_BUMP, countIn:ST.countIn, countBeats:ST.countBeats, keepAwake:ST.keepAwake,
     tempo:ST.tempo, enjoy:ST.enjoy, loop:ST.loop, lang:ST.lang,
     keyRoot:ST.keyRoot, scaleType:ST.scaleType, scaleOct:ST.scaleOct
   }));
@@ -77,6 +77,7 @@ export function loadSettings(){
       }
     }
     if(typeof j.countIn==='boolean') ST.countIn=j.countIn;
+    if(j.countBeats===4 || j.countBeats===8) ST.countBeats=j.countBeats;
     if(typeof j.keepAwake==='boolean') ST.keepAwake=j.keepAwake;
     if(typeof j.tempo==='number') ST.tempo=j.tempo;
     if(typeof j.enjoy==='boolean') ST.enjoy=j.enjoy;
@@ -106,6 +107,7 @@ export function syncSettingsUI(){
   const tnum=document.getElementById('tempoNum');
   if(tnum) tnum.value=ST.tempo;
   document.getElementById('countSw').classList.toggle('on', ST.countIn);
+  syncCountSeg();
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
   const langEl=document.getElementById('langSel');
   if(langEl) langEl.value=ST.lang;
@@ -117,7 +119,21 @@ export function syncSettingsUI(){
     if(el) el.value=v;
     if(lb) lb.textContent=v;
   }
+  syncVolRow();
   syncDock();
+}
+/* 開始カウント（4 / 8）。「開始カウント」がOFFのあいだは選べないようにする
+   （押しても何も起きない入力を残さない＝ループ小節の disabled と同じ考え方） */
+export function syncCountSeg(){
+  const seg=document.getElementById('countSeg');
+  if(!seg) return;
+  seg.classList.toggle('off', !ST.countIn);
+  seg.querySelectorAll('button').forEach(b=> b.classList.toggle('on', (+b.dataset.count)===ST.countBeats));
+}
+/* 歯車の一覧に出す「音量」の要約（全体の値）。サブメニューを開かなくても分かるように */
+export function syncVolRow(){
+  const r=document.getElementById('volRowV');
+  if(r) r.textContent=Math.round((ST.vol.master||0)*100)+'%';
 }
 
 /* ===== 運指の保存 ===== */
@@ -200,7 +216,20 @@ export function resetFingering(){
 }
 
 export function openDrawer(){ document.getElementById('drawer').classList.add('open'); document.getElementById('scrim').classList.add('show'); }
-export function openGear(){ document.getElementById('gearPanel').classList.add('open'); document.getElementById('gearScrim').classList.add('open'); }
+export function openGear(){ openGearPage('main'); document.getElementById('gearPanel').classList.add('open'); document.getElementById('gearScrim').classList.add('open'); }
+/* ===== 歯車：サブメニュー（音量 / 指板ズーム） =====
+   iPhoneの設定と同じで、表示するページは常に1枚だけ。開き直したら必ず一覧に戻す。
+   back=true は「戻る」方向＝逆向きに差し込む。 */
+export function openGearPage(name, back){
+  const panel=document.getElementById('gearPanel');
+  if(!panel) return;
+  panel.querySelectorAll('.gp-page').forEach(p=>{
+    const on=(p.dataset.gp===name);
+    p.classList.toggle('on', on);
+    p.classList.toggle('back', on && !!back);
+  });
+  panel.scrollTop=0;
+}
 export function closeGear(){ document.getElementById('gearPanel').classList.remove('open'); document.getElementById('gearScrim').classList.remove('open'); }
 export function toggleGear(){ document.getElementById('gearPanel').classList.contains('open') ? closeGear() : openGear(); }
 export function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); }

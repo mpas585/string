@@ -19,7 +19,7 @@ import { toast } from './dom.js';
 import { render, micUnavailableReason, setTunerHint, syncSheet, syncMicUI } from './modes.js';
 
 export const TUN={on:false, ctx:null, stream:null, analyser:null, buf:null, raf:0, last:0, hist:[],
-                  out:null, wasOK:false, lastChime:0};
+                  out:null, wasOK:false, lastChime:0, muted:false};
 /* 合図の音を出す。マイク用 AudioContext をそのまま使う（出力先は付いていないので繋ぐ） */
 export function tunerBus(){
   if(!TUN.ctx) return null;
@@ -28,6 +28,12 @@ export function tunerBus(){
     TUN.out.connect(TUN.ctx.destination);
   }
   return TUN.out;
+}
+/* マイク入力の一時停止。track.enabled=false は権限も接続も保ったまま無音になるので、
+   getUserMedia を取り直さずに戻せる（再許可のダイアログが出ない）。 */
+export function setMicMuted(mute){
+  if(!TUN.stream) return;
+  TUN.stream.getAudioTracks().forEach(t=>{ try{ t.enabled=!mute; }catch(e){} });
 }
 /* ===== 基準音（参考の音程を鳴らす） =====
    マイク用の TUN.ctx とは別の AudioContext を使う。
@@ -53,6 +59,21 @@ export function refMidi(){
    オクターブ違いでも合わせる基準としては同じなので、唸りの聞き取りに支障はない。 */
 export const REF_OCT = 12;
 export function refSoundMidi(){ return refMidi() + REF_OCT; }
+/* ===== 基準音の音量 =====
+   端末のスピーカーは口径が小さく、低い音ほど鳴らない。4弦（チェロのC線）の基準音は
+   1オクターブ上げても C3＝131Hz しかなく、1弦（A線＝A4 440Hz）と同じ振幅では
+   ほとんど聞こえない。そこで実際に鳴らす高さに応じて振幅を上げる。
+   A3(57) を境に、1オクターブ下がるごとに 全体の振幅は2.5倍、倍音の比は5倍。
+   倍音のほうを強く上げるのは、小口径スピーカーでは基音そのものより
+   「オクターブ上の倍音」が実際に空気を動かして聞こえるため（上限は歪み防止）。 */
+export const REF_BASE_MIDI = 57;
+export function refGains(midi){
+  const oct=Math.max(0, (REF_BASE_MIDI - midi)/12);
+  return {
+    base: Math.min(0.45, 0.15*Math.pow(2.5, oct)),   /* 全体の振幅 */
+    harm: Math.min(0.60, 0.10*Math.pow(5,   oct))    /* 基音に対する倍音の比 */
+  };
+}
 export function stopReference(){
   if(!refVoice) return;
   const v=refVoice; refVoice=null;
@@ -63,23 +84,27 @@ export function stopReference(){
     v.g.gain.linearRampToValueAtTime(0.0001, t+0.10);   /* ぶつ切りにしない */
     v.o1.stop(t+0.16); v.o2.stop(t+0.16);
   }catch(e){}
+  if(TUN.muted){ TUN.muted=false; setMicMuted(false); }   /* 止めていたマイクを戻す */
   syncReferenceUI();
 }
 export function playReference(){
   const ctx=ensureRefCtx();
   if(!ctx) return;
   stopReference();
-  const t=ctx.currentTime, f=midiFreq(refSoundMidi());
+  const t=ctx.currentTime, m=refSoundMidi(), f=midiFreq(m), lv=refGains(m);
   /* 純正弦波だと唸り（beat）が聞き取りにくいので、オクターブ上を少しだけ足す */
   const o1=ctx.createOscillator(); o1.type='sine';     o1.frequency.setValueAtTime(f,   t);
   const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.setValueAtTime(f*2, t);
-  const g2=ctx.createGain(); g2.gain.value=0.10;
+  const g2=ctx.createGain(); g2.gain.value=lv.harm;
   const g=ctx.createGain();
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(0.15, t+0.06);
+  g.gain.linearRampToValueAtTime(lv.base, t+0.06);
   o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(refOut);
   o1.start(t); o2.start(t);
   refVoice={ctx,o1,o2,g};
+  /* 鳴らしている間はマイクを止める。スピーカーから出た基準音を自分で拾って
+     「ぴったり」と誤判定する（＝合っていない弦が合って見える）のを防ぐ。 */
+  if(TUN.on){ TUN.muted=true; setMicMuted(true); }
   syncReferenceUI();
 }
 export function toggleReference(){ refVoice ? stopReference() : playReference(); }
@@ -152,6 +177,8 @@ export async function startTuner(){
     TUN.buf=new Float32Array(an.fftSize);
     TUN.hist=[]; TUN.last=0;
     TUN.out=null; TUN.wasOK=false; TUN.lastChime=0;
+    /* 基準音を鳴らしている最中にマイクをONにしたら、止めた状態で始める */
+    TUN.muted=!!refVoice; setMicMuted(TUN.muted);
     setTunerHint(null);
     syncMicUI(); syncSheet();
     if(ST.mode==='tuner') render();
@@ -223,7 +250,7 @@ export function updateInputLevel(rms, peak){
   const bar=document.getElementById('tunLevel');
   const msg=document.getElementById('tunInMsg');
   if(!bar || !msg) return;
-  if(!TUN.on){
+  if(!TUN.on || TUN.muted){
     bar.style.clipPath='inset(0 100% 0 0)';
     msg.textContent='–'; msg.className='';
     return;
@@ -243,6 +270,9 @@ export function tunerLoop(){
   const now=performance.now();
   if(now - TUN.last < 50) return;     /* 約20fpsに制限 */
   TUN.last=now;
+  /* 基準音を鳴らしている間はマイクを止めてある。無音を解析して
+     「音が低い＝締める」を出さないよう、判定と表示も止める */
+  if(TUN.muted){ updateInputLevel(0, 0); updateTunerUI(-1); return; }
   TUN.analyser.getFloatTimeDomainData(TUN.buf);
   let sq=0, pk=0;
   for(let i=0;i<TUN.buf.length;i++){

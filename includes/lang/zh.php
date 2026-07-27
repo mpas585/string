@@ -38,6 +38,7 @@ return [
     'nowline'        => '请打开谱面',
     'gear_aria'      => '指板显示设置',
     'close'          => '关闭',
+    'back'           => '返回',
     'settings'       => '⚙ 设置',
     'lang_label'     => '语言 / Language',
     'lang_note'      => '选择后将跳转到该语言的页面',
@@ -51,6 +52,8 @@ return [
 
     'playback'       => '播放',
     'countin'        => '开始预备拍',
+    'countin_4'      => '4拍',
+    'countin_8'      => '8拍',
     'tun_ref_play'   => '🔊 播放基准音',
     'tun_ref_stop'   => '⏹ 停止',
     'tun_ref_oct'    => '高八度',
@@ -110,6 +113,7 @@ return [
     'loop_dn'        => '后退一小节',
     'loop_up'        => '前进一小节',
     'loop_info'      => '指定小节反复播放（例：34–40）',
+    'loop_reset'     => '⟲ 恢复循环设置',
 
     'seg_scale'      => '🎵 音阶',
     'seg_score'      => '🎼 乐曲',

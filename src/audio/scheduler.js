@@ -380,7 +380,8 @@ export function startPlay(fromBeat, noCount){
 
   const lead = wasPlaying ? 0.10 : 0.16;
   const doCount = ST.countIn && !noCount && !wasPlaying;
-  const countN = Math.max(1, Math.round(ST.beatsPerMeasure || 4));   /* カウントは1小節ぶん */
+  /* カウント数は設定（4 / 8）。譜面の拍子ではなく利用者が選んだ数を使う */
+  const countN = (ST.countBeats===8) ? 8 : 4;
   const countBeats = doCount ? countN : 0;
   ST.t0 = ctx.currentTime + lead + countBeats*ST.beatSec - (from - ST.range.sB)*ST.beatSec;
 

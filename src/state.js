@@ -15,6 +15,9 @@ export const DEFAULT_VOL = {
   score: {master:0.80, lead:0.90, drum:0.65, bass:0.65, chord:0.60, metro:0.55}
 };
 export const VOL_KEYS=['master','lead','drum','bass','chord','metro'];
+/* ループ設定の初期値。ループモーダルの「⟲ 元に戻す」の戻り先もここ1か所を見る
+   （ST の初期値と同じものを指すので、片方だけ直して食い違うことがない） */
+export const DEFAULT_LOOP = {on:false, from:1, to:4};
 export function volProfileKey(){ return (ST.mode==='scale') ? 'scale' : 'score'; }
 
 /* ===== 状態 ===== */
@@ -39,7 +42,7 @@ export const ST = {
   passDur: 0,
   t0: 0,
   /* 練習モード */
-  loop: {on:false, from:1, to:4},
+  loop: Object.assign({}, DEFAULT_LOOP),
   enjoy: false,
   songChords: null,      // 曲JSONの伴奏コード [{root,q},…]（1小節1個）。持たない譜面は null
   keyRoot: 0,
@@ -72,6 +75,7 @@ export const ST = {
   vol: Object.assign({}, DEFAULT_VOL.score),
   /* 冒頭カウント・スリープ防止 */
   countIn: true,
+  countBeats: 4,        // 開始カウントの数（4 | 8）。譜面の拍子ではなく利用者の指定
   keepAwake: true,
   wakeLock: null,
   buses: null,
@@ -82,4 +86,7 @@ export const ST = {
   /* 表示 */
   lastScrollId: null,
   holding: false,
+  /* ドロワーでスケール設定を変えたが、まだ画面の譜面に反映していない状態。
+     true の間は ▶ が光り、押すと genScale() で作り直してから再生する */
+  scaleDirty: false,
 };

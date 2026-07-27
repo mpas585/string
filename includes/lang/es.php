@@ -41,6 +41,7 @@ return [
     'nowline'        => 'Abre una partitura',
     'gear_aria'      => 'Ajustes del diapasón',
     'close'          => 'Cerrar',
+    'back'           => 'Atrás',
     'settings'       => '⚙ Ajustes',
     'lang_label'     => 'Idioma / Language',
     'lang_note'      => 'Al elegir un idioma se abre esa versión de la página',
@@ -54,6 +55,8 @@ return [
 
     'playback'       => 'Reproducción',
     'countin'        => 'Cuenta de entrada',
+    'countin_4'      => '4 tiempos',
+    'countin_8'      => '8 tiempos',
     'tun_ref_play'   => '🔊 Tono de referencia',
     'tun_ref_stop'   => '⏹ Parar',
     'tun_ref_oct'    => '1 oct arriba',
@@ -113,6 +116,7 @@ return [
     'loop_dn'        => 'Un compás atrás',
     'loop_up'        => 'Un compás adelante',
     'loop_info'      => 'Repite los compases indicados (p. ej. 34–40)',
+    'loop_reset'     => '⟲ Restablecer bucle',
 
     'seg_scale'      => '🎵 Escalas',
     'seg_score'      => '🎼 Piezas',

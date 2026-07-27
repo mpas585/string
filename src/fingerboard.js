@@ -316,10 +316,23 @@ export function applyZoom(){
   box.style.width=(baseBoardWidth()*ST.zoom).toFixed(0)+'px';
   box.style.maxWidth='none';
   document.body.classList.toggle('zoomed', ST.zoom>1.001);
+  centerBoardH();
   const sl=document.getElementById('zoom');
   const lb=document.getElementById('zoomval');
   if(sl) sl.value=Math.round(ST.zoom*100);
   if(lb) lb.textContent=Math.round(ST.zoom*100)+'%';
+  const rw=document.getElementById('zoomRowV');       /* 歯車の一覧に出す要約 */
+  if(rw) rw.textContent=Math.round(ST.zoom*100)+'%';
+}
+/* 指板を横方向の中央に固定する。
+   ズームで指板が画面幅を超えると横スクロールできてしまい、押弦のつもりの指で
+   左右に流れて位置がずれる。CSS 側で touch-action:pan-y にして指では動かせなくし、
+   はみ出したぶんはここで常に中央に置く（左右の余白が同じ＝弦の並びが常に真ん中）。 */
+export function centerBoardH(){
+  const wrap=document.querySelector('.board-full');
+  if(!wrap) return;
+  const over=wrap.scrollWidth - wrap.clientWidth;
+  wrap.scrollLeft = (over>0) ? over/2 : 0;
 }
 
 /* 0〜5F（半音0〜5）が画面に収まる倍率にする */
@@ -331,7 +344,7 @@ export function zoomFitPositions(maxOff){
   const needVb=yOf(maxOff) + 50;                 /* 音名ラベルぶんの余白 */
   ST.zoom=(availH * FB.vbW / needVb) / baseBoardWidth();
   applyZoom();
-  wrap.scrollTo({top:0, left:0});
+  wrap.scrollTo({top:0});                     /* left は指定しない＝applyZoom の中央寄せを保つ */
 }
 /* 指板全体が画面に収まる倍率にする */
 export function zoomFit(){
@@ -343,7 +356,7 @@ export function zoomFit(){
   const needW=availH / aspect;                 /* 収めるのに必要なSVG幅 */
   ST.zoom=needW / baseBoardWidth();
   applyZoom();
-  wrap.scrollTo({top:0, left:0, behavior:'smooth'});
+  wrap.scrollTo({top:0, behavior:'smooth'});  /* left は指定しない＝applyZoom の中央寄せを保つ */
   toast(tt('msg.zoom_fit', Math.round(ST.zoom*100)));
 }
 

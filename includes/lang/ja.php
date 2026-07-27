@@ -44,6 +44,7 @@ return [
     'nowline'        => '譜面を開いてください',
     'gear_aria'      => '指板の表示設定',
     'close'          => '閉じる',
+    'back'           => '戻る',
     'settings'       => '⚙ 設定',
     'lang_label'     => '言語 / Language',
     'lang_note'      => '選ぶとその言語のページへ移動します',
@@ -57,6 +58,8 @@ return [
 
     'playback'       => '再生',
     'countin'        => '開始カウント',
+    'countin_4'      => '4カウント',
+    'countin_8'      => '8カウント',
     'tun_ref_play'   => '🔊 基準音を鳴らす',
     'tun_ref_stop'   => '⏹ 止める',
     'tun_ref_oct'    => '1oct上',
@@ -116,6 +119,7 @@ return [
     'loop_dn'        => '1小節戻す',
     'loop_up'        => '1小節進める',
     'loop_info'      => '小節を指定して繰り返します（例：34〜40）',
+    'loop_reset'     => '⟲ ループ設定を元に戻す',
 
     'seg_scale'      => '🎵 スケール',
     'seg_score'      => '🎼 曲練習',

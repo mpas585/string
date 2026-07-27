@@ -7,11 +7,11 @@
 */
 import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
-import { applyZoom, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
-import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, setPref } from './modes.js';
+import { applyZoom, centerBoardH, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
+import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop, markScaleDirty } from './modes.js';
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
-import { importFingering, loadSettings, saveSettings, syncSettingsUI, closeGear, toggleGear, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
+import { importFingering, loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
@@ -26,7 +26,13 @@ import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」�
 /* --- 取りこぼしていた基本配線（元 L3509–3520。fab=再生ボタン等） --- */
 on('file','change', e=>{ if(e.target.files[0]) loadScoreFile(e.target.files[0]); e.target.value=''; });
 on('pdffile','change', e=>{ if(e.target.files[0]) openPdf(e.target.files[0]); e.target.value=''; });
-on('fab','click', ()=>{ if(ST.playing) stopPlay(); else startPlay(); });
+on('fab','click', ()=>{
+  if(ST.playing){ stopPlay(); return; }
+  /* ドロワーでスケール設定を変えた直後は、▶ が「反映して再生」を兼ねる。
+     genScale(false) がドロワーを閉じ、生成後に自動で再生まで行う。 */
+  if(ST.scaleDirty && ST.mode==='scale'){ genScale(false); return; }
+  startPlay();
+});
 on('menu','click', openDrawer);
 on('drawerClose','click', closeDrawer);
 on('scrim','click', closeDrawer);
@@ -51,7 +57,8 @@ on('tempoDn','click', ()=>{ setTempo(ST.tempo-1, true); saveSettings(); });
 on('tempoUp','click', ()=>{ setTempo(ST.tempo+1, true); saveSettings(); });
 /* リセット先は「読み込んだ譜面のテンポ」（setScore で控えている） */
 on('tempoReset','click', ()=>{ setTempo(ST.tempoOrig || 80, true); saveSettings(); });
-document.querySelectorAll('.pref').forEach(b=> b.addEventListener('click', ()=> setPref(b.dataset.pref)));
+/* 推奨ポジション（.pref）のUIは廃止＝配線も外した。
+   ST.pref / setPref() は modes.js に残してあるので、戻すときはここも戻す。 */
 on('pdfprev','click', ()=>{ if(pdfPage>1){ setPdfPage(pdfPage-1); renderPdfPage();} });
 on('pdfnext','click', ()=>{ if(pdfDoc&&pdfPage<pdfDoc.numPages){ setPdfPage(pdfPage+1); renderPdfPage();} });
 
@@ -244,6 +251,13 @@ on('volReset','click', ()=>{
 on('countSw','click', ()=>{
   ST.countIn=!ST.countIn;
   document.getElementById('countSw').classList.toggle('on', ST.countIn);
+  syncCountSeg();                       /* OFF にしたら 4/8 の選択も触れなくする */
+  saveSettings();
+});
+on('countSeg','click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  ST.countBeats=((+b.dataset.count)===8) ? 8 : 4;
+  syncCountSeg();
   saveSettings();
 });
 on('awakeSw','click', ()=>{
@@ -272,6 +286,7 @@ document.querySelectorAll('.oct').forEach(b=> b.addEventListener('click', ()=> s
     ST.volProfiles[volProfileKey()][key]=(+e.target.value||0)/100;
     ST.vol=ST.volProfiles[volProfileKey()];
     document.getElementById(id+'V').textContent=e.target.value;
+    if(key==='master'){ const r=document.getElementById('volRowV'); if(r) r.textContent=e.target.value+'%'; }
     applyVolumes(); saveSettings();
   });
 });
@@ -310,9 +325,9 @@ on('songBtns','click', e=>{
 });
 
 /* ===== スケール練習 ===== */
-on('scaleRoot','change', e=>{ ST.keyRoot=parseInt(e.target.value,10)||0; saveSettings(); });
-on('scaleType','change', e=>{ ST.scaleType=e.target.value; saveSettings(); });
-on('scaleOct','change', e=>{ ST.scaleOct=parseInt(e.target.value,10)||2; saveSettings(); });
+on('scaleRoot','change', e=>{ ST.keyRoot=parseInt(e.target.value,10)||0; saveSettings(); markScaleDirty(); });
+on('scaleType','change', e=>{ ST.scaleType=e.target.value; saveSettings(); markScaleDirty(); });
+on('scaleOct','change', e=>{ ST.scaleOct=parseInt(e.target.value,10)||2; saveSettings(); markScaleDirty(); });
 on('scaleGen','click', ()=> genScale(false));
 
 on('loopSw','click', ()=>{
@@ -329,6 +344,7 @@ function stepLoop(id, d){
   el.value=(parseInt(el.value,10) || 1) + d;
   setLoopRange();
 }
+on('loopReset','click', resetLoop);
 on('loopFromDn','click', ()=> stepLoop('loopFrom', -1));
 on('loopFromUp','click', ()=> stepLoop('loopFrom',  1));
 on('loopToDn','click',   ()=> stepLoop('loopTo',   -1));
@@ -370,6 +386,9 @@ document.querySelectorAll('.tun-str [data-str]').forEach(el=>{
 /* ===== 歯車：指板の表示設定 ===== */
 on('gear','click', toggleGear);
 on('gearScrim','click', closeGear);
+/* 歯車：行をタップでサブメニューへ／「‹ 戻る」で一覧へ（iPhoneの設定と同じ動き） */
+document.querySelectorAll('[data-gpopen]').forEach(b=> b.addEventListener('click', ()=> openGearPage(b.dataset.gpopen)));
+document.querySelectorAll('[data-gpback]').forEach(b=> b.addEventListener('click', ()=> openGearPage('main', true)));
 
 /* ===== 歯車：設定の保存（いちばん上）＝ 保存番号の作成 / 読込 / 解除 / 削除 ===== */
 on('svBtn','click', openSave);
@@ -441,3 +460,4 @@ window.addEventListener('resize', ()=>{ if(pdfDoc && document.getElementById('pd
   initSave();
 })();
 window.addEventListener('orientationchange', ()=> setTimeout(applyZoom, 250));
+window.addEventListener('resize', centerBoardH);          /* はみ出しぶんは常に中央に置く */

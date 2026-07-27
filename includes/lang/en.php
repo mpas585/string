@@ -38,6 +38,7 @@ return [
     'nowline'        => 'Open a score',
     'gear_aria'      => 'Fingerboard display settings',
     'close'          => 'Close',
+    'back'           => 'Back',
     'settings'       => '⚙ Settings',
     'lang_label'     => 'Language / 言語',
     'lang_note'      => 'Selecting a language opens that version of the page',
@@ -51,6 +52,8 @@ return [
 
     'playback'       => 'Playback',
     'countin'        => 'Count-in',
+    'countin_4'      => '4 counts',
+    'countin_8'      => '8 counts',
     'tun_ref_play'   => '🔊 Play reference',
     'tun_ref_stop'   => '⏹ Stop',
     'tun_ref_oct'    => '1 oct up',
@@ -110,6 +113,7 @@ return [
     'loop_dn'        => 'Back one bar',
     'loop_up'        => 'Forward one bar',
     'loop_info'      => 'Repeats the bars you specify (e.g. 34–40)',
+    'loop_reset'     => '⟲ Reset loop settings',
 
     'seg_scale'      => '🎵 Scales',
     'seg_score'      => '🎼 Pieces',

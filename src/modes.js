@@ -13,7 +13,7 @@
   drawer（saveSettings/loadFingering/syncSettingsUI/closeDrawer 等）・songs（renderTracks/loadSample）は
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
-import { ST, volProfileKey } from './state.js';
+import { ST, volProfileKey, DEFAULT_LOOP } from './state.js';
 import { fracOf, midiName, zoneOf, fingerHint, strFingerText, NOTE_NAMES, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
 import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
 import { renderStaff } from './notation.js';
@@ -102,6 +102,7 @@ export function setMode(mode, keepDrawer){
   if(ST.mode==='tuner' && mode!=='tuner') stopTuner();
 
   ST.mode=mode;
+  ST.scaleDirty=false;                 /* モードが変われば保留は無効 */
   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
   ST.lastScrollId=null; ST.scoreName='';
   setMidiFile(null); renderTracks();
@@ -404,8 +405,21 @@ export function setScore(parsed, scoreName){
   scrollBoardToActive();               /* ハイポジション始まりでも最初の音が画面に入るように */
   return restored;
 }
+/* ドロワーでスケール設定を変えた ＝ まだ画面の譜面に反映されていない状態。
+   ▶ を光らせて「押せば反映される」ことを伝える（作り直しは押した時に行う）。 */
+export function markScaleDirty(){
+  if(ST.mode!=='scale') return;
+  ST.scaleDirty=true;
+  updateChrome();
+}
+export function clearScaleDirty(){
+  if(!ST.scaleDirty) return;
+  ST.scaleDirty=false;
+  updateChrome();
+}
 export function genScale(quiet){
   try{
+    ST.scaleDirty=false;            /* 作り直した＝保留はなくなる */
     setMidiFile(null); renderTracks();
     const parsed=buildScaleEvents(ST.keyRoot, ST.scaleType, ST.scaleOct);
     const label=`${NOTE_NAMES[ST.keyRoot]} ${SCALE_LABEL[ST.scaleType]} ${ST.scaleOct}oct`;
@@ -473,6 +487,17 @@ export function setLoopRange(){
   syncLoopUI();
   if(ST.playing) startPlay();     /* 再生中なら新しい範囲で組み直し */
 }
+/* ループ設定を初期状態へ戻す（ON/OFF・開始小節・終了小節すべて）。
+   戻り先は state.js の DEFAULT_LOOP＝起動直後と同じ状態。 */
+export function resetLoop(){
+  Object.assign(ST.loop, DEFAULT_LOOP);
+  const mCount=Math.max(1, ST.measures.length);
+  ST.loop.from=Math.min(ST.loop.from, mCount);    /* 譜面が短いときは丸める */
+  ST.loop.to  =Math.max(ST.loop.from, Math.min(ST.loop.to, mCount));   /* setLoopRange と同じ規則 */
+  syncLoopUI();
+  saveSettings();
+  if(ST.playing) startPlay();     /* 再生中なら組み直し（setLoopRange と同じ） */
+}
 export function setZoom(z){
   ST.zoom=z;
   applyZoom();
@@ -485,6 +510,11 @@ export function updateChrome(){
   const fab=document.getElementById('fab');
   fab.style.display = playable ? 'inline-flex' : 'none';
   fab.disabled=!playable; fab.textContent=ST.playing?'■':'▶'; fab.classList.toggle('playing', ST.playing);
+  /* 設定変更が保留されている間だけ光らせる。ドロワー(z-index:41)を開いたままでも
+     押せるよう、body 側のクラスで重なり順を上げる（CSS: body.scale-dirty .fab） */
+  const dirty = ST.scaleDirty && ST.mode==='scale' && !ST.playing && playable;
+  fab.classList.toggle('attn', dirty);
+  document.body.classList.toggle('scale-dirty', dirty);
   document.getElementById('gear').style.display = ST.mode ? 'inline-flex' : 'none';
   document.getElementById('storeInfo').textContent =
     Store.ok ? tt('msg.store_ok')
