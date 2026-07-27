@@ -10,6 +10,9 @@
     --jp:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  /* hidden 属性は UA 既定の display:none。.row や button は自前で display を持つため
+     作者スタイルが勝って隠れない。属性を常に優先させる */
+  [hidden]{display:none !important}
   html,body{margin:0; height:100%; overflow:hidden}
   body{
     background:var(--bg); color:var(--ink); font-family:var(--jp);
@@ -847,14 +850,14 @@
   .startrow{display:flex; flex-direction:column; gap:8px}
   .startrow button{width:100%; justify-content:center; min-height:52px; font-size:14px; border-radius:11px}
 
-  /* ======== 会員（歯車のいちばん上）／お問い合わせ（いちばん下） ======== */
-  /* 歯車の中の状態表示。ログイン中だけ色を変える */
+  /* ======== 設定の保存（歯車のいちばん上）／お問い合わせ（いちばん下） ======== */
+  /* 歯車の中の状態表示。保存番号を持っているときだけ色を変える */
   .accwho{font-size:12px; color:var(--faint); margin:-4px 0 8px; line-height:1.5;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .accwho.on{color:var(--accent)}
 
-  /* dkmodal は本来ドック用に左下固定。会員とお問い合わせは画面中央に置く（#mInst と同じ扱い） */
-  #mAccount, #mContact{
+  /* dkmodal は本来ドック用に左下固定。保存とお問い合わせは画面中央に置く（#mInst と同じ扱い） */
+  #mSave, #mSaveAsk, #mContact{
     left:50%; right:auto; top:50%; bottom:auto;
     transform:translate(-50%,-50%);
     width:min(340px, calc(100vw - 40px));
@@ -872,7 +875,30 @@
   .fmrow textarea{resize:vertical; min-height:96px; line-height:1.6}
   .fmrow input:focus, .fmrow textarea:focus{outline:none; border-color:var(--accent)}
   .fmrow input::placeholder, .fmrow textarea::placeholder{color:var(--faint)}
-  #accPin{letter-spacing:.5em; font-family:var(--mono); text-align:center}
+  /* 保存番号の入力欄。5文字なので大きく間隔をあけて出す */
+  #svInput{letter-spacing:.35em; font-family:var(--mono); text-align:center; text-transform:uppercase}
+
+  /* 発行済みの保存番号 */
+  .sv-label{font-size:11px; color:var(--muted); margin-bottom:5px}
+  .sv-code{
+    font-family:var(--mono); font-size:30px; font-weight:700; letter-spacing:.18em;
+    color:var(--accent); text-align:center; user-select:all; -webkit-user-select:all;
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:12px 8px; margin-bottom:10px;
+  }
+  /* 「設定を保存しますか？」の本文。文言側の改行をそのまま出す */
+  .sv-ask{white-space:pre-line; margin:2px 0 0}
+  /* 消す操作だけ色を変える（押し間違いを減らす） */
+  button.ghost.danger{color:var(--danger); border-color:var(--danger)}
+
+  /* 保存したことの合図。右下に1秒ほど出して消える（要素は src/account.js が作る） */
+  .svsaved{
+    position:fixed; right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); z-index:61;
+    background:var(--panel); border:1px solid var(--accent-dim); border-radius:8px;
+    padding:7px 11px; font-size:11px; color:var(--accent); pointer-events:none;
+    opacity:0; transition:opacity .18s;
+  }
+  .svsaved.show{opacity:1}
 
   /* 送信結果・エラーの1行表示 */
   .fmmsg{font-size:11px; color:var(--good); margin:6px 0 0; line-height:1.6; min-height:1em}
@@ -924,6 +950,10 @@
   .hm-about h2{font-size:13px; font-weight:700; color:var(--muted); margin:0 0 8px; letter-spacing:.04em}
   .hm-about p{font-size:12px; color:var(--muted); line-height:1.85; margin:0}
   .hm-foot{margin-top:26px; padding-top:16px; border-top:1px solid var(--line); text-align:center}
+  /* ホーム画面に追加（言語選択の上）。対応ブラウザ以外では pwa.js が出さない */
+  .hm-pwa{display:flex; justify-content:center; margin-bottom:10px}
+  .hm-pwa button{min-height:42px; padding:9px 18px; font-size:13px; border-radius:10px}
+  .hm-pwa-note{text-align:center; margin:-4px 0 12px}
   .hm-lang{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:12px}
   .hm-lang a{
     font-size:12px; color:var(--muted); text-decoration:none;

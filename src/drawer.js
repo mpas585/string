@@ -18,6 +18,8 @@ import { SCALES } from './scale.js';
 import { render, syncLayoutClass, syncDock } from './modes.js';
 import { toast } from './dom.js';
 import { pdfDoc, renderPdfPage } from './pdf.js';
+/* 保存（保存番号）への通知。設定と運指の保存はここが唯一の出口なので、ここから知らせる */
+import { settingsChanged } from './account.js';
 
 export const Store = (()=>{
   let ok=false;
@@ -50,6 +52,7 @@ export function saveSettings(){
     tempo:ST.tempo, enjoy:ST.enjoy, loop:ST.loop, lang:ST.lang,
     keyRoot:ST.keyRoot, scaleType:ST.scaleType, scaleOct:ST.scaleOct
   }));
+  settingsChanged();          /* 保存番号があればサーバへも上書き。無ければ作成を尋ねる */
 }
 export function loadSettings(){
   const raw=Store.get(SETTINGS_KEY) || legacyGet(LEGACY_SETTINGS_KEY); if(!raw) return;
@@ -162,6 +165,7 @@ export function saveFingering(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     Store.set(scoreSig(), JSON.stringify({v:1, name:ST.scoreName, data:fingerData()}));
+    settingsChanged();        /* 指番号・運指の変更もサーバへ持っていく */
   }, 250);
 }
 export function loadFingering(){

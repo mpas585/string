@@ -62,19 +62,18 @@ foreach (APP_INSTRUMENTS as $ins) {
   <link rel="stylesheet" href="<?= h($BASE) ?>src/styles.css">
 
   <script>
-    /* トップで使うのは会員まわりと PWA の案内だけなので、辞書は ui と account に絞って渡す
+    /* トップで使うのは保存番号まわりと PWA の案内だけなので、辞書は ui と save に絞って渡す
        （アプリ本体のページは includes/views/app.php が $T 全体を渡している） */
     window.APP = <?= json_encode(['lang' => $LANG, 'name' => APP_NAME], $JSON) ?>;
-    window.T   = <?= json_encode(['ui' => $T['ui'], 'account' => $T['account']], $JSON) ?>;
+    window.T   = <?= json_encode(['ui' => $T['ui'], 'save' => $T['save']], $JSON) ?>;
   </script>
 </head>
 <body class="home">
 <main class="hm">
-  <!-- 会員（アプリ本体では歯車のいちばん上。表示の書き換えは src/account.js） -->
+  <!-- 設定の保存（アプリ本体では歯車のいちばん上。表示の書き換えは src/account.js） -->
   <div class="hm-acc">
-    <span id="accWho" class="accwho"><?php e('ui.acc_guest') ?></span>
-    <button id="accBtn" class="ghost"><?php e('ui.acc_login') ?></button>
-    <button id="accOut" class="ghost" hidden><?php e('ui.acc_logout') ?></button>
+    <span id="svWho" class="accwho"><?php e('ui.save_none') ?></span>
+    <button id="svBtn" class="ghost"><?php e('ui.save_start') ?></button>
   </div>
 
   <header class="hm-head">
@@ -100,6 +99,12 @@ foreach (APP_INSTRUMENTS as $ins) {
   </section>
 
   <footer class="hm-foot">
+    <!-- ホーム画面に追加（対応ブラウザでのみ出る）。配線は src/pwa.js。要素IDはアプリ本体と共通 -->
+    <div id="pwaBox" class="hm-pwa" hidden>
+      <button id="pwaInstall" class="ghost"><?php e('ui.install') ?></button>
+    </div>
+    <div id="pwaNote" class="hm-pwa-note sub" hidden><?php e('ui.install_note') ?></div>
+
     <div class="hm-lang">
 <?php foreach (APP_LANGS as $l):
         $ln = require APP_ROOT . '/includes/lang/' . $l . '.php'; ?>
@@ -111,26 +116,74 @@ foreach (APP_INSTRUMENTS as $ins) {
 </main>
 <div id="dockScrim" class="dkscrim"></div>
 
-<!-- ログイン／新規登録。切替は src/account.js が同じフォームで行う -->
-<div id="mAccount" class="dkmodal" role="dialog" aria-modal="true">
+<!-- 設定の保存（右上の「設定を保存する」から開く。表示の出し分けは src/account.js） -->
+<div id="mSave" class="dkmodal" role="dialog" aria-modal="true">
   <div class="dk-head">
-    <span id="accTitle" class="dk-tt"><?php e('ui.m_account') ?></span>
+    <span class="dk-tt"><?php e('ui.m_save') ?></span>
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
-  <div class="fmrow">
-    <label for="accNick"><?php e('account.nick') ?></label>
-    <input id="accNick" type="text" maxlength="20" autocomplete="nickname" placeholder="<?php e('account.nick_ph') ?>">
+
+  <!-- 保存番号を持っているとき -->
+  <div id="svBound" hidden>
+    <div class="sv-label"><?php e('save.code_label') ?></div>
+    <div id="svCode" class="sv-code"></div>
+    <div class="row controls">
+      <button id="svCopy" class="ghost" style="flex:1; justify-content:center"><?php e('save.copy') ?></button>
+    </div>
+    <div class="sub"><?php e('save.code_note') ?></div>
+    <hr class="sep">
   </div>
-  <div class="fmrow">
-    <label for="accPin"><?php e('account.pin') ?></label>
-    <input id="accPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="････">
+
+  <!-- まだ持っていないとき -->
+  <div id="svUnbound" hidden>
+    <div class="sub"><?php e('save.none_note') ?></div>
+    <div class="row controls" style="margin-top:10px">
+      <button id="svCreate" class="primary" style="flex:1; justify-content:center"><?php e('save.create') ?></button>
+    </div>
+    <hr class="sep">
   </div>
+
+  <!-- 他の端末の設定を引き継ぐ（両方の状態で使える） -->
   <div class="row controls">
-    <button id="accSubmit" class="primary" style="flex:1; justify-content:center"><?php e('account.login') ?></button>
+    <button id="svLoadOpen" class="ghost" style="flex:1; justify-content:center"><?php e('save.load_open') ?></button>
   </div>
-  <button id="accSwap" class="linkbtn"><?php e('account.to_register') ?></button>
-  <div id="accMsg" class="fmmsg" role="status"></div>
-  <div class="sub"><?php e('account.note') ?></div>
+  <div id="svLoadBox" hidden>
+    <div class="fmrow">
+      <label for="svInput"><?php e('save.input_label') ?></label>
+      <input id="svInput" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="G4821">
+    </div>
+    <div class="row controls">
+      <button id="svLoad" class="primary" style="flex:1; justify-content:center"><?php e('save.load') ?></button>
+    </div>
+    <div class="sub"><?php e('save.load_note') ?></div>
+  </div>
+
+  <!-- 解除・削除（保存番号を持っているときだけ） -->
+  <div id="svBound2" hidden>
+    <hr class="sep">
+    <div class="row controls">
+      <button id="svUnlink" class="ghost" style="flex:1; justify-content:center"><?php e('save.unlink') ?></button>
+    </div>
+    <div class="sub"><?php e('save.unlink_note') ?></div>
+    <div class="row controls" style="margin-top:10px">
+      <button id="svDelete" class="ghost danger" style="flex:1; justify-content:center"><?php e('save.delete') ?></button>
+    </div>
+  </div>
+
+  <div id="svMsg" class="fmmsg" role="status"></div>
+</div>
+
+<!-- 保存が要る操作をしたときに出す（保存番号をまだ持っていないときだけ） -->
+<div id="mSaveAsk" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('save.ask_title') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="sub sv-ask"><?php e('save.ask_body') ?></div>
+  <div class="startrow" style="margin-top:12px">
+    <button id="svAskYes" class="primary"><?php e('save.ask_yes') ?></button>
+    <button id="svAskNo" class="ghost"><?php e('save.ask_no') ?></button>
+  </div>
 </div>
 
 <div id="toast"></div>

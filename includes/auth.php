@@ -1,22 +1,31 @@
 <?php
 /*
-  includes/auth.php — 簡易会員（ニックネーム＋暗証番号4桁）の土台。
+  includes/auth.php — 保存番号（英字1文字＋数字4桁）で設定を預かる土台。
+
+  「ログイン」ではなく「保存」。メールアドレスもパスワードもセッションも無い。
+  利用者は保存番号だけで自分のデータを指す。同じ端末では番号を LocalStorage に置き、
+  起動時に自動で読み込む（＝番号を打つのは他の端末に移るときだけ）。
 
   ・保存先は SQLite 1ファイル（config/app.php の 'db_path'）。無ければ初回アクセス時に作る。
-  ・暗証番号は password_hash で保存する（平文では持たない）。
-  ・4桁は総当たりが容易なので、失敗回数でロックをかける（LOCK_AFTER 回で LOCK_SEC 秒）。
-  ・セッションの実体も data/ の中に置く（共用サーバの共有 tmp に置くと他所の掃除で消える）。
+  ・保存番号は英字1文字＋数字4桁。読み違えやすい I / L / O は英字から外してある。
+  ・番号だけが鍵なので、存在しない番号を叩き続けられると総当たりになる。
+    IP ごとに「外れた回数」を数え、一定回数を超えたら一定時間だけ受け付けない。
+  ・預かるのは画面の設定（テンポ・運指など）だけ。個人を特定できる情報は入れない。
 
-  この段階では「登録・ログイン・ログアウト・自分の情報」だけ。
-  会員向けの機能（練習記録の保存など）を足すときは users.id を外部キーにしたテーブルを増やす。
+  ※ ニックネーム＋暗証番号の会員（users テーブル）は廃止した。既存の app.db には
+     users が残っているが参照しない。消したいときは手で DROP TABLE users すること
+     （自動で消さないのは、切り戻しの余地を残すため）。
 */
 if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
-const AUTH_LOCK_AFTER = 5;      /* 連続失敗の許容回数 */
-const AUTH_LOCK_SEC   = 300;    /* ロックする秒数（5分） */
-const AUTH_SESSION_SEC = 2592000; /* ログイン維持期間（30日） */
+/* 保存番号の頭1文字に使う英字。I / L / O は 1 / 0 と読み違えるので入れない（23文字） */
+const SAVE_ALPHA     = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+const SAVE_GEN_TRY   = 40;      /* 番号が重複したときに引き直す回数 */
+const SAVE_MAX_BYTES = 512000;  /* 預かる JSON の上限（約500KB） */
+const SAVE_RATE_SEC  = 600;     /* 総当たりを見る窓（10分） */
+const SAVE_RATE_MAX  = 20;      /* 窓の中で許す「外れ」の回数。超えたら窓が空くまで拒否 */
 
-function auth_db(): PDO {
+function save_db(): PDO {
   static $pdo = null;
   if ($pdo instanceof PDO) return $pdo;
 
@@ -31,135 +40,122 @@ function auth_db(): PDO {
   $pdo->exec('PRAGMA journal_mode = WAL');
   $pdo->exec('PRAGMA busy_timeout = 3000');
   $pdo->exec(
-    'CREATE TABLE IF NOT EXISTS users (
-       id            INTEGER PRIMARY KEY AUTOINCREMENT,
-       nick          TEXT    NOT NULL,
-       nick_key      TEXT    NOT NULL UNIQUE,
-       pin_hash      TEXT    NOT NULL,
-       created_at    INTEGER NOT NULL,
-       last_login_at INTEGER,
-       fail_count    INTEGER NOT NULL DEFAULT 0,
-       locked_until  INTEGER NOT NULL DEFAULT 0
+    'CREATE TABLE IF NOT EXISTS saves (
+       id         INTEGER PRIMARY KEY AUTOINCREMENT,
+       code       TEXT    NOT NULL UNIQUE,
+       payload    TEXT    NOT NULL DEFAULT ' . "'{}'" . ',
+       created_at INTEGER NOT NULL,
+       updated_at INTEGER NOT NULL
      )'
   );
+  /* 総当たり対策。外れた回数だけを記録する（当たったリクエストは残さない） */
+  $pdo->exec(
+    'CREATE TABLE IF NOT EXISTS save_hits (
+       ip TEXT    NOT NULL,
+       ts INTEGER NOT NULL
+     )'
+  );
+  $pdo->exec('CREATE INDEX IF NOT EXISTS ix_save_hits ON save_hits (ip, ts)');
   @chmod($path, 0600);
   return $pdo;
 }
 
-/* セッション。Cookie は HttpOnly / SameSite=Lax、https のときだけ Secure */
-function auth_session_start(): void {
-  if (session_status() === PHP_SESSION_ACTIVE) return;
-
-  $dir = APP_ROOT . '/data/sessions';
-  if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
-  if (is_dir($dir) && is_writable($dir)) { session_save_path($dir); }
-
-  $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-
-  ini_set('session.gc_maxlifetime', (string)AUTH_SESSION_SEC);
-  ini_set('session.use_strict_mode', '1');
-  session_name('gsid');
-  session_set_cookie_params([
-    'lifetime' => AUTH_SESSION_SEC,
-    'path'     => '/',
-    'secure'   => $https,
-    'httponly' => true,
-    'samesite' => 'Lax',
-  ]);
-  session_start();
+/* ===== 保存番号 ===== */
+/* 打ち間違い（空白・ハイフン・小文字）は受け取る側で吸収する */
+function save_norm_code(string $code): string {
+  return strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $code));
+}
+function save_code_ok(string $code): bool {
+  if (strlen($code) !== 5) return false;
+  if (strpos(SAVE_ALPHA, $code[0]) === false) return false;
+  return (bool)preg_match('/\A[0-9]{4}\z/', substr($code, 1));
+}
+function save_gen_code(): string {
+  $a = SAVE_ALPHA[random_int(0, strlen(SAVE_ALPHA) - 1)];
+  return $a . str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
 }
 
-/* ===== 入力の検証 ===== */
-function auth_norm_nick(string $nick): string {
-  $nick = trim(preg_replace('/[\x00-\x1f\x7f]/u', '', $nick));
-  return preg_replace('/\s+/u', ' ', $nick);
+/* ===== レート制限（存在確認の総当たり対策） ===== */
+function save_ip(): string {
+  return (string)($_SERVER['REMOTE_ADDR'] ?? '-');
 }
-function auth_nick_ok(string $nick): bool {
-  $len = mb_strlen($nick, 'UTF-8');
-  return $len >= 1 && $len <= 20;
-}
-function auth_pin_ok(string $pin): bool {
-  return (bool)preg_match('/\A[0-9]{4}\z/', $pin);
-}
-
-/* ===== 会員操作 =====
-   戻り値は ['ok'=>bool, 'error'=>string, 'user'=>array|null]。
-   error は文言キー（includes/lang/*.php の account.err.* ）に対応させている。 */
-function auth_register(string $nick, string $pin): array {
-  $nick = auth_norm_nick($nick);
-  if (!auth_nick_ok($nick)) return ['ok' => false, 'error' => 'nick'];
-  if (!auth_pin_ok($pin))   return ['ok' => false, 'error' => 'pin'];
-
-  $db  = auth_db();
-  $key = mb_strtolower($nick, 'UTF-8');
-  $st  = $db->prepare('SELECT id FROM users WHERE nick_key = ?');
-  $st->execute([$key]);
-  if ($st->fetch()) return ['ok' => false, 'error' => 'taken'];
-
-  $st = $db->prepare('INSERT INTO users (nick, nick_key, pin_hash, created_at, last_login_at) VALUES (?,?,?,?,?)');
+function save_rate_blocked(PDO $db): bool {
   $now = time();
-  $st->execute([$nick, $key, password_hash($pin, PASSWORD_DEFAULT), $now, $now]);
-
-  $user = ['id' => (int)$db->lastInsertId(), 'nick' => $nick];
-  auth_set_login($user);
-  return ['ok' => true, 'user' => $user];
+  /* 窓から出た記録は毎回まとめて捨てる（別途の掃除を要らなくするため） */
+  $db->prepare('DELETE FROM save_hits WHERE ts < ?')->execute([$now - SAVE_RATE_SEC]);
+  $st = $db->prepare('SELECT COUNT(*) FROM save_hits WHERE ip = ? AND ts >= ?');
+  $st->execute([save_ip(), $now - SAVE_RATE_SEC]);
+  return ((int)$st->fetchColumn()) >= SAVE_RATE_MAX;
+}
+function save_rate_hit(PDO $db): void {
+  $db->prepare('INSERT INTO save_hits (ip, ts) VALUES (?,?)')->execute([save_ip(), time()]);
 }
 
-function auth_login(string $nick, string $pin): array {
-  $nick = auth_norm_nick($nick);
-  if ($nick === '' || $pin === '') return ['ok' => false, 'error' => 'empty'];
+/* ===== 預かるデータ ===== */
+function save_payload_ok(string $payload): bool {
+  if ($payload === '' || strlen($payload) > SAVE_MAX_BYTES) return false;
+  return is_array(json_decode($payload, true));
+}
 
-  $db = auth_db();
-  $st = $db->prepare('SELECT * FROM users WHERE nick_key = ?');
-  $st->execute([mb_strtolower($nick, 'UTF-8')]);
-  $u = $st->fetch();
+/* ===== 操作 =====
+   戻り値は ['ok'=>bool, 'error'=>string, …]。
+   error は文言キー（includes/lang/*.php の save.err.* ）に対応させている。 */
+function save_create(string $payload): array {
+  if (!save_payload_ok($payload)) return ['ok' => false, 'error' => 'payload'];
 
-  /* 存在しないニックネームでも同じ応答にする（総当たりで実在を探られないように） */
-  if (!$u) return ['ok' => false, 'error' => 'nomatch'];
-
+  $db  = save_db();
   $now = time();
-  if ((int)$u['locked_until'] > $now) {
-    return ['ok' => false, 'error' => 'locked', 'wait' => (int)ceil(((int)$u['locked_until'] - $now) / 60)];
+  $st  = $db->prepare('INSERT INTO saves (code, payload, created_at, updated_at) VALUES (?,?,?,?)');
+  for ($i = 0; $i < SAVE_GEN_TRY; $i++) {
+    $code = save_gen_code();
+    try {
+      $st->execute([$code, $payload, $now, $now]);
+      return ['ok' => true, 'code' => $code];
+    } catch (PDOException $ex) {
+      /* UNIQUE 衝突だけ引き直す。それ以外はそのまま投げて 500 にする */
+      if ((string)$ex->getCode() !== '23000') throw $ex;
+    }
   }
-
-  if (!password_verify($pin, $u['pin_hash'])) {
-    $fail = (int)$u['fail_count'] + 1;
-    $lock = ($fail >= AUTH_LOCK_AFTER) ? ($now + AUTH_LOCK_SEC) : 0;
-    $db->prepare('UPDATE users SET fail_count = ?, locked_until = ? WHERE id = ?')
-       ->execute([$lock ? 0 : $fail, $lock, $u['id']]);
-    if ($lock) return ['ok' => false, 'error' => 'locked', 'wait' => (int)ceil(AUTH_LOCK_SEC / 60)];
-    return ['ok' => false, 'error' => 'nomatch', 'left' => AUTH_LOCK_AFTER - $fail];
-  }
-
-  $db->prepare('UPDATE users SET fail_count = 0, locked_until = 0, last_login_at = ? WHERE id = ?')
-     ->execute([$now, $u['id']]);
-
-  $user = ['id' => (int)$u['id'], 'nick' => $u['nick']];
-  auth_set_login($user);
-  return ['ok' => true, 'user' => $user];
+  return ['ok' => false, 'error' => 'full'];
 }
 
-function auth_set_login(array $user): void {
-  auth_session_start();
-  session_regenerate_id(true);       /* セッション固定攻撃よけ */
-  $_SESSION['uid']  = $user['id'];
-  $_SESSION['nick'] = $user['nick'];
+function save_load(string $code): array {
+  $db   = save_db();
+  $code = save_norm_code($code);
+  if (save_rate_blocked($db))  return ['ok' => false, 'error' => 'ratelimit'];
+  if (!save_code_ok($code))    { save_rate_hit($db); return ['ok' => false, 'error' => 'code']; }
+
+  $st = $db->prepare('SELECT code, payload FROM saves WHERE code = ?');
+  $st->execute([$code]);
+  $row = $st->fetch();
+  if (!$row) { save_rate_hit($db); return ['ok' => false, 'error' => 'notfound']; }
+
+  return ['ok' => true, 'code' => $row['code'], 'payload' => json_decode($row['payload'], true)];
 }
 
-function auth_logout(): void {
-  auth_session_start();
-  $_SESSION = [];
-  if (ini_get('session.use_cookies')) {
-    $p = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
-  }
-  session_destroy();
+function save_update(string $code, string $payload): array {
+  $db   = save_db();
+  $code = save_norm_code($code);
+  if (save_rate_blocked($db))        return ['ok' => false, 'error' => 'ratelimit'];
+  if (!save_code_ok($code))          { save_rate_hit($db); return ['ok' => false, 'error' => 'code']; }
+  if (!save_payload_ok($payload))    return ['ok' => false, 'error' => 'payload'];
+
+  $st = $db->prepare('UPDATE saves SET payload = ?, updated_at = ? WHERE code = ?');
+  $st->execute([$payload, time(), $code]);
+  if ($st->rowCount() < 1) { save_rate_hit($db); return ['ok' => false, 'error' => 'notfound']; }
+
+  return ['ok' => true, 'code' => $code];
 }
 
-/* ログイン中なら ['id'=>, 'nick'=>]、していなければ null */
-function auth_current(): ?array {
-  auth_session_start();
-  if (empty($_SESSION['uid'])) return null;
-  return ['id' => (int)$_SESSION['uid'], 'nick' => (string)($_SESSION['nick'] ?? '')];
+function save_delete(string $code): array {
+  $db   = save_db();
+  $code = save_norm_code($code);
+  if (save_rate_blocked($db))  return ['ok' => false, 'error' => 'ratelimit'];
+  if (!save_code_ok($code))    { save_rate_hit($db); return ['ok' => false, 'error' => 'code']; }
+
+  $st = $db->prepare('DELETE FROM saves WHERE code = ?');
+  $st->execute([$code]);
+  if ($st->rowCount() < 1) { save_rate_hit($db); return ['ok' => false, 'error' => 'notfound']; }
+
+  return ['ok' => true, 'code' => $code];
 }

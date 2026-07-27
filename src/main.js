@@ -17,7 +17,7 @@ import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 import { tt } from './util.js';
-import { initAccount, openAccount, submitAccount, swapAccountMode, logoutAccount } from './account.js';
+import { initSave, openSave, createSave, loadSave, toggleSaveLoad, copySaveCode, unlinkSave, deleteSave, askCreate, askSkip, setSaveApply, armSave } from './account.js';
 import { openContact, sendContact } from './contact.js';
 import { importPdfScore } from './omr-import.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
@@ -371,14 +371,19 @@ document.querySelectorAll('.tun-str [data-str]').forEach(el=>{
 on('gear','click', toggleGear);
 on('gearScrim','click', closeGear);
 
-/* ===== 歯車：会員（いちばん上）＝ ログイン / 新規登録 / ログアウト ===== */
-on('accBtn','click', openAccount);
-on('accOut','click', logoutAccount);
-on('accSubmit','click', submitAccount);
-on('accSwap','click', swapAccountMode);
-/* 暗証番号欄で Enter を押したらそのまま送る（フォーム要素を使っていないため自前で拾う） */
-on('accPin','keydown', e=>{ if(e.key==='Enter') submitAccount(); });
-on('accNick','keydown', e=>{ if(e.key==='Enter') document.getElementById('accPin').focus(); });
+/* ===== 歯車：設定の保存（いちばん上）＝ 保存番号の作成 / 読込 / 解除 / 削除 ===== */
+on('svBtn','click', openSave);
+on('svCreate','click', createSave);
+on('svCopy','click', copySaveCode);
+on('svLoadOpen','click', toggleSaveLoad);
+on('svLoad','click', loadSave);
+on('svUnlink','click', unlinkSave);
+on('svDelete','click', deleteSave);
+/* 保存番号の入力欄で Enter を押したらそのまま読み込む（フォーム要素を使っていないため自前で拾う） */
+on('svInput','keydown', e=>{ if(e.key==='Enter') loadSave(); });
+/* 「設定を保存しますか？」のモーダル */
+on('svAskYes','click', askCreate);
+on('svAskNo','click',  askSkip);
 
 /* ===== 歯車：お問い合わせ（いちばん下） ===== */
 on('contactBtn','click', openContact);
@@ -420,7 +425,19 @@ window.addEventListener('resize', ()=>{ if(pdfDoc && document.getElementById('pd
   syncLoopUI();
   render();
   applyZoom();
-  /* ログイン状態は描画に関係しないので、初期描画の後で取りに行く */
-  initAccount();
+  /* 保存番号で復元したときに画面を作り直す手順。中身を知っているのは main.js だけなので渡しておく */
+  setSaveApply(()=>{
+    loadSettings();
+    if(window.APP && window.APP.lang) ST.lang=window.APP.lang;
+    applyMode();
+    syncSettingsUI();
+    syncLoopUI();
+    render();
+    applyZoom();
+  });
+  /* ここから先の設定変更だけを自動保存の対象にする（起動時の底上げ保存で尋ねないため） */
+  armSave();
+  /* 保存番号は描画に関係しないので、初期描画の後で取りに行く */
+  initSave();
 })();
 window.addEventListener('orientationchange', ()=> setTimeout(applyZoom, 250));

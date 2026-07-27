@@ -34,21 +34,21 @@ string/
 │  ├─ index.php         # 楽器選択トップ（$LANG を定義して includes/home.php を require）
 │  └─ cello/index.php   # $LANG と $INSTRUMENT を定義して基幹PHPを require するだけ
 ├─ api/
-│  ├─ auth.php          # 会員（登録/ログイン/ログアウト/状態）の JSON API
+│  ├─ auth.php          # 設定の保存（保存番号の作成/読込/上書き/削除）の JSON API
 │  └─ contact.php       # お問い合わせ送信（mb_send_mail）
-├─ data/                # 非公開。.htaccess で遮断。SQLite とセッションの実体（gitには入れない）
+├─ data/                # 非公開。.htaccess で遮断。SQLite の実体（gitには入れない）
 ├─ includes/
 │  ├─ bootstrap.php         # 共通（config読込・言語・辞書・h/t/e/er・パス算出）
 │  ├─ home.php              # 楽器選択トップの基幹
 │  ├─ string_instrument.php # 楽器ページの基幹。検証・楽器configの読込・ビューの振り分け
-│  ├─ auth.php              # 会員の実処理（SQLite / password_hash / 失敗ロック）
+│  ├─ auth.php              # 保存番号の実処理（SQLite / 番号生成 / レート制限）
 │  ├─ views/
 │  │  ├─ home.php        # 楽器選択トップのHTML
 │  │  ├─ app.php         # アプリ本体のHTMLシェル（旧 index.html）
 │  │  └─ soon.php        # 準備中の楽器（ready=false）のページ
 │  ├─ fingering.php      # ゾーン判定・指番号（JS の zoneOf/fingerHint と同じ規則）
 │  ├─ midi.php           # 音名・周波数・弦長比（JS の midiName/fracOf と同じ規則）
-│  └─ lang/{ja,en,es,zh}.php  # 文言・音名・ゾーンラベル・会員/問い合わせ/トップの文言
+│  └─ lang/{ja,en,es,zh}.php  # 文言・音名・ゾーンラベル・保存/問い合わせ/トップの文言
 ├─ config/
 │  ├─ app.php            # 対応言語・対応楽器・既定値・問い合わせ宛先・DBパス（ここが唯一の定義）
 │  ├─ cello.php          # 開放弦・弦名・ゾーン境界・指番号テーブル（ready=true）
@@ -63,7 +63,7 @@ string/
 │     └─ scales.json     # スケール定義（起動時に先読み）
 └─ src/
    ├─ main.js            # エントリ（アプリ本体 /{言語}/{楽器}/）。init順序・移植ロードマップ
-   ├─ home.js            # エントリ（楽器選択トップ /{言語}/）。会員とPWAだけを配線する
+   ├─ home.js            # エントリ（楽器選択トップ /{言語}/）。保存番号とPWAだけを配線する
    ├─ styles.css         # 元<style>の移植先（index.htmlの<link>で読む）
    ├─ state.js           # ST(状態) + 定数（OPEN弦, NOTE_NAMES 等）
    ├─ util.js            # 純粋関数（midiName 等）＋楽器定数（window.INSTRUMENT から受取）
@@ -77,7 +77,7 @@ string/
    ├─ tuner.js           # ピッチ検出（静的import）
    ├─ pdf.js             # PDF表示（pdfjsは基幹PHPでグローバル読み込み）+ 検出用の描画
    ├─ omr-import.js      # PDFのページを読み取って譜面にする（omr/ とアプリの橋渡し）
-   ├─ account.js         # 会員（歯車のいちばん上）。api/auth.php を叩く
+   ├─ account.js         # 設定の保存＝保存番号（歯車のいちばん上）。api/auth.php を叩く
    ├─ contact.js         # お問い合わせ（歯車のいちばん下）。api/contact.php を叩く
    ├─ pwa.js             # Service Worker登録 と「ホーム画面に追加」。※自分で配線する
    └─ audio/
@@ -305,25 +305,51 @@ Verovio で MusicXML から浄書した1ページ（全音符・2分・4分・8�
 * iOS には `beforeinstallprompt` が無いので、共有メニューからの手順を文字で案内するだけにしている。
 * アイコンは `public/icons/`。差し替えるときは**ファイル名を変える**こと（.htaccess で30日キャッシュ）。
 
-## 会員（ニックネーム＋暗証番号4桁）
+## 設定の保存（保存番号）
 
-入口は2か所（アプリ本体＝歯車のいちばん上／トップ＝右上）。**要素IDを同じ（`accWho` `accBtn`
-`accOut` と `#mAccount` 一式）にしてあるので `src/account.js` を両方でそのまま共用している。**
+**ログインではなく「保存」。** メールアドレスもパスワードもセッションも無い。利用者は
+**保存番号**（英字1文字＋数字4桁・例 `G4821`）だけで自分のデータを指す。同じ端末では番号を
+LocalStorage に置いて起動時に自動で読み込むので、番号を打つのは他の端末に移るときだけ。
+「アカウントを管理する」意識を持たせず、「この端末に自分の設定を置いている」感覚で使えることを狙う。
+
+入口は2か所（アプリ本体＝歯車のいちばん上／トップ＝右上）。**要素IDを同じ（`svWho` `svBtn`
+と `#mSave` / `#mSaveAsk` 一式）にしてあるので `src/account.js` を両方でそのまま共用している。**
 そのためモーダルの開閉 `openDockModal` / `closeDockModal` は drawer.js から dom.js へ移した
 （drawer.js からも再輸出しているので既存の import はそのまま）。
 
+`includes/auth.php`（実処理）/ `api/auth.php`（JSON API）/ `src/account.js`（画面）。
 
-`includes/auth.php`（実処理）/ `api/auth.php`（JSON API）/ `src/account.js`（画面）。入口は歯車のいちばん上。
+### 流れ
 
+```
+初回          … 保存番号なしで全機能が使える（何も尋ねない）
+保存が要る操作 … saveSettings() / saveFingering() → settingsChanged()
+                 番号あり → 600ms まとめて UPDATE（確認なし。右下に「✓ 保存しました」）
+                 番号なし → #mSaveAsk「設定を保存しますか？」を1訪問に1回だけ出す
+起動時        … LocalStorage の番号 → api/auth.php(load) → 復元 → setSaveApply() で再描画
+他端末        … #mSave で番号を入力 → 現在の設定を置換
+```
+
+* **設定変更の通知は `drawer.js` の2か所だけ**（`saveSettings()` と `saveFingering()`）。
+  設定・運指の保存はここが唯一の出口なので、保存する項目を増やしても配線を足さなくてよい。
+* 預けるのは **localStorage の `cf:` で始まるキーそのもの**（`{v:1, keys:{…}}`）。`drawer.js` の
+  `Store` と同じ場所を読むので、楽器別の設定も運指も一括で持ち運べる。`cf:save:code`（番号自体）は除く。
+* 起動時の復元は `setSaveApply()` に渡した手順（`loadSettings` → `applyMode` → `render` …）で
+  画面に反映する。**中身を知っているのは main.js だけ**なので、account.js からは呼ばない。
+  トップページは変える設定が無いので登録しない（読み込んだ値は LocalStorage 経由で本体に渡る）。
+* `armSave()` より前の保存（音量の底上げなど起動時の自動保存）では尋ねない。
 * 保存は SQLite 1ファイル。場所は `config/app.php` の `db_path`（既定は `data/app.db`）。
   **公開ディレクトリの外に置ける契約なら絶対パスにして `data/` ごと外へ移すこと。**
-  暗証番号は `password_hash` で保存し、平文では持たない。
-* 4桁は総当たりが容易なので、**5回連続で失敗すると5分ロック**する（`AUTH_LOCK_AFTER` / `AUTH_LOCK_SEC`）。
-* セッションの実体も `data/sessions/` に置く。共用サーバの共有 tmp に置くと他所の gc で消えるため。
-* **ページの生成時にはセッションを開かない。** ログイン状態は読み込み後に `api/auth.php?action=me` で
-  取りに行き、歯車の中の表示だけ差し替える（ページをキャッシュ可能なまま保つため）。
-* 更新系は POST かつ `X-Requested-With: fetch` 必須＝素のフォーム送信では叩けない（CSRF よけ）。
-* 会員向けの機能を足すときは `users.id` を外部キーにしたテーブルを増やす。
+* 番号の英字は **I / L / O を除いた23文字**（1 / 0 と読み違えるため）＝23×10,000通り。
+  `code` に UNIQUE 制約。衝突したら引き直す（`SAVE_GEN_TRY`）。
+* **番号だけが鍵なので総当たりの的になる。** 存在しない番号を叩かれた回数を IP ごとに数え、
+  10分で20回を超えたら窓が空くまで受け付けない（`SAVE_RATE_SEC` / `SAVE_RATE_MAX`・`save_hits` テーブル）。
+  当たったリクエストは記録しない。番号空間を広げたいときは `SAVE_ALPHA` を2文字にする。
+* **保存番号は URL に出さない**（履歴・アクセスログ・Referer に残さないため）＝読み出しも含めて全て POST。
+  加えて `X-Requested-With: fetch` 必須＝素のフォーム送信では叩けない（CSRF よけ）。
+* 紐付け解除は LocalStorage を消すだけで、サーバのデータは残す。消すのは「保存データを削除」だけ。
+* 旧・会員（ニックネーム＋暗証番号4桁）は廃止。既存の `app.db` に `users` が残っているが参照しない。
+  消したいときは手で `DROP TABLE users`（自動で消さないのは切り戻しの余地を残すため）。
 
 ## お問い合わせ
 
