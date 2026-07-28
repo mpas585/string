@@ -113,7 +113,7 @@ return [
     'loop_dn'        => 'Back one bar',
     'loop_up'        => 'Forward one bar',
     'loop_info'      => 'Repeats the bars you specify (e.g. 34–40)',
-    'loop_reset'     => '⟲ Reset loop settings',
+    'loop_reset'     => '⟲ Reset measures',
 
     'seg_scale'      => '🎵 Scales',
     'seg_score'      => '🎼 Pieces',

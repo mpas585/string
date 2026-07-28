@@ -487,13 +487,13 @@ export function setLoopRange(){
   syncLoopUI();
   if(ST.playing) startPlay();     /* 再生中なら新しい範囲で組み直し */
 }
-/* ループ設定を初期状態へ戻す（ON/OFF・開始小節・終了小節すべて）。
-   戻り先は state.js の DEFAULT_LOOP＝起動直後と同じ状態。 */
+/* 開始小節・終了小節を初期値（DEFAULT_LOOP＝1〜4）へ戻す。
+   ループのON/OFFは触らない。OFFにすると syncLoopUI() が小節指定を disabled にして
+   .field2.off で薄くするので、リセットした途端に入力欄が消えたように見えるため。 */
 export function resetLoop(){
-  Object.assign(ST.loop, DEFAULT_LOOP);
   const mCount=Math.max(1, ST.measures.length);
-  ST.loop.from=Math.min(ST.loop.from, mCount);    /* 譜面が短いときは丸める */
-  ST.loop.to  =Math.max(ST.loop.from, Math.min(ST.loop.to, mCount));   /* setLoopRange と同じ規則 */
+  ST.loop.from=Math.min(DEFAULT_LOOP.from, mCount);
+  ST.loop.to  =Math.max(ST.loop.from, Math.min(DEFAULT_LOOP.to, mCount));  /* setLoopRange と同じ規則 */
   syncLoopUI();
   saveSettings();
   if(ST.playing) startPlay();     /* 再生中なら組み直し（setLoopRange と同じ） */

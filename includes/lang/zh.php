@@ -113,7 +113,7 @@ return [
     'loop_dn'        => '后退一小节',
     'loop_up'        => '前进一小节',
     'loop_info'      => '指定小节反复播放（例：34–40）',
-    'loop_reset'     => '⟲ 恢复循环设置',
+    'loop_reset'     => '⟲ 恢复小节设置',
 
     'seg_scale'      => '🎵 音阶',
     'seg_score'      => '🎼 乐曲',
