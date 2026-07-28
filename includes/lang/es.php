@@ -286,6 +286,7 @@ return [
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 No hay canciones<small>Revisa public/songs/manifest.json</small></button>',
     'song_loaded'          => '%s cargada',
     'song_err'             => 'Error al cargar: %s',
+    'local_only'           => 'Solo se pueden cargar archivos del propio servidor de esta aplicación',
     'mic_unavailable'      => 'Micrófono no disponible (se requiere https:// o localhost)',
     'mic_start_fail_html'  => '<b>No se pudo iniciar el micrófono.</b>',
     'mic_check_perm_html'  => '<br>Comprueba el permiso del micrófono en el navegador.',
@@ -327,6 +328,51 @@ return [
       ['¿Puedo cambiar la digitación?', 'Toca una nota y aparecerán las alternativas. Tu elección se guarda automáticamente y puede exportarse e importarse.'],
     ],
     'note'  => 'Todo el proceso ocurre en tu dispositivo. No se envía ningún dato al exterior.',
+  ],
+
+  /* ===== Guía de problemas de práctica (entrada a los artículos GEO/SEO) =====
+     faqs     … tres elementos bajo las preguntas frecuentes de la app (includes/views/app.php)
+     articles … contenido de la página de archivo (/{idioma}/{instrumento}/guide/)
+     Texto de muestra por ahora. Mantén los cuatro idiomas al día al sustituirlo. */
+  'guide' => [
+    'title' => 'Guía de problemas al practicar %s',
+    'lead'  => 'Respuestas breves a lo que más suele frenar la práctica. Pulsa una pregunta para abrir la respuesta.',
+    'faqs' => [
+      ['La afinación no se me estabiliza. ¿Por dónde empiezo?', 'Comprueba primero las quintas y las octavas contra las cuerdas al aire. Antes de mirar la forma de los dedos, mira si han cambiado la altura del codo izquierdo y la posición del pulgar. Repetir la misma nota despacio mirando el diapasón en pantalla es el camino más corto.'],
+      ['El sonido se corta al cambiar de cuerda', 'Queda un hueco entre dejar una cuerda y llegar a la siguiente. No gires solo con la muñeca: lleva el codo por adelantado a la altura de la cuerda siguiente. Practica alternando dos cuerdas sin detener nunca el arco.'],
+      ['En las piezas largas me descoloco a mitad', 'El punto en que se rompe suele ser siempre el mismo. Aísla esos dos a cuatro compases con la reproducción en bucle, baja el tempo hasta poder tocarlos y súbelo poco a poco. Una pasada entera al final es suficiente.'],
+    ],
+    'more'  => 'Ver más artículos sobre problemas al practicar %s',
+
+    /* Página de archivo (/{idioma}/{instrumento}/guide/) */
+    'page_title' => 'Problemas al practicar %s | afinación, arco, rutinas | GEN strings',
+    'page_desc'  => 'Dificultades habituales al practicar %s, agrupadas en afinación, uso del arco, cómo practicar y cuidado del instrumento.',
+    'page_h1'    => 'Problemas al practicar %s',
+    'page_lead'  => 'Preguntas que salen durante la práctica, agrupadas por tema, con sus respuestas. Vamos añadiendo artículos.',
+    'back'       => '‹ Volver a la app de práctica de %s',
+    'updated'    => 'Esta lista se actualiza a medida que añadimos artículos.',
+    'articles' => [
+      ['Afinación y mano izquierda', 'Léelo cuando la posición no acaba de fijarse o las notas quedan bajas.', [
+        ['La misma nota me suena distinta según el día', 'O el instrumento se ha desafinado, o ha cambiado la colocación de la mano izquierda. Comprueba las cuerdas al aire con el afinador y después mira el pulgar. Si el pulgar baja, los dedos se tumban y la afinación tiende a caer.'],
+        ['Fallo mucho en cuanto subo a posiciones altas', 'La distancia del cambio se aprende con el brazo, no con los dedos. No pares el arco durante el cambio y practica deteniéndote justo antes de la nota de destino. Las franjas de posición del diapasón en pantalla (baja, media, alta) sirven de referencia.'],
+        ['No calculo la separación de un semitono', 'Como regla, en un semitono los dedos se tocan y en un tono queda el hueco de un dedo. La separación es amplia en posiciones bajas y estrecha en las altas, así que no subas con la misma forma de mano.'],
+      ]],
+      ['El arco y la mano derecha', 'Léelo cuando el sonido sale fino, raspa o se detiene a media frase.', [
+        ['El sonido cambia al cambiar la dirección del arco', 'Lo habitual es que el peso se retire justo antes del cambio y entre de más justo después. Mantén constante el peso del índice y cambia de dirección solo con la muñeca. Usa arcadas enteras lentas y escucha si hay un escalón de volumen.'],
+        ['El sonido raspa o suena débil', 'O falta peso para la velocidad del arco, o estás demasiado lejos del puente. Coloca el arco entre el diapasón y el puente, baja la velocidad y busca el punto donde la cuerda responde bien. También puede faltar resina.'],
+        ['El arco rebota sobre la cuerda', 'El brazo rígido hace que rebote. Suelta hombro y muñeca y deja que el peso del arco apoye en la cuerda. El talón rebota más, así que estabiliza primero en la mitad del arco.'],
+      ]],
+      ['Cómo practicar', 'Léelo cuando no encuentras tiempo o no notas avances.', [
+        ['¿Cuánto debo practicar al día?', 'Importa más la frecuencia que la duración. Quince minutos diarios cunden más que dos horas seguidas el fin de semana. Cinco minutos de cuerdas al aire y escalas, y el resto al repertorio, es un reparto fácil para empezar.'],
+        ['No sé si estoy mejorando', 'Graba la misma pieza al mismo tempo y compárala con la de hace un mes. Haber podido subir el tempo, o tener menos cortes entre notas, solo se aprecia en una grabación.'],
+        ['¿Hacen falta las escalas?', 'Las notas que cuestan en una pieza suelen estar también en la escala. Tocar la tonalidad entera evita dudar dónde poner los dedos en piezas de esa tonalidad. Empieza por la tonalidad de la pieza que estés trabajando.'],
+      ]],
+      ['Cuidado del instrumento', 'Léelo cuando la afinación se va o las cuerdas están gastadas.', [
+        ['Se me desafina enseguida', 'Las cuerdas nuevas se estiran, así que durante un tiempo se irán en cada sesión. Si una clavija se suelta, es que no está bien encajada: empuja mientras giras. Los ajustes finos se hacen con los afinadores.'],
+        ['¿Cuándo cambio las cuerdas?', 'Cuando el entorchado empieza a deshilacharse, aunque el sonido no haya cambiado. De seis meses a un año es una referencia razonable si tocas a diario. Cámbialas de una en una y no las cuatro a la vez, para no mover el puente.'],
+        ['¿Qué hago al terminar de practicar?', 'Limpia la resina de las cuerdas y del instrumento con un paño seco y afloja siempre las cerdas del arco. Guardarlo tenso debilita la curvatura de la vara. Deja el estuche donde la temperatura y la humedad sean estables.'],
+      ]],
+    ],
   ],
 
   /* ===== Portada por idioma (selección de instrumento) = /{idioma}/ ===== */

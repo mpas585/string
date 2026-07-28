@@ -28,7 +28,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
      （画面に見えている内容と一致していることが要件）。
      JSON_HEX_TAG は文言に < > が入っても </script> で抜けないようにするため。 */
   $faq = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => []];
-  foreach (t('intro.faqs') as $q) {
+  /* 「よくある質問」＋その下の「お悩みガイド」。どちらも画面に見えている内容 */
+  foreach (array_merge(t('intro.faqs'), t('guide.faqs')) as $q) {
     $faq['mainEntity'][] = [
       '@type' => 'Question',
       'name'  => $q[0],
@@ -252,6 +253,23 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <dd><?= h($q[1]) ?></dd>
 <?php endforeach; ?>
     </dl>
+
+    <!-- ===== お悩みガイド（記事への導線）=====
+         Q&A は <details>/<summary> の開閉なので JS は要らない。
+         文言は includes/lang/*.php の guide.*、記事一覧は /{言語}/{楽器}/guide/。 -->
+    <h2 id="guide"><?php e('guide.title', $INST_NAME) ?></h2>
+    <p><?php e('guide.lead') ?></p>
+    <div class="pk-guide">
+<?php foreach (t('guide.faqs') as $g): ?>
+      <details class="gq">
+        <summary><?= h($g[0]) ?></summary>
+        <p><?= h($g[1]) ?></p>
+      </details>
+<?php endforeach; ?>
+    </div>
+    <a class="pk-more" href="<?= h($rootPath . '/' . $LANG . '/' . $INSTRUMENT . '/guide/') ?>">
+      <span><?php e('guide.more', $INST_NAME) ?></span><span class="cv">›</span>
+    </a>
   </section>
 </div>
 

@@ -283,6 +283,7 @@ return [
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 No songs<small>Check public/songs/manifest.json</small></button>',
     'song_loaded'          => '%s loaded',
     'song_err'             => 'Load error: %s',
+    'local_only'           => 'Only files on this app\'s own server can be loaded',
     'mic_unavailable'      => 'Microphone unavailable (https:// or localhost required)',
     'mic_start_fail_html'  => '<b>Could not start the microphone.</b>',
     'mic_check_perm_html'  => '<br>Check the microphone permission in your browser.',
@@ -324,6 +325,51 @@ return [
       ['Can I change the fingering myself?', 'Tap a note and the alternatives appear. Your choice is saved automatically, and can be exported and imported.'],
     ],
     'note'  => 'Everything runs on your device. No data is sent anywhere.',
+  ],
+
+  /* ===== Practice troubleshooting guide (entry point for the GEO/SEO articles) =====
+     faqs     … three items shown right under the FAQ on the app page (includes/views/app.php)
+     articles … the contents of the archive page (/{lang}/{instrument}/guide/)
+     Sample copy for now. Keep all four languages in step when replacing it. */
+  'guide' => [
+    'title' => '%s practice: common problems',
+    'lead'  => 'Short answers to the things that most often stop practice. Tap a question to open the answer.',
+    'faqs' => [
+      ['My intonation will not settle. Where do I start?', 'Check your fifths and octaves against the open strings first. Before you look at finger shape, check whether the height of your left elbow and the position of your thumb have moved. Watching the fingerboard display while repeating the same note slowly is the fastest route.'],
+      ['The sound breaks when I change strings', 'There is a gap between leaving one string and arriving on the next. Do not turn with the wrist alone: move your elbow towards the height of the next string in advance. Practise alternating two strings without ever stopping the bow.'],
+      ['I fall apart partway through longer pieces', 'The place where it collapses is usually the same one. Take just those two to four bars with loop playback, drop the tempo until you can play them, then bring it back up gradually. One run-through at the end is enough.'],
+    ],
+    'more'  => 'More articles on %s practice problems',
+
+    /* Archive page (/{lang}/{instrument}/guide/) */
+    'page_title' => '%s practice problems | intonation, bowing, practice routines | GEN strings',
+    'page_desc'  => 'Common sticking points in %s practice, grouped into intonation, bowing, how to practise, and looking after the instrument.',
+    'page_h1'    => '%s practice problems',
+    'page_lead'  => 'Questions that come up during practice, grouped by theme, with answers. More articles are added over time.',
+    'back'       => '‹ Back to the %s practice app',
+    'updated'    => 'This list is updated as new articles are added.',
+    'articles' => [
+      ['Intonation and the left hand', 'Read this when the stopping position will not settle, or notes sit flat.', [
+        ['The same note is out of tune on different days', 'Either the instrument itself has drifted, or your left hand set-up has changed. Check the open strings with the tuner first, then look at your thumb. When the thumb drops, the fingers flatten out and pitch tends to fall.'],
+        ['I miss badly as soon as I go into high positions', 'Learn the distance of a shift with the arm, not the fingers. Keep the bow moving during the shift, and practise stopping just short of the target note. The position bands on the fingerboard display (low, middle, high) give you something to aim at.'],
+        ['I cannot judge the spacing for a semitone', 'As a rough guide, a semitone means the fingers touch and a whole tone means a finger-width gap. The spacing is wide in low positions and narrow in high ones, so do not carry the same hand shape up the fingerboard.'],
+      ]],
+      ['The bow and the right hand', 'Read this when the sound is thin, breaks up, or stops halfway.', [
+        ['The sound changes when I change bow direction', 'Usually the weight comes off just before the turn and goes back on too strongly just after it. Keep the weight of the index finger constant and change direction with the wrist alone. Use slow whole bows and listen for a step in volume at the turn.'],
+        ['The tone is scratchy or thin', 'Either there is not enough weight for the bow speed, or you are too far from the bridge. Put the bow midway between fingerboard and bridge, slow it down, and find the point where the string really speaks. It may also just need rosin.'],
+        ['The bow bounces on the string', 'A locked arm makes it bounce. Release the shoulder and wrist and let the weight of the bow rest into the string. The lower half bounces most, so settle it in the middle of the bow first.'],
+      ]],
+      ['How to practise', 'Read this when you cannot find time, or cannot feel any progress.', [
+        ['How long should I practise each day?', 'Frequency beats length. Fifteen minutes every day sticks better than two hours once at the weekend. Five minutes of open strings and scales, then the rest on repertoire, is an easy split to start with.'],
+        ['I cannot tell whether I am improving', 'Record the same piece at the same tempo and compare it with a month ago. A higher tempo, or fewer gaps between notes, are changes you will only notice on a recording.'],
+        ['Do I really need to practise scales?', 'The notes that give you trouble in a piece are usually in the scale too. Playing a key through means you stop hesitating over where to put your fingers in pieces in that key. Start with the key of the piece you are working on.'],
+      ]],
+      ['Looking after the instrument', 'Read this when tuning drifts, or the strings feel old.', [
+        ['It goes out of tune almost immediately', 'New strings stretch, so they will drift every time you play for a while. If a peg slips back, it is not pushed in far enough: press in as you turn. Use the fine adjusters for small corrections.'],
+        ['When should I change strings?', 'Once the winding starts to fray, it is time, even if the sound has not changed. Six months to a year is a reasonable guide if you play daily. Change them one at a time rather than all four at once, so the bridge is not disturbed.'],
+        ['What should I do after practising?', 'Wipe the rosin off the strings and the body with a dry cloth, and always loosen the bow hair. Storing it tight weakens the camber of the bow. Keep the case somewhere the temperature and humidity are stable.'],
+      ]],
+    ],
   ],
 
   /* ===== Language home (instrument picker) = /{lang}/ ===== */

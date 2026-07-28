@@ -66,6 +66,42 @@ if (!function_exists('er')) {
   function er(string $key, ...$args): void { echo t($key, ...$args); }
 }
 
+/* ===== 3.5 読み込み先の制限（Content-Security-Policy） =====
+   JS・CSS・画像・通信先を「このサーバの中」に限る。素の 'self' だけにすると
+   いま使っている次の3つが止まるので、そこだけを名指しで許可している。
+     cdnjs.cloudflare.com   … JSZip（.mxl の解凍）と pdf.js（PDF表示・そのworker）
+     googletagmanager.com   … GA4 の計測タグ（includes/views/analytics.php）
+     google-analytics.com   … GA4 の送信先
+   'unsafe-inline' が要るのは、ビューに直書きしている <script>window.APP=…</script> と
+   style="" 属性のため。これらを外部ファイルへ出すまでは外せない。
+
+   ※ HTML を返すページ（includes/home.php / includes/string_instrument.php）からだけ呼ぶ。
+      api/*.php は JSON なので送らない。
+   ※ 許可先を増やすときはここ1か所と sw.js の素通し設定を合わせて直すこと。 */
+if (!function_exists('app_send_csp')) {
+  function app_send_csp(): void {
+    if (headers_sent()) { return; }
+    $csp = implode('; ', [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.googletagmanager.com",
+      "worker-src 'self' blob: https://cdnjs.cloudflare.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://www.googletagmanager.com https://*.google-analytics.com",
+      "font-src 'self' data:",
+      "media-src 'self' blob:",
+      "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+      "manifest-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'",
+    ]);
+    header('Content-Security-Policy: ' . $csp);
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+  }
+}
+
 /* ===== 4. パス ===== */
 $BASE      = str_repeat('../', $URL_DEPTH);              /* 今のページからルートまで */
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));

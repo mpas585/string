@@ -69,6 +69,30 @@ export function pickText(v){
   return v[lang] || v.ja || Object.values(v)[0] || '';
 }
 
+/* ===== 読み込み先の制限（同一サーバの中だけ） =====
+   曲のJSON・スケール定義は、このアプリを置いたサーバの中のファイルからしか読まない。
+   manifest.json の "file" に外部URL（https://… ）や親ディレクトリ（../）が
+   書かれていても、ここで弾いて fetch まで行かせない。
+
+   localFile(名前, 置き場)
+     名前 … 英数字と . _ - だけのファイル名。/ : ? # .. を含むものは受け付けない
+     置き場… new URL('../public/songs/', import.meta.url) のような同一サーバのURL
+   戻り値は URL。条件から外れていれば例外を投げる（呼び出し側の catch で toast する）。 */
+export function localFile(name, dir){
+  const s = String(name == null ? '' : name);
+  if(!/^[A-Za-z0-9._-]+$/.test(s) || s.indexOf('..') >= 0) throw new Error(tt('msg.local_only'));
+  const u = new URL(s, dir);
+  if(u.origin !== location.origin) throw new Error(tt('msg.local_only'));
+  return u;
+}
+/* 置き場そのもの（manifest.json / scales.json）の確認。import.meta.url から作っているので
+   通常は同一サーバだが、将来 URL を組み替えたときに外へ出ないよう同じ関門を通す。 */
+export function localUrl(url){
+  const u = new URL(url);
+  if(u.origin !== location.origin) throw new Error(tt('msg.local_only'));
+  return u;
+}
+
 export function fingerHint(off){
   if(off in FINGER_TABLE) return FINGER_TABLE[off];
   if(off>12) return FINGER_HIGH;

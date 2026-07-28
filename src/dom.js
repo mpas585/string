@@ -31,4 +31,37 @@ export function openDockModal(id){
 export function closeDockModal(){
   document.querySelectorAll('.dkmodal').forEach(m=> m.classList.remove('open'));
   const sc=document.getElementById('dockScrim'); if(sc) sc.classList.remove('open');
+  clearPlayAttn();
+}
+
+/* ===== 「✓ 保存しました」が出たあいだ ▶ を前面へ =====
+   設定を変えた＝譜面に反映して聴き直したい場面。パネルを ✕ で閉じなくても
+   ▶ を押せるように、body のクラスで重なり順を上げる（CSS: body.save-attn .fab）。
+
+   ・付ける … src/account.js の settingsChanged()（設定を変えた時点）と
+              flashSaved()（「✓ 保存しました」が出た時点）の2か所
+   ・外す … ドロワー／歯車／ドックのモーダルを閉じたとき
+   ▶ を押した時点では外さない。押した直後は ■（停止）になるので、
+   ここで重なり順を戻すとスクリムの下に沈んで止められなくなるため。
+   ※ ▶ が無い画面（楽器選択トップ）では何もしない。 */
+export function raisePlayAttn(){
+  const fab=document.getElementById('fab');
+  if(!fab || fab.disabled) return;
+  /* 何も開いていなければ ▶ はもともと押せる。前へ出す必要も光らせる必要もない
+     （保存の合図はパネルを閉じたあとに届くこともあるので、ここで見送る） */
+  const open = document.getElementById('drawer')?.classList.contains('open')
+            || document.getElementById('gearPanel')?.classList.contains('open')
+            || document.getElementById('dockScrim')?.classList.contains('open');
+  if(!open) return;
+  document.body.classList.add('save-attn');
+  /* 重なり順はここで直接付ける。styles.css にも同じ 62 を書いてあるが、
+     CSS はブラウザや Service Worker のキャッシュで古いままになることがあり、
+     それだと ▶ が .dkscrim(42)・.dkmodal(43) の下に沈んだままになるため。
+     updateChrome() が fab.style.display を触っているのと同じやり方。 */
+  fab.style.zIndex='62';
+}
+export function clearPlayAttn(){
+  document.body.classList.remove('save-attn');
+  const fab=document.getElementById('fab');
+  if(fab) fab.style.zIndex='';     /* styles.css の既定（6）へ戻す */
 }

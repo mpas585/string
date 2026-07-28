@@ -7,7 +7,7 @@
   ※ SCALES/SCALE_LABEL は public/scales/scales.json から loadScales() で読み込む（外部化済み）。
     main.js の初期化で loadSettings() より先に await すること（保存済み scaleType の照合に必要）。
 */
-import { OPEN, midiName, pickText, tt } from './util.js';
+import { OPEN, midiName, pickText, tt, localUrl } from './util.js';
 import { recommend } from './fingerboard.js';
 import { ST } from './state.js';
 
@@ -36,7 +36,7 @@ export function setScales(list){
 export const SCALES_URL = new URL('../public/scales/scales.json', import.meta.url);
 export async function loadScales(){
   try{
-    const res=await fetch(SCALES_URL, {cache:'no-cache'});
+    const res=await fetch(localUrl(SCALES_URL), {cache:'no-cache'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const j=await res.json();
     if(!j || !Array.isArray(j.scales) || !j.scales.length) throw new Error('scales が空です');

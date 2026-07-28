@@ -16,7 +16,7 @@
   ※ pdf は Batch7 で作成。それまで PDFファイルを開く経路のみ実行時未解決。
 */
 import { ST } from './state.js';
-import { midiName, NOTE_NAMES, OPEN, tt, pickText } from './util.js';
+import { midiName, NOTE_NAMES, OPEN, tt, pickText, localFile, localUrl } from './util.js';
 import { recommend, scrollBoardToActive, FB } from './fingerboard.js';
 import { scrollStaffToActive } from './notation.js';
 import { buildScaleEvents, SCALE_LABEL } from './scale.js';
@@ -563,7 +563,8 @@ export function renderSongList(){
 }
 export async function loadSongManifest(){
   try{
-    const res=await fetch(new URL('manifest.json', SONGS_DIR), {cache:'no-cache'});
+    /* 曲一覧も同一サーバのファイルからしか読まない（src/util.js の localFile） */
+    const res=await fetch(localFile('manifest.json', localUrl(SONGS_DIR)), {cache:'no-cache'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const j=await res.json();
     if(!j || !Array.isArray(j.songs)) throw new Error('songs がありません');
@@ -627,7 +628,9 @@ export async function loadSong(id, quiet){
   if(!s){ toast(tt('msg.soon')); return; }
   try{
     midiFile=null; renderTracks();
-    const res=await fetch(new URL(s.file || (id+'.json'), SONGS_DIR), {cache:'no-cache'});
+    /* manifest.json の "file" は public/songs/ 直下のファイル名だけを受け付ける。
+       外部URLや ../ が書かれていた場合は localFile() が例外を投げる（＝読みに行かない）。 */
+    const res=await fetch(localFile(s.file || (id+'.json'), localUrl(SONGS_DIR)), {cache:'no-cache'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
     const parsed=buildSongFromData(data);

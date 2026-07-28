@@ -788,6 +788,47 @@
   body.landscape-layout .pk-desc,
   body.force-landscape .pk-desc{max-width:560px}
 
+  /* ======== お悩みガイド（よくある質問の下の導線）========
+     開閉は <details>/<summary> なので JS は無い。記事一覧は /{言語}/{楽器}/guide/。
+     .gq は一覧ページ（includes/views/guide.php）でも同じものを使う。 */
+  .pk-guide{margin:0 0 12px}
+  .gq{
+    border:1px solid var(--line); border-radius:10px; background:var(--panel2);
+    padding:0 11px; margin-top:7px; overflow:hidden;
+  }
+  .gq summary{
+    list-style:none; cursor:pointer; padding:10px 20px 10px 0; position:relative;
+    font-size:12px; font-weight:700; color:var(--ink); line-height:1.6;
+  }
+  .gq summary::-webkit-details-marker{display:none}
+  .gq summary::after{
+    content:'＋'; position:absolute; right:0; top:10px;
+    font-size:12px; font-weight:400; color:var(--accent);
+  }
+  .gq[open] summary::after{content:'−'}
+  .gq[open] summary{border-bottom:1px solid var(--line)}
+  .gq summary:active{opacity:.6}
+  .gq > p{
+    margin:0; padding:9px 0 12px;
+    font-size:11px; color:var(--faint); line-height:1.85;
+  }
+  .pk-more{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    text-decoration:none; margin-top:12px; padding:11px 12px;
+    border:1px solid var(--accent); border-radius:10px;
+    font-size:12px; font-weight:700; color:var(--accent); line-height:1.5;
+  }
+  .pk-more .cv{font-size:13px}
+  .pk-more:active{opacity:.6}
+
+  /* ======== お悩み集（/{言語}/{楽器}/guide/ ＝ includes/views/guide.php）======== */
+  .gd-back{margin:0 0 10px; font-size:11px}
+  .gd-back a{color:var(--accent); text-decoration:none}
+  .gd-sec{margin-top:26px; padding-top:16px; border-top:1px solid var(--line); text-align:left}
+  .gd-sec h2{font-size:13px; font-weight:700; color:var(--ink); margin:0 0 6px; letter-spacing:.04em}
+  .gd-lead{font-size:11px; color:var(--muted); line-height:1.8; margin:0 0 8px}
+  .gd-note{margin-top:22px; font-size:10px; color:var(--faint); text-align:left}
+
   /* ======== 楽器の切り替え（ドロワー見出し → モーダル） ======== */
   .drawer-head .dh-t .instbtn{
     font:inherit; letter-spacing:inherit; text-transform:inherit; color:inherit;
@@ -999,6 +1040,20 @@
   /* ドロワー(z-index:41)を開いたまま押せるように、光っている間だけ前面へ出す */
   body.scale-dirty .fab{z-index:42}
   .fab.attn{animation:fabattn 1.1s ease-in-out infinite}
+
+  /* ======== 「✓ 保存しました」が出たら ▶ を前面へ ========
+     設定を変えた＝聴き直したい場面なので、✕ で閉じなくても ▶ を押せるようにする。
+     付けるのは src/account.js の flashSaved()、外すのは closeDrawer()/closeGear()/▶タップ。
+
+     62 なのは、いま画面に出ている可能性のあるものすべてより上へ出すため。
+       36 歯車スクリム / 38 歯車パネル / 40 スクリム / 41 ドロワー
+       42 ドックのスクリム(.dkscrim) / 43 ドックのモーダル(.dkmodal)
+       45 PDF参照 / 60 トースト / 61 「✓ 保存しました」(.svsaved)
+     42 では .dkscrim と同値になり、#dockScrim が #fab より後ろにあるぶん
+     スクリムが上に乗ってタップを吸ってしまう（テンポ・ループ等を変えた直後がこれ）。
+     冒頭カウント(70) より下なので、カウントダウン中に前へ出ることはない。 */
+  body.save-attn .fab{z-index:62}
+  body.save-attn .fab:not(:disabled):not(.playing){animation:fabattn 1.1s ease-in-out infinite}
   @keyframes fabattn{
     0%,100%{box-shadow:0 6px 0 #7d5d1c, 0 8px 26px rgba(231,178,75,.45), inset 0 2px 0 rgba(255,255,255,.5)}
     50%    {box-shadow:0 6px 0 #7d5d1c, 0 0 0 9px rgba(231,178,75,.20), 0 8px 34px rgba(231,178,75,.85), inset 0 2px 0 rgba(255,255,255,.5)}

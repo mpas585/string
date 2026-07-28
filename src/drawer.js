@@ -16,7 +16,7 @@ import { fracOf, zoneOf, fingerHint, INSTRUMENT_ID, tt } from './util.js';
 import { recommend } from './fingerboard.js';
 import { SCALES } from './scale.js';
 import { render, syncLayoutClass, syncDock } from './modes.js';
-import { toast } from './dom.js';
+import { toast, clearPlayAttn } from './dom.js';
 import { pdfDoc, renderPdfPage } from './pdf.js';
 /* 保存（保存番号）への通知。設定と運指の保存はここが唯一の出口なので、ここから知らせる */
 import { settingsChanged } from './account.js';
@@ -230,9 +230,9 @@ export function openGearPage(name, back){
   });
   panel.scrollTop=0;
 }
-export function closeGear(){ document.getElementById('gearPanel').classList.remove('open'); document.getElementById('gearScrim').classList.remove('open'); }
+export function closeGear(){ document.getElementById('gearPanel').classList.remove('open'); document.getElementById('gearScrim').classList.remove('open'); clearPlayAttn(); }
 export function toggleGear(){ document.getElementById('gearPanel').classList.contains('open') ? closeGear() : openGear(); }
-export function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); }
+export function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); clearPlayAttn(); }
 export function openPdfOverlay(){ document.getElementById('pdfOverlay').classList.add('open'); if(pdfDoc) renderPdfPage(); }
 export function closePdfOverlay(){ document.getElementById('pdfOverlay').classList.remove('open'); }
 

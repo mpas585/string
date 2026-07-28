@@ -26,8 +26,8 @@ foreach ($APP['instruments'] as $i) {
   if (!empty($c['ready'])) { $instruments[] = $i; }
 }
 
-$url = function ($lang, $inst = '') use ($origin, $root) {
-  return $origin . $root . '/' . $lang . '/' . ($inst === '' ? '' : $inst . '/');
+$url = function ($lang, $inst = '', $sub = '') use ($origin, $root) {
+  return $origin . $root . '/' . $lang . '/' . ($inst === '' ? '' : $inst . '/') . ($sub === '' ? '' : $sub . '/');
 };
 $x = function ($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); };
 
@@ -55,6 +55,18 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
     <xhtml:link rel="alternate" hreflang="<?= $x($alt) ?>" href="<?= $x($url($alt, $inst)) ?>"/>
 <?php endforeach; ?>
     <priority>0.8</priority>
+  </url>
+<?php endforeach; ?>
+<?php endforeach; ?>
+<?php /* 3) 楽器ごとのお悩み集（/{言語}/{楽器}/guide/ ＝ includes/views/guide.php） */ ?>
+<?php foreach ($instruments as $inst): ?>
+<?php foreach ($APP['langs'] as $lang): ?>
+  <url>
+    <loc><?= $x($url($lang, $inst, 'guide')) ?></loc>
+<?php foreach ($APP['langs'] as $alt): ?>
+    <xhtml:link rel="alternate" hreflang="<?= $x($alt) ?>" href="<?= $x($url($alt, $inst, 'guide')) ?>"/>
+<?php endforeach; ?>
+    <priority>0.6</priority>
   </url>
 <?php endforeach; ?>
 <?php endforeach; ?>

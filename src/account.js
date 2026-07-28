@@ -18,7 +18,7 @@
      localStorage が使えない環境（プライベートモード等）ではこの機能だけ黙って止まる。
 */
 import { tt } from './util.js';
-import { toast, openDockModal, closeDockModal } from './dom.js';
+import { toast, openDockModal, closeDockModal, raisePlayAttn } from './dom.js';
 
 const API  = new URL('../api/auth.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
@@ -131,6 +131,7 @@ function flashSaved() {
   el.classList.add('show');
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), 1100);
+  raisePlayAttn();      /* 開いたままでも ▶ を押せるように前面へ（src/dom.js） */
 }
 
 function showLoadBox(on) {
@@ -158,6 +159,10 @@ function scheduleSave() {
 /* 設定・運指が変わったときに drawer.js から呼ばれる入口 */
 export function settingsChanged() {
   if (!armed || applying) return;
+  /* 変えた時点で ▶ を前面へ。サーバへの保存（＝「✓ 保存しました」）は
+     600ms 待ってから通信するので、そこまで待つと反応が遅れる。
+     保存番号を持っていない人にも同じように効かせたいので、分岐の前で呼ぶ。 */
+  raisePlayAttn();
   if (CODE) { scheduleSave(); return; }
   if (asked || !LS) return;
   asked = true;                      /* 尋ねるのは1回だけ。断られたらこの訪問では出さない */

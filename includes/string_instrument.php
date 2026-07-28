@@ -60,6 +60,7 @@ $JSON = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
    ここから下に HTML は書かない。画面を直すときは includes/views/ を触る。
    ビューからは上で作った変数（$T/$INST/$INST_NAME/$BASE/$LANG_URLS 等）と
    t()/h()/e()/er() がそのまま使える。 */
+app_send_csp();                                         /* 読み込み先は同一サーバのみ（bootstrap.php） */
 header('Content-Type: text/html; charset=UTF-8');
 
 if (empty($INST['ready'])) {

@@ -19,5 +19,6 @@ require __DIR__ . '/bootstrap.php';
 
 $JSON = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 
+app_send_csp();                                         /* 読み込み先は同一サーバのみ（bootstrap.php） */
 header('Content-Type: text/html; charset=UTF-8');
 require APP_ROOT . '/includes/views/home.php';
