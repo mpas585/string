@@ -81,84 +81,100 @@
       "file": "elise.json"
     },
     {
-      "id": "heads_shoulders_knees_and_toes",
+      "id": "bach_prelude_bwv1007",
       "title": {
-        "ja": "あたま かた ひざ つまさき",
-        "en": "Heads Shoulders Knees and Toes",
-        "es": "Cabeza, hombros, rodillas y pies",
-        "zh": "头部、肩膀、膝盖和脚趾"
+        "ja": "無伴奏チェロ組曲 第1番 プレリュード",
+        "en": "Cello Suite No.1 Prelude (BWV 1007)",
+        "es": "Suite para violonchelo n.º 1, Preludio",
+        "zh": "第一号无伴奏大提琴组曲 前奏曲"
       },
       "desc": {
-        "ja": "ト長調・4/4拍子",
-        "en": "G major, 4/4",
-        "es": "Sol mayor, 4/4",
-        "zh": "G大调・4/4拍"
+        "ja": "ト長調・4/4拍子（冒頭8小節）",
+        "en": "G major, 4/4 (first 8 bars)",
+        "es": "Sol mayor, 4/4 (8 primeros compases)",
+        "zh": "G大调・4/4拍（前8小节）"
       },
-      "file": "heads_shoulders_knees_and_toes.json"
+      "file": "bach_prelude_bwv1007.json"
     },
     {
-      "id": "vesti_la_giubba",
+      "id": "sakura",
       "title": {
-        "ja": "衣装を着けろ（歌劇《道化師》より）",
-        "en": "Vesti la giubba (from Pagliacci)",
-        "es": "Vesti la giubba",
-        "zh": "穿上戏装（选自《丑角》）"
+        "ja": "さくらさくら",
+        "en": "Sakura Sakura",
+        "es": "Sakura Sakura",
+        "zh": "樱花"
       },
       "desc": {
-        "ja": "ニ短調・2/4拍子 (Adagio ♩=46)",
-        "en": "D minor, 2/4 (Adagio ♩=46)",
-        "es": "Re menor, 2/4 (Adagio ♩=46)",
-        "zh": "d小调・2/4拍 (Adagio ♩=46)"
+        "ja": "イ短調・4/4拍子",
+        "en": "A minor, 4/4",
+        "es": "La menor, 4/4",
+        "zh": "a小调・4/4拍"
       },
-      "file": "vesti_la_giubba.json"
+      "file": "sakura.json"
     },
     {
-      "id": "beethoven_bagatelle_op119_no4",
+      "id": "largo_going_home",
       "title": {
-        "ja": "11のバガテル 第4番",
-        "en": "Bagatelle Op.119 No.4",
-        "es": "Bagatela Op.119 No.4",
-        "zh": "十一首风俗小品 第4首"
+        "ja": "家路（新世界より）",
+        "en": "Going Home (from “New World” Symphony)",
+        "es": "Largo (de la Sinfonía “del Nuevo Mundo”)",
+        "zh": "念故乡（选自《自新大陆》交响曲）"
       },
       "desc": {
-        "ja": "イ長調・4/4拍子 (Andante cantabile)",
-        "en": "A major, 4/4 (Andante cantabile)",
-        "es": "La mayor, 4/4 (Andante cantabile)",
-        "zh": "A大调・4/4拍 (Andante cantabile)"
+        "ja": "ハ長調・4/4拍子",
+        "en": "C major, 4/4",
+        "es": "Do mayor, 4/4",
+        "zh": "C大调・4/4拍"
       },
-      "file": "beethoven_bagatelle_op119_no4.json"
+      "file": "largo_going_home.json"
     },
     {
-      "id": "haydn_sonata_60_1st",
+      "id": "pachelbel_canon",
       "title": {
-        "ja": "ピアノソナタ 第60番 第1楽章",
-        "en": "Piano Sonata No. 60, 1st Mov.",
-        "es": "Sonata para piano n.º 60, 1.er mov.",
-        "zh": "C大调第60号钢琴奏鸣曲 第一乐章"
+        "ja": "カノン",
+        "en": "Canon in D",
+        "es": "Canon en re mayor",
+        "zh": "D大调卡农"
       },
       "desc": {
-        "ja": "ハ長調・4/4拍子 (Allegro)",
-        "en": "C major, 4/4 (Allegro)",
-        "es": "Do mayor, 4/4 (Allegro)",
-        "zh": "C大调・4/4拍 (Allegro)"
+        "ja": "ニ長調・4/4拍子（冒頭12小節）",
+        "en": "D major, 4/4 (first 12 bars)",
+        "es": "Re mayor, 4/4 (12 primeros compases)",
+        "zh": "D大调・4/4拍（前12小节）"
       },
-      "file": "haydn_sonata_60_1st.json"
+      "file": "pachelbel_canon.json"
     },
     {
-      "id": "dukas_sorcerer_apprentice",
+      "id": "kojo_no_tsuki",
       "title": {
-        "ja": "魔法使いの弟子",
-        "en": "The Sorcerer's Apprentice",
-        "es": "El aprendiz de brujo",
-        "zh": "魔法师的弟子"
+        "ja": "荒城の月",
+        "en": "Kōjō no Tsuki (The Moon over the Ruined Castle)",
+        "es": "Kōjō no Tsuki (La luna sobre el castillo en ruinas)",
+        "zh": "荒城之月"
       },
       "desc": {
-        "ja": "ヘ短調・9/8拍子",
-        "en": "F minor, 9/8",
-        "es": "Fa menor, 9/8",
-        "zh": "f小调・9/8拍"
+        "ja": "ニ短調・4/4拍子",
+        "en": "D minor, 4/4",
+        "es": "Re menor, 4/4",
+        "zh": "d小调・4/4拍"
       },
-      "file": "dukas_sorcerer_apprentice.json"
+      "file": "kojo_no_tsuki.json"
+    },
+    {
+      "id": "furusato",
+      "title": {
+        "ja": "ふるさと",
+        "en": "Furusato (My Old Country Home)",
+        "es": "Furusato (Mi vieja tierra natal)",
+        "zh": "故乡"
+      },
+      "desc": {
+        "ja": "ト長調・3/4拍子",
+        "en": "G major, 3/4",
+        "es": "Sol mayor, 3/4",
+        "zh": "G大调・3/4拍"
+      },
+      "file": "furusato.json"
     }
   ]
 }
