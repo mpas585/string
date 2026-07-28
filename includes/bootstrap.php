@@ -29,6 +29,7 @@ if (!defined('APP_NAME')) {
   define('APP_DEFAULT_LANG',       $APP_CFG['default_lang']);
   define('APP_DEFAULT_INSTRUMENT', $APP_CFG['default_instrument']);
   define('APP_CONTACT_TO',         $APP_CFG['contact_to']);
+  define('APP_GA_ID',              $APP_CFG['ga_id'] ?? '');
   define('APP_DB_PATH',            $APP_CFG['db_path']);
 }
 

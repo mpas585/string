@@ -27,6 +27,10 @@ return [
   'default_lang'       => 'ja',
   'default_instrument' => 'cello',
 
+  /* Google アナリティクス（GA4）の測定ID。空文字にすると計測タグを出力しない
+     （ローカルや検証用のコピーで数字を汚したくないときは空にする） */
+  'ga_id'              => 'G-KSBPPQHTT9',
+
   /* お問い合わせの宛先（転送専用アドレス）。件名の頭には上の 'name' が付く */
   'contact_to'         => 'mail@genstrings.sakura.ne.jp',
 

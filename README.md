@@ -45,6 +45,7 @@ string/
 │  ├─ views/
 │  │  ├─ home.php        # 楽器選択トップのHTML
 │  │  ├─ app.php         # アプリ本体のHTMLシェル（旧 index.html）
+│  │  ├─ analytics.php   # GA4 の計測タグ（config/app.php の ga_id が空なら出力しない）
 │  │  └─ soon.php        # 準備中の楽器（ready=false）のページ
 │  ├─ fingering.php      # ゾーン判定・指番号（JS の zoneOf/fingerHint と同じ規則）
 │  ├─ midi.php           # 音名・周波数・弦長比（JS の midiName/fracOf と同じ規則）
@@ -250,6 +251,19 @@ fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCAL
 
 ---
 
+## 再生ボタンまわり
+
+* **停止したら「止めた場所」から再開する。** `stopPlay()` が壊す前に `currentBeat()` を読んで
+  `ST.playhead` に入れているので、次の `startPlay()`（引数なし）はそこから始まる。
+  画面の表示も合わせるため、`#fab` の停止側では `stopPlay()` の直後に `seekTo(ST.playhead)` を呼ぶ。
+* **最後まで鳴り切って止まった場合だけは範囲の頭へ戻す。** 曲末の `kind:'end'` も同じ `stopPlay()` を
+  通るので、終端をそのまま覚えると次の ▶ が鳴らずに即終了してしまう（`ST.range.eB - 0.05` で判定）。
+* **頭出し `#cue` は再生ボタンの真上**（`.cue` は `.fab` と同じ3つの bottom 指定を +68px でなぞる）。
+  中身は `songs.js` の `skipToStart()` で、**再生中は先頭から鳴り直し・停止中は先頭へ移動**と
+  両方を見ているので、再生中も停止中も押せる。出し入れは `updateChrome()` が `#fab` と同時に行う。
+* 頭出しの行き先は `firstNoteBeat()`＝**最初に音が鳴る拍**（MIDIは冒頭が休符のことがある）。
+  MIDIトラック一覧の `#skipStart` と同じ関数なので、動きは常に一致する。
+
 ## PDF譜面の読み取り（OMR）
 
 `src/omr/`（五線・符頭・音高の検出）は単体で完結したモジュール群で、
@@ -304,6 +318,19 @@ Verovio で MusicXML から浄書した1ページ（全音符・2分・4分・8�
   楽器選択トップの両方から読まれるため、main.js の配線に載せられない。他モジュールに依存させないこと。
 * iOS には `beforeinstallprompt` が無いので、共有メニューからの手順を文字で案内するだけにしている。
 * アイコンは `public/icons/`。差し替えるときは**ファイル名を変える**こと（.htaccess で30日キャッシュ）。
+* **「ホーム画面に追加」の導線は楽器選択トップ（`views/home.php` の言語選択の上）だけ**に置く。
+  アプリ本体の歯車からは外した。`src/pwa.js` は `#pwaInstall` が無ければ何もしない
+  （Service Worker の登録だけ行う）ので、置き場所を変えても JS は触らなくてよい。
+
+## アナリティクス（GA4）
+
+`includes/views/analytics.php` を3つのビュー（`app.php` / `home.php` / `soon.php`）の
+`<head>` 冒頭から require する。**測定IDの定義は `config/app.php` の `ga_id` 1か所だけ**で、
+空文字にすると計測タグを出力しない（ローカルや検証用のコピーで数字を汚さないため）。
+
+* **`sw.js` で googletagmanager / google-analytics / analytics.google.com は素通しさせている。**
+  Service Worker の「CDN＝キャッシュ優先」に落ちると計測ビーコンが握り潰されて数字が出なくなる。
+  計測ドメインを増やすときはこの除外にも足すこと。
 
 ## 設定の保存（保存番号）
 

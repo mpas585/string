@@ -119,7 +119,7 @@ return [
     'loop_dn'        => '1小節戻す',
     'loop_up'        => '1小節進める',
     'loop_info'      => '小節を指定して繰り返します（例：34〜40）',
-    'loop_reset'     => '⟲ 小節を初期値に戻す',
+    'loop_reset'     => 'リセット',
 
     'seg_scale'      => '🎵 スケール',
     'seg_score'      => '🎼 曲練習',

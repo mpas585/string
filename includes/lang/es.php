@@ -116,7 +116,7 @@ return [
     'loop_dn'        => 'Un compás atrás',
     'loop_up'        => 'Un compás adelante',
     'loop_info'      => 'Repite los compases indicados (p. ej. 34–40)',
-    'loop_reset'     => '⟲ Restablecer compases',
+    'loop_reset'     => 'Restablecer',
 
     'seg_scale'      => '🎵 Escalas',
     'seg_score'      => '🎼 Piezas',

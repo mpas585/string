@@ -13,7 +13,7 @@
   drawer（saveSettings/loadFingering/syncSettingsUI/closeDrawer 等）・songs（renderTracks/loadSample）は
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
-import { ST, volProfileKey, DEFAULT_LOOP } from './state.js';
+import { ST, volProfileKey } from './state.js';
 import { fracOf, midiName, zoneOf, fingerHint, strFingerText, NOTE_NAMES, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
 import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
 import { renderStaff } from './notation.js';
@@ -396,8 +396,11 @@ export function setScore(parsed, scoreName){
   const restored=loadFingering();
 
   const mCount=ST.measures.length || 1;
-  ST.loop.from=Math.min(ST.loop.from, mCount);
-  ST.loop.to  =Math.min(Math.max(ST.loop.to, ST.loop.from), mCount);
+  /* 読み込み直後は全体（1〜最終小節）。前の曲で指定した範囲を持ち越さない
+     ＝28小節の曲を開いたのに前回の 1〜8 が残っている、という状態を作らない。
+     ON/OFF は利用者に任せる（genScale() と同じ扱い） */
+  ST.loop.from=1;
+  ST.loop.to  =mCount;
   syncLoopUI();
   render();
   zoomFitPositions(5);                 /* 読み込み時：0〜5F が画面に収まるように */
@@ -487,13 +490,15 @@ export function setLoopRange(){
   syncLoopUI();
   if(ST.playing) startPlay();     /* 再生中なら新しい範囲で組み直し */
 }
-/* 開始小節・終了小節を初期値（DEFAULT_LOOP＝1〜4）へ戻す。
-   ループのON/OFFは触らない。OFFにすると syncLoopUI() が小節指定を disabled にして
-   .field2.off で薄くするので、リセットした途端に入力欄が消えたように見えるため。 */
+/* 開始小節・終了小節を、いま読んでいる譜面の全体（1〜最終小節）へ戻す。
+   ・ループのON/OFFは触らない（OFFにすると syncLoopUI() が小節指定を disabled にして
+     .field2.off で薄くするので、リセットした途端に入力欄が消えたように見えるため）
+   ・ST の初期値 1〜4 は譜面を読む前の値。28小節の曲に対して 4 へ戻しても意味がないので、
+     実際の小節数を使う。譜面がまだ無いときだけ初期値の 4 のままにする。 */
 export function resetLoop(){
-  const mCount=Math.max(1, ST.measures.length);
-  ST.loop.from=Math.min(DEFAULT_LOOP.from, mCount);
-  ST.loop.to  =Math.max(ST.loop.from, Math.min(DEFAULT_LOOP.to, mCount));  /* setLoopRange と同じ規則 */
+  const mCount=ST.measures.length;
+  ST.loop.from=1;
+  ST.loop.to  = mCount>0 ? mCount : 4;
   syncLoopUI();
   saveSettings();
   if(ST.playing) startPlay();     /* 再生中なら組み直し（setLoopRange と同じ） */
