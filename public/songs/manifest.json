@@ -79,6 +79,86 @@
         "zh": "a小调・3/8拍（主题）"
       },
       "file": "elise.json"
+    },
+    {
+      "id": "heads_shoulders_knees_and_toes",
+      "title": {
+        "ja": "あたま かた ひざ つまさき",
+        "en": "Heads Shoulders Knees and Toes",
+        "es": "Cabeza, hombros, rodillas y pies",
+        "zh": "头部、肩膀、膝盖和脚趾"
+      },
+      "desc": {
+        "ja": "ト長調・4/4拍子",
+        "en": "G major, 4/4",
+        "es": "Sol mayor, 4/4",
+        "zh": "G大调・4/4拍"
+      },
+      "file": "heads_shoulders_knees_and_toes.json"
+    },
+    {
+      "id": "vesti_la_giubba",
+      "title": {
+        "ja": "衣装を着けろ（歌劇《道化師》より）",
+        "en": "Vesti la giubba (from Pagliacci)",
+        "es": "Vesti la giubba",
+        "zh": "穿上戏装（选自《丑角》）"
+      },
+      "desc": {
+        "ja": "ニ短調・2/4拍子 (Adagio ♩=46)",
+        "en": "D minor, 2/4 (Adagio ♩=46)",
+        "es": "Re menor, 2/4 (Adagio ♩=46)",
+        "zh": "d小调・2/4拍 (Adagio ♩=46)"
+      },
+      "file": "vesti_la_giubba.json"
+    },
+    {
+      "id": "beethoven_bagatelle_op119_no4",
+      "title": {
+        "ja": "11のバガテル 第4番",
+        "en": "Bagatelle Op.119 No.4",
+        "es": "Bagatela Op.119 No.4",
+        "zh": "十一首风俗小品 第4首"
+      },
+      "desc": {
+        "ja": "イ長調・4/4拍子 (Andante cantabile)",
+        "en": "A major, 4/4 (Andante cantabile)",
+        "es": "La mayor, 4/4 (Andante cantabile)",
+        "zh": "A大调・4/4拍 (Andante cantabile)"
+      },
+      "file": "beethoven_bagatelle_op119_no4.json"
+    },
+    {
+      "id": "haydn_sonata_60_1st",
+      "title": {
+        "ja": "ピアノソナタ 第60番 第1楽章",
+        "en": "Piano Sonata No. 60, 1st Mov.",
+        "es": "Sonata para piano n.º 60, 1.er mov.",
+        "zh": "C大调第60号钢琴奏鸣曲 第一乐章"
+      },
+      "desc": {
+        "ja": "ハ長調・4/4拍子 (Allegro)",
+        "en": "C major, 4/4 (Allegro)",
+        "es": "Do mayor, 4/4 (Allegro)",
+        "zh": "C大调・4/4拍 (Allegro)"
+      },
+      "file": "haydn_sonata_60_1st.json"
+    },
+    {
+      "id": "dukas_sorcerer_apprentice",
+      "title": {
+        "ja": "魔法使いの弟子",
+        "en": "The Sorcerer's Apprentice",
+        "es": "El aprendiz de brujo",
+        "zh": "魔法师的弟子"
+      },
+      "desc": {
+        "ja": "ヘ短調・9/8拍子",
+        "en": "F minor, 9/8",
+        "es": "Fa menor, 9/8",
+        "zh": "f小调・9/8拍"
+      },
+      "file": "dukas_sorcerer_apprentice.json"
     }
   ]
 }
