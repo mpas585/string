@@ -42,8 +42,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
   <!-- ホーム画面に保存したときにアプリとして起動するための情報（manifest.php が言語・楽器ごとに生成） -->
   <link rel="manifest" href="<?= h($BASE) ?>manifest.php?lang=<?= h($LANG) ?>&amp;inst=<?= h($INSTRUMENT) ?>">
-  <link rel="icon" href="<?= h($BASE) ?>public/icons/favicon-32.png" sizes="32x32">
-  <link rel="apple-touch-icon" href="<?= h($BASE) ?>public/icons/apple-touch-icon.png">
+  <link rel="icon" href="<?= h($BASE) ?>public/icons/favicon-32-v2.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="<?= h($BASE) ?>public/icons/apple-touch-icon-v2.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -96,39 +96,33 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <hr class="sep">
 
     <div class="gp-t"><?php e('ui.view') ?></div>
-    <div class="seg2" id="viewSeg">
-      <button data-view="board"><?php e('ui.view_board') ?></button>
-      <button data-view="staff"><?php e('ui.view_staff') ?></button>
-    </div>
-    <div id="fretSw" class="sw on"><span><?php e('ui.frets') ?></span><span class="knob"></span></div>
-    <div id="landSw" class="sw"><span><?php e('ui.landscape') ?></span><span class="knob"></span></div>
-    <div class="sub" style="margin:-3px 0 8px"><?php e('ui.landscape_note') ?></div>
+    <!-- 表示（指板/五線譜・フレット線・横画面・指板ズーム）はサブメニューへ。
+         右端の値は src/drawer.js の syncSettingsUI() が書き換える -->
+    <button class="gp-row" data-gpopen="view">
+      <span><?php e('ui.view') ?></span><span class="v" id="viewRowV"></span><span class="cv">›</span>
+    </button>
 
     <div class="gp-t"><?php e('ui.playback') ?></div>
-    <div id="countSw" class="sw on"><span><?php e('ui.countin') ?></span><span class="knob"></span></div>
-    <div class="seg2" id="countSeg">
-      <button data-count="4"><?php e('ui.countin_4') ?></button>
-      <button data-count="8"><?php e('ui.countin_8') ?></button>
-    </div>
-    <div id="awakeSw" class="sw on"><span><?php e('ui.keepawake') ?></span><span class="knob"></span></div>
-
-    <!-- サブメニューへ。右端の値は applyZoom() / syncVolRow() が書き換える -->
-    <button class="gp-row" data-gpopen="zoom">
-      <span><?php e('ui.zoom') ?></span><span class="v" id="zoomRowV">100%</span><span class="cv">›</span>
+    <!-- 開始カウント（ON/OFF と 4 / 8）もサブメニューへ。右端の値は syncCountSeg() が書き換える -->
+    <button class="gp-row" data-gpopen="count">
+      <span><?php e('ui.countin') ?></span><span class="v" id="countRowV"></span><span class="cv">›</span>
     </button>
+    <div id="awakeSw" class="sw on"><span><?php e('ui.keepawake') ?></span><span class="knob"></span></div>
+    <!-- 軽量モード：軽いMIDI音源に切り替える（音が途切れる端末むけ） -->
+    <div id="liteSw" class="sw"><span><?php e('ui.lite') ?></span><span class="knob"></span></div>
+    <div class="sub" style="margin:-3px 0 8px"><?php e('ui.lite_note') ?></div>
+
+    <!-- サブメニューへ。右端の値は syncVolRow() が書き換える -->
     <button class="gp-row" data-gpopen="vol">
       <span><?php e('ui.volume') ?></span><span class="v" id="volRowV">70%</span><span class="cv">›</span>
     </button>
 
-    <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）／お問い合わせ（いちばん下）===== -->
+    <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）===== -->
     <hr class="sep">
     <div id="pwaBox" class="row controls" hidden>
       <button id="pwaInstall" class="ghost" style="flex:1; justify-content:center"><?php e('ui.install') ?></button>
     </div>
     <div id="pwaNote" class="sub" hidden><?php e('ui.install_note') ?></div>
-    <div class="row controls">
-      <button id="contactBtn" class="ghost" style="flex:1; justify-content:center"><?php e('ui.contact') ?></button>
-    </div>
 
     <!-- ===== 言語（いちばん下）===== -->
     <hr class="sep">
@@ -140,26 +134,59 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <?php endforeach; ?>
     </select>
     <div class="sub" style="margin:6px 0 10px"><?php e('ui.lang_note') ?></div>
+
+    <!-- ===== お問い合わせ（いちばん下）===== -->
+    <hr class="sep">
+    <div class="row controls">
+      <button id="contactBtn" class="ghost" style="flex:1; justify-content:center"><?php e('ui.contact') ?></button>
+    </div>
   </div>
 
-  <!-- ===== サブ：指板ズーム ===== -->
-  <div class="gp-page" data-gp="zoom">
+  <!-- ===== サブ：表示（指板/五線譜・フレット線・横画面・指板ズーム） ===== -->
+  <div class="gp-page" data-gp="view">
     <div class="gp-back">
       <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
-      <span class="t"><?php e('ui.zoom') ?></span>
+      <span class="t"><?php e('ui.view') ?></span>
     </div>
-    <div class="field">
-      <div class="k"><?php e('ui.zoom_k') ?></div>
-      <div class="v tempo">
-        <input id="zoom" type="range" min="20" max="220" step="5" value="100">
-        <b id="zoomval">100%</b>
+    <div class="seg2" id="viewSeg">
+      <button data-view="board"><?php e('ui.view_board') ?></button>
+      <button data-view="staff"><?php e('ui.view_staff') ?></button>
+    </div>
+    <div id="fretSw" class="sw on"><span><?php e('ui.frets') ?></span><span class="knob"></span></div>
+    <div id="landSw" class="sw"><span><?php e('ui.landscape') ?></span><span class="knob"></span></div>
+    <div class="sub" style="margin:-3px 0 8px"><?php e('ui.landscape_note') ?></div>
+
+    <!-- 指板ズームは「指板」を選んでいるときだけ出す（五線譜では効かないため）。
+         出し入れは src/drawer.js の syncSettingsUI() -->
+    <div id="zoomBox" hidden>
+      <hr class="sep">
+      <div class="gp-t"><?php e('ui.zoom') ?></div>
+      <div class="field">
+        <div class="k"><?php e('ui.zoom_k') ?></div>
+        <div class="v tempo">
+          <input id="zoom" type="range" min="20" max="220" step="5" value="100">
+          <b id="zoomval">100%</b>
+        </div>
+      </div>
+      <div class="row controls">
+        <button id="zoomOut" class="ghost">−</button>
+        <button id="zoomIn" class="ghost">＋</button>
+        <button id="zoomFit" class="ghost"><?php e('ui.zoom_fit') ?></button>
+        <button id="zoomReset" class="ghost"><?php e('ui.zoom_reset') ?></button>
       </div>
     </div>
-    <div class="row controls">
-      <button id="zoomOut" class="ghost">−</button>
-      <button id="zoomIn" class="ghost">＋</button>
-      <button id="zoomFit" class="ghost"><?php e('ui.zoom_fit') ?></button>
-      <button id="zoomReset" class="ghost"><?php e('ui.zoom_reset') ?></button>
+  </div>
+
+  <!-- ===== サブ：開始カウント ===== -->
+  <div class="gp-page" data-gp="count">
+    <div class="gp-back">
+      <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
+      <span class="t"><?php e('ui.countin') ?></span>
+    </div>
+    <div id="countSw" class="sw on"><span><?php e('ui.countin') ?></span><span class="knob"></span></div>
+    <div class="seg2" id="countSeg">
+      <button data-count="4"><?php e('ui.countin_4') ?></button>
+      <button data-count="8"><?php e('ui.countin_8') ?></button>
     </div>
   </div>
 
@@ -204,7 +231,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 <!-- 入口：モード選択 ＋ 説明 -->
 <div id="picker" class="picker">
-  <div class="pk-logo"><?= h($INST['emoji']) ?></div>
+  <div class="pk-logo"><img src="<?= h($BASE) ?>public/icons/logo-v2.png" alt="<?= h(APP_NAME) ?>" width="512" height="512" decoding="async"></div>
   <h1 class="pk-title"><?= h(APP_NAME) ?></h1>
   <div class="pk-sub"><?php e('app_sub', $INST_NAME) ?></div>
   <button class="pk-card" data-mode="scale">
@@ -469,6 +496,21 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="sub"><?php e('contact.note') ?></div>
 </div>
 
+<!-- アップロードした楽譜：同じ譜面っぽいものがあるとき、上書きか新規追加かを尋ねる
+     （中身まで同じときは尋ねずに何もしない。判定は src/uploads.js の findSimilar） -->
+<div id="mUpDup" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('ui.m_up_dup') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div id="upDupBody" class="sub sv-ask"></div>
+  <div class="startrow" style="margin-top:12px">
+    <button id="upDupOver" class="primary"><?php e('ui.up_dup_over') ?></button>
+    <button id="upDupNew" class="ghost"><?php e('ui.up_dup_new') ?></button>
+  </div>
+  <div class="sub"><?php e('ui.up_dup_note') ?></div>
+</div>
+
 <!-- 曲を練習：入口から入った時の案内（押すとドロワーが横から出る） -->
 <div id="mScoreStart" class="dkmodal" role="dialog" aria-modal="true">
   <div class="dk-head">
@@ -562,6 +604,12 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
         <button id="pdfOpen" class="ghost"><?php e('ui.pdf_btn') ?></button>
       </div>
       <div class="sub"><?php e('ui.file_note') ?></div>
+
+      <!-- ===== アップロードした楽譜（保存番号があるときだけサーバに残る。上限99件）=====
+           一覧の中身・保存・削除は src/uploads.js。PHP 側では枠だけ出す。 -->
+      <div class="seclbl"><?php e('ui.uploads') ?></div>
+      <div id="upList" class="uplist"></div>
+      <div id="upNote" class="sub"><?php e('ui.uploads_note', 99) ?></div>
 
       <div id="tracks" class="tracks">
         <div class="seclbl"><?php e('ui.tracks') ?></div>

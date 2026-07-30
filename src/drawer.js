@@ -49,6 +49,7 @@ export function saveSettings(){
   Store.set(SETTINGS_KEY, JSON.stringify({
     view:ST.view, frets:ST.frets, landscape:ST.landscape, zoom:ST.zoom, octave:ST.octave, pref:ST.pref,
     volProfiles:ST.volProfiles, volBump:VOL_BUMP, countIn:ST.countIn, countBeats:ST.countBeats, keepAwake:ST.keepAwake,
+    lite:ST.lite,
     tempo:ST.tempo, enjoy:ST.enjoy, loop:ST.loop, lang:ST.lang,
     keyRoot:ST.keyRoot, scaleType:ST.scaleType, scaleOct:ST.scaleOct
   }));
@@ -79,6 +80,7 @@ export function loadSettings(){
     if(typeof j.countIn==='boolean') ST.countIn=j.countIn;
     if(j.countBeats===4 || j.countBeats===8) ST.countBeats=j.countBeats;
     if(typeof j.keepAwake==='boolean') ST.keepAwake=j.keepAwake;
+    if(typeof j.lite==='boolean') ST.lite=j.lite;
     if(typeof j.tempo==='number') ST.tempo=j.tempo;
     if(typeof j.enjoy==='boolean') ST.enjoy=j.enjoy;
     if(j.loop) Object.assign(ST.loop, j.loop);
@@ -93,6 +95,12 @@ export function loadSettings(){
 export function syncSettingsUI(){
   document.querySelectorAll('#viewSeg button').forEach(b=> b.classList.toggle('on', b.dataset.view===ST.view));
   document.body.classList.toggle('view-staff', ST.view==='staff');
+  /* 歯車の一覧に出す「表示」の要約 */
+  const vrow=document.getElementById('viewRowV');
+  if(vrow) vrow.textContent=tt(ST.view==='staff' ? 'ui.view_staff' : 'ui.view_board');
+  /* 指板ズームは「指板」を選んでいるときだけ出す（五線譜では効かないため） */
+  const zbox=document.getElementById('zoomBox');
+  if(zbox) zbox.hidden=(ST.view!=='board');
   document.getElementById('fretSw').classList.toggle('on', ST.frets);
   document.getElementById('landSw').classList.toggle('on', ST.landscape);
   document.body.classList.toggle('force-landscape', ST.landscape);
@@ -109,6 +117,8 @@ export function syncSettingsUI(){
   document.getElementById('countSw').classList.toggle('on', ST.countIn);
   syncCountSeg();
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
+  const liteEl=document.getElementById('liteSw');
+  if(liteEl) liteEl.classList.toggle('on', ST.lite);
   const langEl=document.getElementById('langSel');
   if(langEl) langEl.value=ST.lang;
   ST.vol = ST.volProfiles[volProfileKey()];
@@ -125,6 +135,9 @@ export function syncSettingsUI(){
 /* 開始カウント（4 / 8）。「開始カウント」がOFFのあいだは選べないようにする
    （押しても何も起きない入力を残さない＝ループ小節の disabled と同じ考え方） */
 export function syncCountSeg(){
+  /* 歯車の一覧に出す要約（OFF / 4カウント / 8カウント）。サブメニューを開かなくても分かるように */
+  const row=document.getElementById('countRowV');
+  if(row) row.textContent = ST.countIn ? tt(ST.countBeats===8 ? 'ui.countin_8' : 'ui.countin_4') : tt('ui.countin_off');
   const seg=document.getElementById('countSeg');
   if(!seg) return;
   seg.classList.toggle('off', !ST.countIn);
@@ -176,12 +189,19 @@ export function applyFingerData(data){
   return true;
 }
 export let saveTimer=0;
+/* 運指が保存されたときの通知先（src/uploads.js が登録する）。
+   アップロードした譜面を開いているあいだは、その譜面の運指もサーバへ持っていくため。
+   drawer.js から uploads.js を import しないのは、依存の向きを増やさないため
+   （account.js の setSaveWatcher と同じ作法）。 */
+let onFingSaved=null;
+export function setFingWatcher(fn){ onFingSaved=fn; }
 export function saveFingering(){
   if(!ST.events.length) return;
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
     Store.set(scoreSig(), JSON.stringify({v:1, name:ST.scoreName, data:fingerData()}));
     settingsChanged();        /* 指番号・運指の変更もサーバへ持っていく */
+    if(onFingSaved){ try{ onFingSaved(); }catch(e){} }
   }, 250);
 }
 export function loadFingering(){

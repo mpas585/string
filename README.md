@@ -35,6 +35,7 @@ string/
 │  └─ cello/index.php   # $LANG と $INSTRUMENT を定義して基幹PHPを require するだけ
 ├─ api/
 │  ├─ auth.php          # 設定の保存（保存番号の作成/読込/上書き/削除）の JSON API
+│  ├─ scores.php        # アップロードした楽譜（保存番号に紐づく譜面）の JSON API
 │  └─ contact.php       # お問い合わせ送信（mb_send_mail）
 ├─ data/                # 非公開。.htaccess で遮断。SQLite の実体（gitには入れない）
 ├─ includes/
@@ -42,6 +43,7 @@ string/
 │  ├─ home.php              # 楽器選択トップの基幹
 │  ├─ string_instrument.php # 楽器ページの基幹。検証・楽器configの読込・ビューの振り分け
 │  ├─ auth.php              # 保存番号の実処理（SQLite / 番号生成 / レート制限）
+│  ├─ scores.php            # アップロードした楽譜の実処理（saves と同じDB・上限99件）
 │  ├─ views/
 │  │  ├─ home.php        # 楽器選択トップのHTML
 │  │  ├─ app.php         # アプリ本体のHTMLシェル（旧 index.html）
@@ -79,6 +81,7 @@ string/
    ├─ pdf.js             # PDF表示（pdfjsは基幹PHPでグローバル読み込み）+ 検出用の描画
    ├─ omr-import.js      # PDFのページを読み取って譜面にする（omr/ とアプリの橋渡し）
    ├─ account.js         # 設定の保存＝保存番号（歯車のいちばん上）。api/auth.php を叩く
+   ├─ uploads.js         # アップロードした楽譜の一覧・保存・削除。api/scores.php を叩く
    ├─ contact.js         # お問い合わせ（歯車のいちばん下）。api/contact.php を叩く
    ├─ pwa.js             # Service Worker登録 と「ホーム画面に追加」。※自分で配線する
    └─ audio/
@@ -218,6 +221,32 @@ fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCAL
 運指付与・小節割り・`name`生成などの変換ロジックは `songs.js` 側に残し、JSONは生データのみ持つ。
 `drawer.js` は `manifest.json` を fetch して曲ボタンを生成、選択で個別JSONを fetch。
 
+### 歯車パネル（右上⚙）の構成
+一覧に出すのは **設定の保存 / 表示 / 開始カウント / 音量 / 言語 / お問い合わせ** で、行数の多いものは
+サブメニューへ送る（`openGearPage()`。表示するページは常に1枚だけ）。
+
+| 一覧の行 | サブメニュー（`data-gp`） | 中身 |
+| --- | --- | --- |
+| 表示 | `view` | 指板/五線譜・フレット線・横画面・**指板ズーム** |
+| 開始カウント | `count` | ON/OFF ＋ 4 / 8 |
+| 音量 | `vol` | トラック別の音量・初期値に戻す |
+
+* **指板ズームは「指板」を選んでいるときだけ出す**（五線譜では効かないため）。出し入れは
+  `syncSettingsUI()` が `#zoomBox` の `hidden` を切り替える。独立した「指板ズーム」の行は廃止した。
+* 一覧の右端に出る現在値は `#viewRowV`（`syncSettingsUI`）/ `#countRowV`（`syncCountSeg`）/
+  `#volRowV`（`syncVolRow`）が書く。**サブメニューを開かなくても状態が分かる**ことを保つこと。
+* **お問い合わせはいちばん下**（言語セレクトより後ろ）。設定ではないので最後に置く。
+
+### 軽量モード（軽いMIDI音源）
+歯車の「再生」にあるスイッチ（`#liteSw` → `ST.lite`）。古い端末で音数が増えたときの音切れ対策。
+
+* `synth.js` の `playNote()` / `padChord()` が先頭で `ST.lite` を見て `playNoteLite()` /
+  `padChordLite()` に分岐する。軽い側は**1音1オシレータ**（通常は5本）で、ビブラート・ユニゾン・
+  弓ノイズ・ローパスを作らない。**鳴らす側（scheduler）は触っていない。**
+* `makeBuses()` は軽量モードのとき **Convolver（リバーブ）を作らない**。畳み込みは音数に関係なく
+  かかり続けるので、ここが一番効く。
+* 設定は他の項目と同じく保存番号に乗る（`saveSettings()` の `lite`）。切り替えると再生中は組み直す。
+
 ### スケールの外部化
 `public/scales/scales.json`（`id`/`label`/`intervals`）を `loadScales()` が fetch し、`SCALES`/`SCALE_LABEL`
 を**中身だけ差し替える**（オブジェクト参照は保つ＝`drawer.js`/`modes.js` の import が生きたまま効く）。
@@ -318,6 +347,12 @@ Verovio で MusicXML から浄書した1ページ（全音符・2分・4分・8�
   楽器選択トップの両方から読まれるため、main.js の配線に載せられない。他モジュールに依存させないこと。
 * iOS には `beforeinstallprompt` が無いので、共有メニューからの手順を文字で案内するだけにしている。
 * アイコンは `public/icons/`。差し替えるときは**ファイル名を変える**こと（.htaccess で30日キャッシュ）。
+  現行は `-v2` 付き（`icon-{192,512}-v2.png` / `icon-maskable-{192,512}-v2.png` /
+  `apple-touch-icon-v2.png` / `favicon-32-v2.png`）。参照元は `manifest.php`・`views/app.php`・
+  `views/home.php`・`sw.js` の PRECACHE の4か所なので、次に差し替えるときもこの4つを揃えて直す。
+* ブランドのロゴは `public/icons/logo-v2.png`。入口（`.pk-logo`）とトップ（`.hm-logo`）で使う。
+  **暗い背景で読めるように、墨を温白・細字をアクセント色に置き換えた版**を置いてある
+  （元データは黒い墨なので、そのまま貼ると背景に沈む）。差し替えるときも同じ処理をすること。
 * **「ホーム画面に追加」の導線は楽器選択トップ（`views/home.php` の言語選択の上）だけ**に置く。
   アプリ本体の歯車からは外した。`src/pwa.js` は `#pwaInstall` が無ければ何もしない
   （Service Worker の登録だけ行う）ので、置き場所を変えても JS は触らなくてよい。
@@ -377,6 +412,67 @@ LocalStorage に置いて起動時に自動で読み込むので、番号を打�
 * 紐付け解除は LocalStorage を消すだけで、サーバのデータは残す。消すのは「保存データを削除」だけ。
 * 旧・会員（ニックネーム＋暗証番号4桁）は廃止。既存の `app.db` に `users` が残っているが参照しない。
   消したいときは手で `DROP TABLE users`（自動で消さないのは切り戻しの余地を残すため）。
+
+## アップロードした楽譜（保存番号に紐づく譜面）
+
+読み込んだ譜面を**保存番号に紐づけてサーバに残す**。入口はドロワーの
+「🎼 曲練習 → 📂 譜面を読み込む」の中の一覧（`#upList`）。
+`includes/scores.php`（実処理）/ `api/scores.php`（JSON API）/ `src/uploads.js`（画面）。
+
+```
+読み込んだ時   … songs.js（MusicXML）と omr-import.js（PDF取り込み）が
+                 rememberUpload(名前, parsed, テンポ) を呼ぶ
+                 MIDI は selectTrack() から呼ばれる＝【選んだトラックごとに1件】残る
+                 保存番号が無ければ何もしない（＝譜面の読み込み自体はこれまでどおり動く）
+一覧に出す     … 保存番号が変わるたび account.js の syncUI() から知らせが来る
+                 （setSaveWatcher で登録。作成・読込・解除・削除・起動時の復元が全てここを通る）
+一覧から開く   … openUpload() → サーバから取り出して setScore ＋ 運指を復元
+一覧から消す   … deleteUpload()（confirm あり）
+運指を直した時 … drawer.js の saveFingering() から知らせが来る（setFingWatcher）
+                 → updateUploadFingering() がその1件の運指だけ更新する
+```
+
+* **上限は保存番号1つあたり99件**（`SCORE_MAX_ITEMS`。JS 側の `MAX_ITEMS` と揃える）。
+  超えたら `limit` を返し、画面には「古いものを削除してください」と出す。
+  **上限は「新規追加」のときだけ見る**（既存の1件の上書きは99件でも通る）。
+* 預けるのは**音の並び**（`data`＝`[開始拍, 長さ, 小節, [midi…], リード番号]`）と**運指**（`fing`）だけ。
+  元のファイル（MusicXML / MIDI / PDF）は預けない。
+
+### 運指もいっしょに残す
+`fing` 列に `{v:1, octave, data:[{l,s,o,f,m}…]}` を入れる。`data` の中身は `drawer.js` の
+`fingerData()` そのままなので、復元は `applyFingerData()` に渡すだけでよい。
+
+* **オクターブを一緒に持つ。** 運指の `off`（開放弦からの半音数）は**移調後の音**で計算されているため、
+  違うオクターブに当てると音がずれる。開き直すときは `setScore()`（＝`applyOctave()`）**より前に**
+  `ST.octave` を保存時の値へ戻す。
+* **運指は `data` と別の列に置く。** 運指を直しただけで `sig`（内容の指紋）が変わると、
+  下の「同じ譜面か」の判定が編集のたびに揺れてしまうため。運指の更新は `action=fing` で
+  その列だけを書き、譜面本体は送らない。
+* 復元した運指は localStorage 側（`cf:{楽器}:{譜面ハッシュ}`）にも書く（次はオフラインでも同じ運指で
+  開ける）。譜面IDは `up:{id}` で固定。送り返しは `applying` フラグで止める。
+* 運指の編集をどの1件に送るかは、**`scoreName` だけで決めない**（`curId` ＋ そのときの `curScore` で見る）。
+  ファイルを読み込んだ直後の `scoreName` はファイル名で `up:{id}` ではないので、`scoreName` だけで
+  判定すると**いちばん多い場面＝読み込んだ直後の運指の編集を取りこぼす。**
+
+### 同じ譜面っぽいときは尋ねる（上書き / 新規追加）
+**サーバが黙って上書きすることはない。** 上書き先は画面から `id` で明示する（`id` が無ければ新規追加）。
+似ているかどうかの判定は `src/uploads.js` の `findSimilar()`：
+
+| 一覧の中の状態 | 動き |
+| --- | --- |
+| 名前も中身（`sig`）も同じ | **尋ねない・書き換えない。** ただ開き直しただけなので運指もそのまま残す |
+| 名前が同じ／中身が同じ／音数が同じ | `#mUpDup` で「上書きする / 新規で追加」を尋ねる |
+| どれにも当たらない | 尋ねずに新規で追加（読み込みのトーストを消さないよう黙って保存する） |
+
+* 1行目があるおかげで、**MIDI のトラックを行き来しても尋ねられない**（名前にトラック名が入るので、
+  同じトラックに戻れば名前も中身も一致する）。
+* 「音数が同じ」は取り違えることもあるので、**判断は必ず人に返す**。✕ で閉じたら保存しない。
+* 保存先は `saves` と**同じ SQLite ファイル**（`scores` テーブル。初回アクセス時に作る）。
+  書き込む前に**その保存番号が実在するかを必ず確かめる**（存在しない番号の行を作らない）。
+* レート制限は `includes/auth.php` の `save_rate_*` をそのまま使う（窓・回数も共通）。
+  **`includes/scores.php` は `includes/auth.php` を読み込んだ後に require すること。**
+* 保存番号は URL に出さない＝読み出しも含めて全て POST ＋ `X-Requested-With: fetch`（api/auth.php と同条件）。
+* 他人の保存番号では取り出せない（`WHERE code = ? AND id = ?` で必ず両方を見る）。
 
 ## お問い合わせ
 

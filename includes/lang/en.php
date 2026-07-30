@@ -54,10 +54,13 @@ return [
     'countin'        => 'Count-in',
     'countin_4'      => '4 counts',
     'countin_8'      => '8 counts',
+    'countin_off'    => 'OFF',
     'tun_ref_play'   => '🔊 Play reference',
     'tun_ref_stop'   => '⏹ Stop',
     'tun_ref_oct'    => '1 oct up',
     'keepawake'      => 'Keep screen awake while playing',
+    'lite'           => 'Light mode (simple sounds)',
+    'lite_note'      => 'Turn this on if the sound stutters. It uses simpler instruments and no reverb.',
 
     'zoom'           => 'Fingerboard zoom',
     'zoom_k'         => 'Scale',
@@ -144,6 +147,18 @@ return [
     'skip_start'     => '⏭ Skip to first note',
     'tracks_note'    => 'Tap a track name to hear it. The track closest to the %s range is preselected.',
 
+    'uploads'          => 'Uploaded scores',
+    'uploads_note'     => 'Scores you open and their fingering are kept with your save code (up to %s).',
+    'uploads_count'    => '%s / %s',
+    'uploads_none'     => 'Nothing here yet',
+    'uploads_need_save'=> 'Create a save code to keep the scores you open here.',
+    'm_up_dup'         => '🎼 This looks like a score you already have',
+    'up_dup_over'      => 'Overwrite',
+    'up_dup_new'       => 'Add as new',
+    'up_dup_note'      => 'Closing with ✕ saves nothing.',
+    'up_dup_body'      => 'This looks like the one saved as "%s". Overwrite it, or add it as a new entry?',
+    'uploads_delete'   => 'Delete',
+
     'pref'           => 'Preferred position',
 
     'fing_save'      => 'Saved fingering',
@@ -154,7 +169,7 @@ return [
 
     'scale_gen'      => 'Generate scale',
 
-    'drawer_note_html' => 'Stopping positions are derived from the string-length ratio (1 − 2<sup>−semitones/12</sup>). Position names and finger numbers are a guide only.<br>Everything runs locally; no data leaves your device.',
+    'drawer_note_html' => 'Stopping positions are derived from the string-length ratio (1 − 2<sup>−semitones/12</sup>). Position names and finger numbers are a guide only.',
 
     'pdf_open'       => '📄 Open',
     'pdf_import'     => 'Import',
@@ -283,6 +298,13 @@ return [
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 No songs<small>Check public/songs/manifest.json</small></button>',
     'song_loaded'          => '%s loaded',
     'song_err'             => 'Load error: %s',
+    'up_loaded'            => 'Loaded %s',
+    'up_overwritten'       => 'Overwritten: %s',
+    'up_added'             => 'Added: %s',
+    'up_deleted'           => 'Score deleted',
+    'up_full'              => 'You can keep up to %s scores. Please delete an older one.',
+    'up_err'               => 'Could not save the score: %s',
+    'up_delete_ask'        => 'Delete this score?',
     'local_only'           => 'Only files on this app\'s own server can be loaded',
     'mic_unavailable'      => 'Microphone unavailable (https:// or localhost required)',
     'mic_start_fail_html'  => '<b>Could not start the microphone.</b>',
@@ -417,6 +439,7 @@ return [
       'ratelimit' => 'Too many attempts. Please wait about 10 minutes and try again',
       'payload'   => 'These settings cannot be saved (too large, or damaged)',
       'full'      => 'Could not issue a save code. Please try again later',
+      'limit'     => 'You can keep up to %s scores. Please delete an older one',
       'method'    => 'That request could not be accepted. Please reload the page',
       'server'    => 'Something went wrong on the server. Please try again later',
       'offline'   => 'Could not reach the server. Please check your connection',

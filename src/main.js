@@ -19,6 +19,7 @@ import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 import { tt } from './util.js';
 import { initSave, openSave, createSave, loadSave, toggleSaveLoad, copySaveCode, unlinkSave, deleteSave, askCreate, askSkip, setSaveApply, armSave } from './account.js';
 import { openContact, sendContact } from './contact.js';
+import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel } from './uploads.js';
 import { importPdfScore } from './omr-import.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
@@ -260,6 +261,13 @@ on('countSeg','click', e=>{
   syncCountSeg();
   saveSettings();
 });
+/* 軽量モード：軽いMIDI音源に切り替える。再生中は音源が変わるので組み直す */
+on('liteSw','click', ()=>{
+  ST.lite=!ST.lite;
+  document.getElementById('liteSw').classList.toggle('on', ST.lite);
+  saveSettings();
+  if(ST.playing) startPlay(currentBeat(), true);
+});
 on('awakeSw','click', ()=>{
   ST.keepAwake=!ST.keepAwake;
   document.getElementById('awakeSw').classList.toggle('on', ST.keepAwake);
@@ -420,6 +428,19 @@ on('trackList','click', e=>{
 });
 on('skipStart','click', skipToStart);
 
+/* ===== アップロードした楽譜（保存番号に紐づく一覧） ===== */
+on('upList','click', e=>{
+  const del=e.target.closest('.ud');
+  if(del){ deleteUpload(del.dataset.id); return; }     /* 削除が先（行のタップより優先） */
+  const row=e.target.closest('.uprow');
+  if(row) openUpload(row.dataset.id);
+});
+/* 同じ譜面っぽいものがあったとき：上書き / 新規で追加 */
+on('upDupOver','click', upDupOverwrite);
+on('upDupNew','click',  upDupAddNew);
+/* ✕ で閉じたら保存しない（待たせていた内容を捨てる） */
+document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListener('click', upDupCancel));
+
 /* ===== 運指の保存 ===== */
 on('fingExport','click', exportFingering);
 on('fingReset','click', resetFingering);
@@ -456,6 +477,8 @@ window.addEventListener('resize', ()=>{ if(pdfDoc && document.getElementById('pd
   });
   /* ここから先の設定変更だけを自動保存の対象にする（起動時の底上げ保存で尋ねないため） */
   armSave();
+  /* アップロードした楽譜の一覧。保存番号が決まった時点で account.js から知らせが来る */
+  initUploads();
   /* 保存番号は描画に関係しないので、初期描画の後で取りに行く */
   initSave();
 })();

@@ -33,7 +33,7 @@ foreach ($APP['instruments'] as $i) {
   $shortcuts[] = [
     'name' => $T['instrument'][$i] ?? $i,
     'url'  => $root . '/' . $lang . '/' . $i . '/',
-    'icons' => [['src' => $root . '/public/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png']],
+    'icons' => [['src' => $root . '/public/icons/icon-192-v2.png', 'sizes' => '192x192', 'type' => 'image/png']],
   ];
 }
 
@@ -53,10 +53,10 @@ $manifest = [
   'theme_color'      => '#15110c',
   'categories'       => ['music', 'education'],
   'icons' => [
-    ['src' => $root . '/public/icons/icon-192.png',          'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-    ['src' => $root . '/public/icons/icon-512.png',          'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-    ['src' => $root . '/public/icons/icon-maskable-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'maskable'],
-    ['src' => $root . '/public/icons/icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+    ['src' => $root . '/public/icons/icon-192-v2.png',          'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+    ['src' => $root . '/public/icons/icon-512-v2.png',          'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+    ['src' => $root . '/public/icons/icon-maskable-192-v2.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'maskable'],
+    ['src' => $root . '/public/icons/icon-maskable-512-v2.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
   ],
   'shortcuts' => $shortcuts,
 ];

@@ -70,6 +70,8 @@ export const ST = {
   /* 音量 */
   volProfiles: {scale:Object.assign({},DEFAULT_VOL.scale), score:Object.assign({},DEFAULT_VOL.score)},
   vol: Object.assign({}, DEFAULT_VOL.score),
+  /* 軽量モード（軽いMIDI音源）。ON のあいだは発音を簡略化して負荷を下げる */
+  lite: false,
   /* 冒頭カウント・スリープ防止 */
   countIn: true,
   countBeats: 4,        // 開始カウントの数（4 | 8）。譜面の拍子ではなく利用者の指定

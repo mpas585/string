@@ -57,10 +57,13 @@ return [
     'countin'        => 'Cuenta de entrada',
     'countin_4'      => '4 tiempos',
     'countin_8'      => '8 tiempos',
+    'countin_off'    => 'OFF',
     'tun_ref_play'   => '🔊 Tono de referencia',
     'tun_ref_stop'   => '⏹ Parar',
     'tun_ref_oct'    => '1 oct arriba',
     'keepawake'      => 'Mantener la pantalla activa',
+    'lite'           => 'Modo ligero (sonido sencillo)',
+    'lite_note'      => 'Actívalo si el sonido se entrecorta. Usa instrumentos sencillos y sin reverberación.',
 
     'zoom'           => 'Zoom del diapasón',
     'zoom_k'         => 'Escala',
@@ -147,6 +150,18 @@ return [
     'skip_start'     => '⏭ Ir a la primera nota',
     'tracks_note'    => 'Toca el nombre de una pista para escucharla. Se preselecciona la más cercana al registro del %s.',
 
+    'uploads'          => 'Partituras subidas',
+    'uploads_note'     => 'Las partituras que abres y su digitación se guardan con tu número (máximo %s).',
+    'uploads_count'    => '%s / %s',
+    'uploads_none'     => 'Todavía no hay nada',
+    'uploads_need_save'=> 'Crea un número de guardado para conservar aquí las partituras que abras.',
+    'm_up_dup'         => '🎼 Parece una partitura que ya tienes',
+    'up_dup_over'      => 'Sobrescribir',
+    'up_dup_new'       => 'Añadir como nueva',
+    'up_dup_note'      => 'Si cierras con ✕ no se guarda nada.',
+    'up_dup_body'      => 'Se parece a la guardada como «%s». ¿La sobrescribes o la añades como nueva?',
+    'uploads_delete'   => 'Eliminar',
+
     'pref'           => 'Posición recomendada',
 
     'fing_save'      => 'Digitación guardada',
@@ -157,7 +172,7 @@ return [
 
     'scale_gen'      => 'Generar escala',
 
-    'drawer_note_html' => 'La posición del dedo se calcula con la proporción de la cuerda (1 − 2<sup>−semitonos/12</sup>). Los nombres de posición y los números de dedo son orientativos.<br>Todo funciona en local: no se envía ningún dato fuera del dispositivo.',
+    'drawer_note_html' => 'La posición del dedo se calcula con la proporción de la cuerda (1 − 2<sup>−semitonos/12</sup>). Los nombres de posición y los números de dedo son orientativos.',
 
     'pdf_open'       => '📄 Abrir',
     'pdf_import'     => 'Importar',
@@ -286,6 +301,13 @@ return [
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 No hay canciones<small>Revisa public/songs/manifest.json</small></button>',
     'song_loaded'          => '%s cargada',
     'song_err'             => 'Error al cargar: %s',
+    'up_loaded'            => 'Se cargó %s',
+    'up_overwritten'       => 'Sobrescrita: %s',
+    'up_added'             => 'Añadida: %s',
+    'up_deleted'           => 'Partitura eliminada',
+    'up_full'              => 'Puedes guardar hasta %s partituras. Elimina alguna antigua.',
+    'up_err'               => 'No se pudo guardar la partitura: %s',
+    'up_delete_ask'        => '¿Eliminar esta partitura?',
     'local_only'           => 'Solo se pueden cargar archivos del propio servidor de esta aplicación',
     'mic_unavailable'      => 'Micrófono no disponible (se requiere https:// o localhost)',
     'mic_start_fail_html'  => '<b>No se pudo iniciar el micrófono.</b>',
@@ -420,6 +442,7 @@ return [
       'ratelimit' => 'Demasiados intentos. Espera unos 10 minutos e inténtalo de nuevo',
       'payload'   => 'Estos ajustes no se pueden guardar (demasiado grandes o dañados)',
       'full'      => 'No se pudo emitir un número de guardado. Inténtalo más tarde',
+      'limit'     => 'Puedes guardar hasta %s partituras. Elimina alguna antigua',
       'method'    => 'No se pudo aceptar la solicitud. Vuelve a cargar la página',
       'server'    => 'Ha ocurrido un problema en el servidor. Inténtalo más tarde',
       'offline'   => 'No se pudo conectar. Comprueba tu conexión',

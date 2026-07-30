@@ -25,6 +25,8 @@ import { render, scrollStripToActive, setScore, syncDock, syncLoopUI } from './m
 import { closeDrawer, openDrawer, openPdfOverlay } from './drawer.js';
 import { toast } from './dom.js';
 import { openPdf } from './pdf.js';
+/* 読み込んだ譜面を保存番号に紐づけて残す（保存番号が無ければ何もしない） */
+import { rememberUpload } from './uploads.js';
 
 export function pitchToMidi(pEl){
   const step = pEl.querySelector('step').textContent.trim();
@@ -326,6 +328,9 @@ export function selectTrack(i, play){
   const parsed=midiTrackToEvents(t, midiFile.division, midiFile.tsNum, midiFile.tsDen);
   setTempo(Math.round(midiFile.tempo));
   setScore(parsed, midiFile.name+'#'+i);
+  /* 選んだトラックを保存番号に紐づけて残す（自動選択ぶんもここを通るので、
+     loadScoreFile 側では呼ばない＝二重に保存しない）。名前にトラック名を含める。 */
+  rememberUpload(midiFile.name+' / '+t.name, parsed, midiFile.tempo);
   renderTracks();
   const out=parsed.events.filter(e=> !e.fing).length;
   toast(tt('msg.track_loaded', t.name, parsed.events.length) + (out ? tt('msg.out_range_suffix', out) : ''));
@@ -368,7 +373,7 @@ export async function loadScoreFile(file){
       const m=parseMidi(buf);
       const sel=bestTrackIndex(m.tracks);
       midiFile={tracks:m.tracks, tempo:m.tempo, tsNum:m.tsNum, tsDen:m.tsDen, division:m.division, name:file.name, sel};
-      selectTrack(sel);
+      selectTrack(sel);        /* 保存は selectTrack 側で行う（トラックを選び直したぶんも残る） */
       openDrawer();
       const box=document.getElementById('tracks');
       if(box.scrollIntoView) box.scrollIntoView({block:'nearest'});
@@ -387,6 +392,7 @@ export async function loadScoreFile(file){
     const parsed=parseMusicXML(text);
     setTempo(Math.round(parsed.tempo));
     const restored=setScore(parsed, file.name);
+    rememberUpload(file.name, parsed, parsed.tempo);
     closeDrawer();
     toast(tt('msg.score_loaded', parsed.events.length) + (restored ? tt('msg.fing_restored_suffix') : ''));
   }catch(err){

@@ -35,7 +35,7 @@ foreach (APP_INSTRUMENTS as $ins) {
   <meta property="og:title" content="<?php e('home.title') ?>">
   <meta property="og:description" content="<?php e('home.desc') ?>">
   <meta property="og:url" content="<?= h($origin . $LANG_HOME_URLS[$LANG]) ?>">
-  <meta property="og:image" content="<?= h($origin . $rootPath) ?>/public/icons/icon-512.png">
+  <meta property="og:image" content="<?= h($origin . $rootPath) ?>/public/icons/icon-512-v2.png">
 
   <script type="application/ld+json">
 <?php
@@ -52,8 +52,8 @@ foreach (APP_INSTRUMENTS as $ins) {
   </script>
 
   <link rel="manifest" href="<?= h($BASE) ?>manifest.php?lang=<?= h($LANG) ?>">
-  <link rel="icon" href="<?= h($BASE) ?>public/icons/favicon-32.png" sizes="32x32">
-  <link rel="apple-touch-icon" href="<?= h($BASE) ?>public/icons/apple-touch-icon.png">
+  <link rel="icon" href="<?= h($BASE) ?>public/icons/favicon-32-v2.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="<?= h($BASE) ?>public/icons/apple-touch-icon-v2.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -77,7 +77,7 @@ foreach (APP_INSTRUMENTS as $ins) {
   </div>
 
   <header class="hm-head">
-    <div class="hm-logo"><?= h($LOGO) ?></div>
+    <div class="hm-logo"><img src="<?= h($BASE) ?>public/icons/logo-v2.png" alt="<?= h(APP_NAME) ?>" width="512" height="512" decoding="async"></div>
     <h1 class="hm-title"><?= h(APP_NAME) ?></h1>
     <p class="hm-sub"><?php e('home.sub') ?></p>
   </header>

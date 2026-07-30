@@ -14,7 +14,43 @@ import { ST } from '../state.js';
 
 export function midiFreq(m){ return 440*Math.pow(2,(m-69)/12); }
 
+/* ===== 軽量モード（ST.lite）=====
+   通常の音源は1音あたり オシレータ5本＋フィルタ＋ノイズ を作るため、古い端末では
+   音数が増えたときに音切れする。軽量モードでは「オシレータ1本＋ゲイン」だけにして、
+   ビブラート・ユニゾン・弓ノイズ・ローパスを省く（＝MIDI音源のような素の音）。
+   鳴らす場所（scheduler）は変えず、ここで分岐するだけにしてある。 */
+export function playNoteLite(ctx, bus, midi, t, dur){
+  const f=midiFreq(midi);
+  const end=t+Math.max(dur,0.18);
+  const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=f;
+  const g=ctx.createGain();
+  const peak=0.20;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t+0.02);
+  g.gain.setValueAtTime(peak, Math.max(t+0.02, end-0.08));
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  o.connect(g); g.connect(bus);
+  o.start(t); o.stop(end+0.03);
+  o.onended=()=>{ try{ g.disconnect(); }catch(e){} };
+}
+/* コードも同じ考え方で1音1オシレータにする */
+export function padChordLite(ctx, bus, t, dur, midis){
+  const end=t+dur;
+  midis.forEach(m=>{
+    const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=midiFreq(m);
+    const g=ctx.createGain();
+    const peak=0.10;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, end);
+    o.connect(g); g.connect(bus);
+    o.start(t); o.stop(end+0.03);
+    o.onended=()=>{ try{ g.disconnect(); }catch(e){} };
+  });
+}
+
 export function playNote(ctx, bus, midi, t, dur){
+  if(ST.lite) return playNoteLite(ctx, bus, midi, t, dur);
   const f=midiFreq(midi);
   const end=t+Math.max(dur,0.18);
   const rel=0.14, atk=0.055;                       /* 弓のアタック */
@@ -125,6 +161,7 @@ export function bassNote(ctx, bus, t, dur, midi, vel){
 }
 /* コード：ピアノ（打鍵→2段減衰。倍音は高いほど早く減衰） */
 export function padChord(ctx, bus, t, dur, midis){
+  if(ST.lite) return padChordLite(ctx, bus, t, dur, midis);
   const end=t+dur;
   midis.forEach((m, idx)=>{
     const f=midiFreq(m);

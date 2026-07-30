@@ -37,6 +37,7 @@ let asked    = false;   /* この訪問で「保存しますか？」を出し�
 let busy     = false;
 let timer    = 0;
 let onApplied = null;   /* 復元後に画面を作り直す処理（アプリ本体だけが登録する） */
+let onCode   = null;    /* 保存番号が変わったときの通知先（src/uploads.js が登録する） */
 
 /* ===== localStorage（使えない環境では機能ごと止める） ===== */
 const LS = (() => {
@@ -109,7 +110,15 @@ function syncUI() {
   const b1 = $('svBound');  if (b1) b1.hidden = !CODE;
   const b2 = $('svBound2'); if (b2) b2.hidden = !CODE;
   const ub = $('svUnbound');if (ub) ub.hidden = !!CODE;
+  /* 保存番号に紐づく画面（アップロードした楽譜の一覧）へ知らせる。
+     作成・読込・解除・削除・起動時の復元はすべてここを通るので、配線はこの1か所でよい */
+  if (onCode) { try { onCode(CODE); } catch (e) {} }
 }
+
+/* いまの保存番号（無ければ null）。楽譜の保存で使う */
+export function getSaveCode() { return CODE; }
+/* 保存番号が変わったときの通知先を登録する（登録できるのは1つだけ） */
+export function setSaveWatcher(fn) { onCode = fn; }
 
 function setMsg(text, isErr) {
   const el = $('svMsg');

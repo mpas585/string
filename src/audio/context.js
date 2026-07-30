@@ -52,12 +52,15 @@ export function makeLimiter(ctx){
 export function makeBuses(ctx){
   const limiter=makeLimiter(ctx); limiter.connect(ctx.destination);
   const master=ctx.createGain(); master.gain.value=ST.vol.master*MASTER_BOOST; master.connect(limiter);
-  const conv=ctx.createConvolver(); conv.buffer=IRBUF;
-  const wet=ctx.createGain(); wet.gain.value=0.28;
-  conv.connect(wet); wet.connect(master);
+  /* 軽量モード（ST.lite）ではリバーブ（Convolver）を作らない。
+     畳み込みは常時かかり続ける処理なので、音数に関係なく負荷が下がる。 */
+  const lite=!!ST.lite;
+  const conv=lite ? null : ctx.createConvolver();
+  const wet =lite ? null : ctx.createGain();
+  if(!lite){ conv.buffer=IRBUF; wet.gain.value=0.28; conv.connect(wet); wet.connect(master); }
   const mk=(v, send)=>{
     const g=ctx.createGain(); g.gain.value=v; g.connect(master);
-    if(send>0){ const sg=ctx.createGain(); sg.gain.value=send; g.connect(sg); sg.connect(conv); }
+    if(send>0 && conv){ const sg=ctx.createGain(); sg.gain.value=send; g.connect(sg); sg.connect(conv); }
     return g;
   };
   const leadOut=mk(1.0, 0.55);

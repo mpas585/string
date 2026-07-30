@@ -60,10 +60,13 @@ return [
     'countin'        => '開始カウント',
     'countin_4'      => '4カウント',
     'countin_8'      => '8カウント',
+    'countin_off'    => 'OFF',
     'tun_ref_play'   => '🔊 基準音を鳴らす',
     'tun_ref_stop'   => '⏹ 止める',
     'tun_ref_oct'    => '1oct上',
     'keepawake'      => '再生中はスリープさせない',
+    'lite'           => '軽量モード（軽い音源）',
+    'lite_note'      => '音が途切れるときにONにしてください。音源とリバーブを簡略化して負荷を下げます。',
 
     'zoom'           => '指板ズーム',
     'zoom_k'         => '倍率',
@@ -150,6 +153,18 @@ return [
     'skip_start'     => '⏭ 最初の音へスキップ',
     'tracks_note'    => 'トラック名をタップすると再生します。%sの音域に近いトラックを自動で選んでいます。',
 
+    'uploads'          => 'アップロードした楽譜',
+    'uploads_note'     => '読み込んだ譜面と運指は保存番号に紐づけて残ります（最大%s件）',
+    'uploads_count'    => '%s / %s件',
+    'uploads_none'     => 'まだありません',
+    'uploads_need_save'=> '保存番号を作成すると、読み込んだ譜面をここに残せます',
+    'm_up_dup'         => '🎼 同じ譜面がありそうです',
+    'up_dup_over'      => '上書きする',
+    'up_dup_new'       => '新規で追加',
+    'up_dup_note'      => '✕ で閉じると保存しません。',
+    'up_dup_body'      => '「%s」として保存済みのものと似ています。上書きしますか、新規で追加しますか？',
+    'uploads_delete'   => '削除',
+
     'pref'           => '推奨ポジション',
 
     'fing_save'      => '運指の保存',
@@ -160,7 +175,7 @@ return [
 
     'scale_gen'      => 'スケールを生成',
 
-    'drawer_note_html' => '押弦位置は弦長比（1 − 2<sup>−半音/12</sup>）から算出。ポジション名・指番号は目安です。<br>ローカル動作・データは端末外に送信しません。',
+    'drawer_note_html' => '押弦位置は弦長比（1 − 2<sup>−半音/12</sup>）から算出。ポジション名・指番号は目安です。',
 
     'pdf_open'       => '📄 開く',
     'pdf_import'     => '取り込む',
@@ -289,6 +304,13 @@ return [
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 曲がありません<small>public/songs/manifest.json を確認してください</small></button>',
     'song_loaded'          => '%sを読み込みました',
     'song_err'             => '読込エラー：%s',
+    'up_loaded'            => '%sを読み込みました',
+    'up_overwritten'       => '上書きしました：%s',
+    'up_added'             => '追加しました：%s',
+    'up_deleted'           => '譜面を削除しました',
+    'up_full'              => '保存できる譜面は%s件までです。古いものを削除してください',
+    'up_err'               => '譜面を保存できませんでした：%s',
+    'up_delete_ask'        => 'この譜面を削除しますか？',
     'local_only'           => 'このアプリと同じサーバの中のファイルしか読み込めません',
     'mic_unavailable'      => 'マイクを使えません（https:// / localhost が必要）',
     'mic_start_fail_html'  => '<b>マイクを開始できません。</b>',
@@ -425,6 +447,7 @@ return [
       'ratelimit' => '試行が続いたため、しばらく受け付けません。10分ほど待ってからやり直してください',
       'payload'   => '保存できる内容ではありません（大きすぎるか、壊れています）',
       'full'      => '保存番号を発行できませんでした。しばらくしてからやり直してください',
+      'limit'     => '保存できる譜面は%s件までです。古いものを削除してください',
       'method'    => '受け付けられないリクエストです。ページを開き直してください',
       'server'    => 'サーバ側で問題が起きました。しばらくしてからやり直してください',
       'offline'   => '通信できませんでした。電波の状態を確かめてください',

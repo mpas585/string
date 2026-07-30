@@ -26,6 +26,7 @@ import { setScore } from './modes.js';
 import { recommend } from './fingerboard.js';
 import { midiName, tt } from './util.js';
 import { toast } from './dom.js';
+import { rememberUpload } from './uploads.js';
 
 const BEATS_PER_MEASURE = 4;   /* 拍子は読めないので4/4と仮定して小節を切る */
 const DUR_FILLED = 1;          /* 黒玉＝4分音符とみなす */
@@ -110,6 +111,7 @@ export async function importPdfScore() {
 
     const parsed = toScore(groups);
     setScore(parsed, 'omr:p' + pdfPage);
+    rememberUpload('PDF p' + pdfPage, parsed, null);   /* 保存番号があれば一覧に残す */
     closePdfOverlay();
 
     /* 判定が怪しい段があれば黙って通さず、そのまま伝える */

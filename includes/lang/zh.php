@@ -54,10 +54,13 @@ return [
     'countin'        => '开始预备拍',
     'countin_4'      => '4拍',
     'countin_8'      => '8拍',
+    'countin_off'    => 'OFF',
     'tun_ref_play'   => '🔊 播放基准音',
     'tun_ref_stop'   => '⏹ 停止',
     'tun_ref_oct'    => '高八度',
     'keepawake'      => '播放时不息屏',
+    'lite'           => '轻量模式（简易音源）',
+    'lite_note'      => '声音卡顿时请打开。将简化音源并关闭混响以降低负担。',
 
     'zoom'           => '指板缩放',
     'zoom_k'         => '倍率',
@@ -144,6 +147,18 @@ return [
     'skip_start'     => '⏭ 跳到第一个音',
     'tracks_note'    => '点击音轨名称即可试听。已自动选择音域接近%s的音轨。',
 
+    'uploads'          => '已上传的乐谱',
+    'uploads_note'     => '载入的乐谱与指法会与保存编号绑定保留（最多%s份）',
+    'uploads_count'    => '%s / %s份',
+    'uploads_none'     => '还没有内容',
+    'uploads_need_save'=> '创建保存编号后，载入的乐谱会保留在这里',
+    'm_up_dup'         => '🎼 好像已有相同的乐谱',
+    'up_dup_over'      => '覆盖',
+    'up_dup_new'       => '新增一条',
+    'up_dup_note'      => '用 ✕ 关闭则不保存。',
+    'up_dup_body'      => '与已保存的「%s」很相似。要覆盖它，还是新增一条？',
+    'uploads_delete'   => '删除',
+
     'pref'           => '推荐把位',
 
     'fing_save'      => '指法保存',
@@ -154,7 +169,7 @@ return [
 
     'scale_gen'      => '生成音阶',
 
-    'drawer_note_html' => '按弦位置由弦长比（1 − 2<sup>−半音/12</sup>）计算。把位名称与指法编号仅供参考。<br>全部在本地运行，不会将数据发送到设备之外。',
+    'drawer_note_html' => '按弦位置由弦长比（1 − 2<sup>−半音/12</sup>）计算。把位名称与指法编号仅供参考。',
 
     'pdf_open'       => '📄 打开',
     'pdf_import'     => '导入',
@@ -283,6 +298,13 @@ return [
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 没有乐曲<small>请检查 public/songs/manifest.json</small></button>',
     'song_loaded'          => '已载入%s',
     'song_err'             => '载入错误：%s',
+    'up_loaded'            => '已载入%s',
+    'up_overwritten'       => '已覆盖：%s',
+    'up_added'             => '已新增：%s',
+    'up_deleted'           => '已删除乐谱',
+    'up_full'              => '最多只能保存%s份乐谱，请删除旧的。',
+    'up_err'               => '无法保存乐谱：%s',
+    'up_delete_ask'        => '要删除这份乐谱吗？',
     'local_only'           => '只能载入本应用所在服务器上的文件',
     'mic_unavailable'      => '无法使用麦克风（需要 https:// 或 localhost）',
     'mic_start_fail_html'  => '<b>无法启动麦克风。</b>',
@@ -417,6 +439,7 @@ return [
       'ratelimit' => '尝试次数过多，暂时无法受理。请等待约10分钟后重试',
       'payload'   => '该内容无法保存（过大或已损坏）',
       'full'      => '无法发放保存编号，请稍后重试',
+      'limit'     => '最多只能保存%s份乐谱，请删除旧的',
       'method'    => '无法受理该请求，请重新打开页面',
       'server'    => '服务器出现问题，请稍后重试',
       'offline'   => '无法连接，请检查网络状态',

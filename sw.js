@@ -12,7 +12,7 @@
   更新するとき: 下の VER を上げる。古いキャッシュは activate で消える。
   ルート直下に置くこと（スコープが / になる）。
 */
-const VER   = 'gs-v7';
+const VER   = 'gs-v8';
 const CORE  = 'core-' + VER;    /* 先読みする最小限 */
 const ASSET = 'asset-' + VER;   /* src/ public/ の実行時キャッシュ */
 const PAGE  = 'page-' + VER;    /* HTML の控え */
@@ -21,8 +21,8 @@ const PAGE  = 'page-' + VER;    /* HTML の控え */
 const PRECACHE = [
   'src/styles.css',
   'src/main.js',
-  'public/icons/icon-192.png',
-  'public/icons/apple-touch-icon.png',
+  'public/icons/icon-192-v2.png',
+  'public/icons/apple-touch-icon-v2.png',
 ];
 
 const scopePath = new URL(self.registration.scope).pathname;   /* 例: '/' */
