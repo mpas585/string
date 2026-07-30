@@ -423,6 +423,8 @@ on('trackBack','click', ()=> setScoreSub('load'));
 on('upList','click', e=>{
   const del=e.target.closest('.ud');
   if(del){ deleteUpload(del.dataset.id); return; }     /* 削除が先（行のタップより優先） */
+  const trk=e.target.closest('.ut');
+  if(trk){ openUpload(trk.dataset.id, true); return; } /* 開いてトラック選択の面を出す */
   const row=e.target.closest('.uprow');
   if(row) openUpload(row.dataset.id);
 });

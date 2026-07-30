@@ -157,6 +157,7 @@ return [
     'up_dup_new'       => 'Add as new',
     'up_dup_note'      => 'Closing with ✕ saves nothing.',
     'up_dup_body'      => 'This looks like the one saved as "%s". Overwrite it, or add it as a new entry?',
+    'uploads_tracks'   => 'Tracks',
     'uploads_delete'   => 'Delete',
 
     'pref'           => 'Preferred position',

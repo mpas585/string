@@ -160,6 +160,7 @@ return [
     'up_dup_new'       => 'Añadir como nueva',
     'up_dup_note'      => 'Si cierras con ✕ no se guarda nada.',
     'up_dup_body'      => 'Se parece a la guardada como «%s». ¿La sobrescribes o la añades como nueva?',
+    'uploads_tracks'   => 'Pistas',
     'uploads_delete'   => 'Eliminar',
 
     'pref'           => 'Posición recomendada',

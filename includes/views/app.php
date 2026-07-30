@@ -62,7 +62,12 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <div id="app">
 <div class="topbar">
   <button id="menu" class="iconbtn" aria-label="<?php e('ui.menu') ?>">☰</button>
-  <div id="nowline" class="nowbar"><?php e('ui.nowline') ?></div>
+  <!-- 上段＝いま開いている譜面の名前（src/modes.js の renderScoreTitle）
+       下段＝押さえる音の情報（renderNow）。曲名が音の情報で消えないよう2段にしている -->
+  <div class="nowwrap">
+    <div id="scoretitle" class="scoretitle"></div>
+    <div id="nowline" class="nowbar"><?php e('ui.nowline') ?></div>
+  </div>
   <button id="gear" class="iconbtn" aria-label="<?php e('ui.gear_aria') ?>">⚙</button>
 </div>
 
@@ -105,15 +110,15 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <button class="gp-row" data-gpopen="count">
       <span><?php e('ui.countin') ?></span><span class="v" id="countRowV"></span><span class="cv">›</span>
     </button>
-    <div id="awakeSw" class="sw on"><span><?php e('ui.keepawake') ?></span><span class="knob"></span></div>
-    <!-- 軽量モード：軽いMIDI音源に切り替える（音が途切れる端末むけ） -->
-    <div id="liteSw" class="sw"><span><?php e('ui.lite') ?></span><span class="knob"></span></div>
-    <div class="sub" style="margin:-3px 0 8px"><?php e('ui.lite_note') ?></div>
-
     <!-- サブメニューへ。右端の値は syncVolRow() が書き換える -->
     <button class="gp-row" data-gpopen="vol">
       <span><?php e('ui.volume') ?></span><span class="v" id="volRowV">70%</span><span class="cv">›</span>
     </button>
+
+    <div id="awakeSw" class="sw on"><span><?php e('ui.keepawake') ?></span><span class="knob"></span></div>
+    <!-- 軽量モード：軽いMIDI音源に切り替える（音が途切れる端末むけ） -->
+    <div id="liteSw" class="sw"><span><?php e('ui.lite') ?></span><span class="knob"></span></div>
+    <div class="sub" style="margin:-3px 0 8px"><?php e('ui.lite_note') ?></div>
 
     <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）===== -->
     <hr class="sep">

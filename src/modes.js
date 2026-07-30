@@ -105,6 +105,7 @@ export function setMode(mode, keepDrawer){
   ST.scaleDirty=false;                 /* モードが変われば保留は無効 */
   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
   ST.lastScrollId=null; ST.scoreName=''; ST.scoreTitle='';
+  renderScoreTitle();
   setMidiFile(null); renderTracks();
   applyMode();
   ST.vol = ST.volProfiles[volProfileKey()];      /* モード別の音量プロファイル */
@@ -191,11 +192,17 @@ export function micUnavailableReason(){
   return null;
 }
 
+/* 上部バーの上段＝いま開いている譜面の名前。
+   ST.scoreName（'song:sakura' 等）は運指の保存キー用の内部IDなので画面には出さず、
+   表示用の ST.scoreTitle（曲名・ファイル名・スケール名）を出す。
+   下段の押さえる音の情報（renderNow）とは別の行なので、演奏中も消えない。 */
+export function renderScoreTitle(){
+  const el=document.getElementById('scoretitle');
+  if(el) el.textContent = ST.scoreTitle || '';
+}
 export function renderNow(ev){
   const el=document.getElementById('nowline');
-  /* 押さえる音が決まっていないときは、いま開いている譜面の名前を出す。
-     ST.scoreName（'song:sakura' 等）は運指の保存キー用の内部IDなので画面には出さない。 */
-  if(!ev || !ev.fing){ el.textContent=ST.scoreTitle || ''; return; }
+  if(!ev || !ev.fing){ el.textContent=''; return; }
   const lead=ev.pitches[ev.leadIdx];
   el.innerHTML = `<b>${lead.name}</b> · ${strFingerText(ev.fing.str, ev.fing.off, ev.fing.finger)} · ${ev.fing.zone}`;
 }
@@ -395,6 +402,7 @@ export function setScore(parsed, scoreName, title){
   ST.beatUnit=(parsed.beatUnit>0) ? parsed.beatUnit : 1;
   ST.scoreName=scoreName || '';
   ST.scoreTitle=title || '';
+  renderScoreTitle();
   ST.selected=0; ST.current=null; ST.lastScrollId=null; ST.playhead=0;
   applyOctave();
 

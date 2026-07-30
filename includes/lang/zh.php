@@ -157,6 +157,7 @@ return [
     'up_dup_new'       => '新增一条',
     'up_dup_note'      => '用 ✕ 关闭则不保存。',
     'up_dup_body'      => '与已保存的「%s」很相似。要覆盖它，还是新增一条？',
+    'uploads_tracks'   => '音轨',
     'uploads_delete'   => '删除',
 
     'pref'           => '推荐把位',

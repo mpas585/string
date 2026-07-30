@@ -128,6 +128,19 @@ export function parseMusicXML(text){
    どちらでも読めないときだけ従来どおり1バイト＝1文字として扱う。
    ※ 以前は常に1バイト＝1文字（Latin-1）で読み、そのうえで日本語以外を捨てていたため、
       日本語のトラック名が文字化けしたり丸ごと消えたりしていた。 */
+/* MIDIの中身を base64 にする／戻す。大きい配列でも積み上げないよう小分けにする */
+export function bytesToBase64(bytes){
+  let s='';
+  const step=0x8000;
+  for(let i=0;i<bytes.length;i+=step) s+=String.fromCharCode.apply(null, bytes.subarray(i, i+step));
+  return btoa(s);
+}
+export function base64ToBytes(b64){
+  const s=atob(b64), a=new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i);
+  return a;
+}
+
 export function decodeMidiText(bytes){
   const clean=(s)=> s.replace(/[\x00-\x1f\x7f]/g,'').trim();
   if(typeof TextDecoder==='function'){
@@ -367,7 +380,7 @@ export function selectTrack(i, play){
      loadScoreFile 側では呼ばない＝二重に保存しない）。
      一覧に出す名前はファイル名だけにして、選んだトラックは副題として持たせる
      ＝トラックを選び直しても件数は増えず、同じ1件が書き換わる。 */
-  rememberUpload(midiFile.name, parsed, midiFile.tempo, {track:i, trackName:t.name});
+  rememberUpload(midiFile.name, parsed, midiFile.tempo, {track:i, trackName:t.name, src:midiFile.src||null});
   renderTracks();
   const out=parsed.events.filter(e=> !e.fing).length;
   toast(tt('msg.track_loaded', t.name, parsed.events.length) + (out ? tt('msg.out_range_suffix', out) : ''));
@@ -410,7 +423,10 @@ export async function loadScoreFile(file){
       const buf=await file.arrayBuffer();
       const m=parseMidi(buf);
       const sel=bestTrackIndex(m.tracks);
-      midiFile={tracks:m.tracks, tempo:m.tempo, tsNum:m.tsNum, tsDen:m.tsDen, division:m.division, name:file.name, sel};
+      /* 元のMIDIも保存番号に預ける（一覧から開き直したあとトラックを選び直せるようにするため）。
+         大きすぎるものは預けない＝そのときはトラック選択のリンクが出ないだけ。 */
+      midiFile={tracks:m.tracks, tempo:m.tempo, tsNum:m.tsNum, tsDen:m.tsDen, division:m.division,
+                name:file.name, sel, src:bytesToBase64(new Uint8Array(buf))};
       selectTrack(sel);        /* 保存は selectTrack 側で行う（トラックを選び直したぶんも同じ1件を更新） */
       setScoreSub('tracks');   /* 読み込んだ直後はトラックを選ぶ面を出す */
       openDrawer();

@@ -3,7 +3,8 @@
   api/scores.php — アップロードした楽譜（保存番号に紐づく譜面）の JSON API。
 
     POST  action=list    code= lang=                                    … 一覧（新しい順・data は返さない）
-    POST  action=save    code= name= sub= notes= data= sig= fing= id= lang= … 1件保存
+    POST  action=save    code= name= sub= notes= data= sig= fing= id= src= lang= … 1件保存
+                          src（元のMIDIのbase64）は送らなければ既存のまま
                                                                           id を付けるとその1件を上書き、
                                                                           付けなければ新しく追加する
     POST  action=fing    code= id= fing= lang=                          … 運指だけ更新（sig は変わらない）
@@ -48,6 +49,8 @@ $notes  = (int)   ($_POST['notes']  ?? 0);
 $data   = (string)($_POST['data']   ?? '');
 $sig    = (string)($_POST['sig']    ?? '');
 $sub    = (string)($_POST['sub']    ?? '');
+/* src は「送られていない＝触らない」を区別するため null 許容で受ける */
+$src    = array_key_exists('src', $_POST) ? (string)$_POST['src'] : null;
 $fing   = (string)($_POST['fing']   ?? '');
 
 try {
@@ -60,7 +63,7 @@ try {
     }
 
     case 'save': {
-      $r = score_save($code, $name, $notes, $data, $sig, $fing, $id, $sub);
+      $r = score_save($code, $name, $notes, $data, $sig, $fing, $id, $sub, $src);
       if (!$r['ok']) err($r['error'], SCORE_MAX_ITEMS);
       out(['ok' => true, 'id' => $r['id'], 'mode' => $r['mode']]);
     }
@@ -74,7 +77,7 @@ try {
     case 'load': {
       $r = score_load($code, $id);
       if (!$r['ok']) err($r['error']);
-      out(['ok' => true, 'id' => $r['id'], 'name' => $r['name'], 'data' => $r['data'], 'fing' => $r['fing']]);
+      out(['ok' => true, 'id' => $r['id'], 'name' => $r['name'], 'data' => $r['data'], 'fing' => $r['fing'], 'src' => $r['src']]);
     }
 
     case 'delete': {

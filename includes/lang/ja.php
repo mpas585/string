@@ -163,6 +163,7 @@ return [
     'up_dup_new'       => '新規で追加',
     'up_dup_note'      => '✕ で閉じると保存しません。',
     'up_dup_body'      => '「%s」として保存済みのものと似ています。上書きしますか、新規で追加しますか？',
+    'uploads_tracks'   => 'トラック',
     'uploads_delete'   => '削除',
 
     'pref'           => '推奨ポジション',

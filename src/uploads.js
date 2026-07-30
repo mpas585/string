@@ -16,6 +16,8 @@
   ※ 預けるのは「音の並び」と「運指」だけ。元のファイル（MusicXML / MIDI / PDF）は預けない。
        data … [開始拍, 長さ, 小節, [midi…], リード番号] の並び。内容の指紋（sig）はこれで作る
        fing … {octave, data:[{l,s,o,f,m}…]}（drawer.js の fingerData() と同じ形）
+       src  … MIDI のときだけ元ファイル（base64）。一覧から開き直したあとに
+              トラックを選び直せるようにするため。MusicXML では預けない
      運指を data と分けているのは、運指を直しただけで sig が変わらないようにするため
      ＝「同じ譜面か」の判定が運指の編集で揺れない。
   ※ オクターブを一緒に持つのは、運指の off（開放弦からの半音数）が移調後の音で計算されているため。
@@ -29,9 +31,9 @@ import { toast, openDockModal, closeDockModal } from './dom.js';
 import { getSaveCode, setSaveWatcher } from './account.js';
 import { setScore } from './modes.js';
 import { setTempo } from './audio/scheduler.js';
-import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher } from './drawer.js';
+import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher, setScoreSub } from './drawer.js';
 import { recommend } from './fingerboard.js';
-import { setMidiFile, renderTracks } from './songs.js';
+import { setMidiFile, renderTracks, parseMidi, base64ToBytes } from './songs.js';
 
 const API  = new URL('../api/scores.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
@@ -124,8 +126,13 @@ export function renderUploads() {
     box.innerHTML = items.map(it => {
       const on = (it.id === curId) ? ' on' : '';
       const sub = tt('msg.track_count', it.notes) + (it.sub ? ' · ' + it.sub : '');
+      /* 元のMIDIを預かっている行だけ、トラックを選び直せる */
+      const trk = it.hassrc
+        ? '<button type="button" class="ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
+        : '';
       return '<div class="uprow' + on + '" data-id="' + it.id + '">'
         + '<span class="un">' + esc(it.name) + '<small>' + esc(sub) + '</small></span>'
+        + trk
         + '<button type="button" class="ud" data-id="' + it.id + '">' + esc(tt('ui.uploads_delete')) + '</button>'
         + '</div>';
     }).join('');
@@ -179,9 +186,13 @@ export async function rememberUpload(name, parsed, tempo, meta) {
   const sub = (meta && meta.trackName) ? String(meta.trackName) : '';
   const sig = sigOf(data);
 
+  /* 元のMIDI。同じ読み込み操作の続き（トラックを選び直した）では送らない
+     ＝サーバ側は既存のまま。毎回数十KBを送り直さないため。 */
+  const src = (meta && meta.src) ? meta.src : null;
+
   /* 同じ読み込み操作の続き（MIDI のトラックを選び直した）＝尋ねずに同じ1件を書き換える */
   if (session.name === nm && session.id) {
-    await sendUpload({ code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: session.id }, true);
+    await sendUpload({ code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: session.id, src: null }, true);
     return;
   }
 
@@ -199,7 +210,7 @@ export async function rememberUpload(name, parsed, tempo, meta) {
 
   /* 似ているものがある＝上書きか新規追加かを尋ねる（サーバは黙って上書きしない） */
   if (hit) {
-    pending = { code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: hit.id };
+    pending = { code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: hit.id, src: src };
     const body = document.getElementById('upDupBody');
     if (body) body.textContent = tt('ui.up_dup_body', hit.name, nm);
     openDockModal('mUpDup');
@@ -207,16 +218,19 @@ export async function rememberUpload(name, parsed, tempo, meta) {
   }
 
   /* 初めての譜面。読み込みのトーストを上書きしないよう、ここでは黙って保存する */
-  await sendUpload({ code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: 0 }, true);
+  await sendUpload({ code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: 0, src: src }, true);
 }
 
 /* 実際に送る。id>0 なら上書き、0 なら新規追加 */
 async function sendUpload(p, quiet) {
   try {
-    const r = await call('save', {
+    const body = {
       code: p.code, name: p.nm, sub: p.sub || '', notes: p.notes, data: p.data, sig: p.sig,
       fing: packFing(), id: p.id || 0,
-    });
+    };
+    /* src は入れたときだけ送る。入れなければサーバ側は既存のまま（触らない） */
+    if (p.src != null) body.src = p.src;
+    const r = await call('save', body);
     if (!r || !r.ok) {
       if (r && r.error === 'limit') toast(tt('msg.up_full', MAX_ITEMS));
       else if (r && r.message)      toast(tt('msg.up_err', r.message));
@@ -244,7 +258,8 @@ export function upDupAddNew() {
 export function upDupCancel() { pending = null; }
 
 /* ===== 一覧から開く ===== */
-export async function openUpload(id) {
+/* showTracks = true のとき（一覧の「トラック」を押したとき）は、閉じずにトラック選択の面を出す */
+export async function openUpload(id, showTracks) {
   const code = getSaveCode();
   if (busy || !code || !id) return;
   busy = true;
@@ -254,8 +269,20 @@ export async function openUpload(id) {
     const parsed = unpackScore(r.data || {});
     const fing = r.fing;
 
-    setMidiFile(null); renderTracks();          /* 前のMIDIのトラック一覧を残さない */
-    session = { name: '', id: 0 };               /* 読み込み操作の続きではない */
+    /* 元のMIDIを預かっていれば、トラック一覧を作り直して選び直せるようにする。
+       壊れていても譜面は開けるようにしたいので、失敗しても止めない。 */
+    let midi = null;
+    if (r.src) {
+      try {
+        const m = parseMidi(base64ToBytes(r.src).buffer);
+        const trk = (r.data && r.data.track != null) ? r.data.track : 0;
+        midi = { tracks: m.tracks, tempo: m.tempo, tsNum: m.tsNum, tsDen: m.tsDen,
+                 division: m.division, name: r.name, sel: Math.min(trk, m.tracks.length - 1), src: r.src };
+      } catch (e) { midi = null; }
+    }
+    setMidiFile(midi); renderTracks();
+    /* この1件を開いた状態にしておく＝以後トラックを選び直しても、尋ねずに同じ1件が書き換わる */
+    session = { name: r.name, id: r.id };
     /* 運指は保存時のオクターブで計算されているので、setScore（＝applyOctave）より前に戻す */
     if (fing && fing.octave != null) ST.octave = (fing.octave === 'auto') ? 'auto' : (parseInt(fing.octave, 10) || 0);
     setTempo(Math.round((r.data && r.data.tempo) || ST.tempo));
@@ -273,7 +300,8 @@ export async function openUpload(id) {
     /* オクターブを戻したので、その表示（モーダルのボタン）も合わせる */
     document.querySelectorAll('.oct').forEach(b => b.classList.toggle('on', String(b.dataset.oct) === String(ST.octave)));
 
-    closeDrawer();
+    if (showTracks && midi) { setScoreSub('tracks'); }
+    else { closeDrawer(); }
     renderUploads();                            /* 選択中の行に印を付け直す */
     toast(tt('msg.up_loaded', r.name));
   } catch (e) {

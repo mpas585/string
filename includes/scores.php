@@ -5,8 +5,10 @@
   設定の保存（includes/auth.php）と同じ SQLite ファイル・同じ保存番号を使う。
   こちらは「譜面1件＝1行」で、保存番号ごとに最大 SCORE_MAX_ITEMS 件まで持てる。
 
-  ・預かるのは音の並び（[開始拍, 長さ, 小節, [midi…], リード番号]）と運指だけ。
-    元のファイル（MusicXML / MIDI / PDF）は預からない。個人を特定できる情報も入らない。
+  ・預かるのは音の並び（[開始拍, 長さ, 小節, [midi…], リード番号]）と運指、
+    それに MIDI の場合だけ元ファイル（src 列・base64）。個人を特定できる情報は入らない。
+  ・MIDI の元ファイルを預かるのは、一覧から開き直したあとにトラックを選び直せるようにするため
+    （音の並びだけでは、選ばなかったトラックが失われる）。MusicXML では預からない。
   ・運指は data とは別の列（fing）に持つ。運指を直しただけのときに sig（内容の指紋）が
     変わらないようにするため＝「同じ譜面か」の判定が運指の編集で揺れない。
   ・書き込みの前に「その保存番号が実在するか」を必ず確かめる（存在しない番号の行を作らない）。
@@ -21,6 +23,7 @@ const SCORE_MAX_ITEMS = 99;      /* 保存番号1つあたりの件数の上限 
 const SCORE_MAX_BYTES = 512000;  /* 譜面1件の JSON の上限（約500KB） */
 const SCORE_NAME_MAX  = 120;     /* 一覧に出す名前の長さ */
 const SCORE_SUB_MAX   = 80;      /* 副題（MIDIで選んだトラック名）の長さ */
+const SCORE_SRC_MAX   = 400000;  /* 元のMIDI（base64）の上限。約300KBのMIDIまで */
 
 /* テーブルは初回アクセス時に作る（saves と同じファイルの中）。
    列を足したときは、既に出来ているテーブルにも ALTER で足す（作り直さない＝データを消さない）。 */
@@ -37,6 +40,7 @@ function score_table(PDO $db): void {
        data       TEXT    NOT NULL,
        sig        TEXT    NOT NULL DEFAULT \'\',
        fing       TEXT    NOT NULL DEFAULT \'\',
+       src        TEXT    NOT NULL DEFAULT \'\',
        created_at INTEGER NOT NULL,
        updated_at INTEGER NOT NULL
      )'
@@ -47,6 +51,7 @@ function score_table(PDO $db): void {
   if (!isset($have['sig']))  $db->exec("ALTER TABLE scores ADD COLUMN sig  TEXT NOT NULL DEFAULT ''");
   if (!isset($have['fing'])) $db->exec("ALTER TABLE scores ADD COLUMN fing TEXT NOT NULL DEFAULT ''");
   if (!isset($have['sub']))  $db->exec("ALTER TABLE scores ADD COLUMN sub  TEXT NOT NULL DEFAULT ''");
+  if (!isset($have['src']))  $db->exec("ALTER TABLE scores ADD COLUMN src  TEXT NOT NULL DEFAULT ''");
   $db->exec('CREATE INDEX IF NOT EXISTS ix_scores_code ON scores (code, id)');
   $done = true;
 }
@@ -72,7 +77,7 @@ function score_list(string $code): array {
   $g = score_open($code);
   if (!$g['ok']) return $g;
 
-  $st = $g['db']->prepare('SELECT id, name, sub, notes, sig, updated_at FROM scores WHERE code = ? ORDER BY id DESC');
+  $st = $g['db']->prepare("SELECT id, name, sub, notes, sig, updated_at, (src <> '') AS hassrc FROM scores WHERE code = ? ORDER BY id DESC");
   $st->execute([$g['code']]);
   $rows = [];
   foreach ($st->fetchAll() as $r) {
@@ -83,6 +88,8 @@ function score_list(string $code): array {
       'sub'        => (string)$r['sub'],
       'notes'      => (int)$r['notes'],
       'sig'        => (string)$r['sig'],
+      /* 元のMIDIを持っている＝一覧から「トラック」を選び直せる */
+      'hassrc'     => ((int)$r['hassrc'] === 1),
       'updated_at' => (int)$r['updated_at'],
     ];
   }
@@ -92,7 +99,7 @@ function score_list(string $code): array {
 /* 保存。$id を渡せばその1件を上書きし、渡さなければ新しく追加する。
    「同じ譜面っぽいものがあるか」の判定と、上書き / 新規追加の選択は画面側（src/uploads.js）で行う
    ＝サーバが黙って上書きすることはない。 */
-function score_save(string $code, string $name, int $notes, string $data, string $sig = '', string $fing = '', int $id = 0, string $sub = ''): array {
+function score_save(string $code, string $name, int $notes, string $data, string $sig = '', string $fing = '', int $id = 0, string $sub = '', ?string $src = null): array {
   $g = score_open($code);
   if (!$g['ok']) return $g;
   $db = $g['db']; $code = $g['code'];
@@ -109,6 +116,12 @@ function score_save(string $code, string $name, int $notes, string $data, string
   if (!is_array(json_decode($data, true)))              return ['ok' => false, 'error' => 'payload'];
 
   if (strlen($fing) > SCORE_MAX_BYTES) return ['ok' => false, 'error' => 'payload'];
+  /* $src が null は「触らない」。文字列なら base64 として受け取る。大きすぎるものは預からない
+     （読み込み自体は成功させたいのでエラーにはせず空にする＝トラック選択だけできなくなる） */
+  if ($src !== null) {
+    $src = preg_replace('/[^A-Za-z0-9+\/=]/', '', $src);
+    if (strlen($src) > SCORE_SRC_MAX) $src = '';
+  }
   $sig = substr(preg_replace('/[^A-Za-z0-9]/', '', $sig), 0, 32);
   $sub = trim(preg_replace('/[\x00-\x1f]+/', ' ', $sub));
   if (preg_match('/\A.{0,' . SCORE_SUB_MAX . '}/us', $sub, $ms)) { $sub = $ms[0]; }
@@ -117,8 +130,13 @@ function score_save(string $code, string $name, int $notes, string $data, string
 
   /* 上書き（画面で選ばれた1件だけ。自分の保存番号のものに限る） */
   if ($id > 0) {
-    $st = $db->prepare('UPDATE scores SET name = ?, sub = ?, notes = ?, data = ?, sig = ?, fing = ?, updated_at = ? WHERE code = ? AND id = ?');
-    $st->execute([$name, $sub, $notes, $data, $sig, $fing, $now, $code, $id]);
+    if ($src === null) {
+      $st = $db->prepare('UPDATE scores SET name = ?, sub = ?, notes = ?, data = ?, sig = ?, fing = ?, updated_at = ? WHERE code = ? AND id = ?');
+      $st->execute([$name, $sub, $notes, $data, $sig, $fing, $now, $code, $id]);
+    } else {
+      $st = $db->prepare('UPDATE scores SET name = ?, sub = ?, notes = ?, data = ?, sig = ?, fing = ?, src = ?, updated_at = ? WHERE code = ? AND id = ?');
+      $st->execute([$name, $sub, $notes, $data, $sig, $fing, $src, $now, $code, $id]);
+    }
     if ($st->rowCount() < 1) return ['ok' => false, 'error' => 'notfound'];
     return ['ok' => true, 'id' => $id, 'mode' => 'update'];
   }
@@ -128,8 +146,8 @@ function score_save(string $code, string $name, int $notes, string $data, string
   $st->execute([$code]);
   if (((int)$st->fetchColumn()) >= SCORE_MAX_ITEMS) return ['ok' => false, 'error' => 'limit'];
 
-  $db->prepare('INSERT INTO scores (code, name, sub, notes, data, sig, fing, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-     ->execute([$code, $name, $sub, $notes, $data, $sig, $fing, $now, $now]);
+  $db->prepare('INSERT INTO scores (code, name, sub, notes, data, sig, fing, src, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+     ->execute([$code, $name, $sub, $notes, $data, $sig, $fing, (string)$src, $now, $now]);
   return ['ok' => true, 'id' => (int)$db->lastInsertId(), 'mode' => 'insert'];
 }
 
@@ -152,7 +170,7 @@ function score_load(string $code, int $id): array {
   $g = score_open($code);
   if (!$g['ok']) return $g;
 
-  $st = $g['db']->prepare('SELECT id, name, notes, data, fing FROM scores WHERE code = ? AND id = ?');
+  $st = $g['db']->prepare('SELECT id, name, notes, data, fing, src FROM scores WHERE code = ? AND id = ?');
   $st->execute([$g['code'], $id]);
   $row = $st->fetch();
   if (!$row) return ['ok' => false, 'error' => 'notfound'];
@@ -164,6 +182,8 @@ function score_load(string $code, int $id): array {
     'data' => json_decode($row['data'], true),
     /* 運指は無いこともある（先の版で保存したもの・一度も直していないもの） */
     'fing' => ($row['fing'] === '') ? null : json_decode($row['fing'], true),
+    /* 元のMIDI（base64）。MusicXML や大きすぎたものは null */
+    'src'  => ($row['src'] === '') ? null : (string)$row['src'],
   ];
 }
 
