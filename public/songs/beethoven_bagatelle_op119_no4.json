@@ -1,0 +1,97 @@
+{
+  "id": "beethoven_bagatelle_op119_no4",
+  "title": {
+    "ja": "11のバガテル 第4番",
+    "en": "Bagatelle Op.119 No.4",
+    "es": "Bagatela Op.119 No.4",
+    "zh": "十一首风俗小品 第4首"
+  },
+  "desc": {
+    "ja": "イ長調・4/4拍子 (Andante cantabile)",
+    "en": "A major, 4/4 (Andante cantabile)",
+    "es": "La mayor, 4/4 (Andante cantabile)",
+    "zh": "A大调・4/4拍 (Andante cantabile)"
+  },
+  "key": "A",
+  "tempo": 72,
+  "beatsPerMeasure": 4,
+  "composer": "L. v. Beethoven",
+  "opus": "119 No. 4",
+  "chords": [
+    "A",
+    "E7",
+    "F#m",
+    "Bm",
+    "A"
+  ],
+  "notes": [
+    [
+      0,
+      2
+    ],
+    [
+      69,
+      1
+    ],
+    [
+      73,
+      1
+    ],
+    [
+      76,
+      1.5
+    ],
+    [
+      74,
+      0.5
+    ],
+    [
+      73,
+      1
+    ],
+    [
+      71,
+      1
+    ],
+    [
+      69,
+      1
+    ],
+    [
+      68,
+      1
+    ],
+    [
+      69,
+      2
+    ],
+    [
+      71,
+      1
+    ],
+    [
+      73,
+      0.5
+    ],
+    [
+      74,
+      0.5
+    ],
+    [
+      76,
+      1
+    ],
+    [
+      78,
+      1
+    ],
+    [
+      76,
+      2
+    ],
+    [
+      0,
+      2
+    ]
+  ]
+}
