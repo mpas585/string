@@ -28,6 +28,7 @@ return [
     'cello'  => '大提琴',
     'violin' => '小提琴',
     'viola'  => '中提琴',
+    'contrabass' => '低音提琴',
   ],
 
   'page_title' => '%s练习应用｜指板按弦位置・指法・调音器｜GEN strings',
@@ -141,7 +142,6 @@ return [
 
     'score'          => '谱面',
     'file_open'      => '🎼 打开',
-    'pdf_btn'        => '📄 PDF',
     'file_note'      => '支持 MusicXML（.xml/.musicxml/.mxl）与 MIDI（.mid）',
     'tracks'         => 'MIDI 音轨选择',
     'skip_start'     => '⏭ 跳到第一个音',
@@ -171,10 +171,6 @@ return [
 
     'drawer_note_html' => '按弦位置由弦长比（1 − 2<sup>−半音/12</sup>）计算。把位名称与指法编号仅供参考。',
 
-    'pdf_open'       => '📄 打开',
-    'pdf_import'     => '导入',
-    'pdf_note_html'  => 'PDF可<b>作为参考显示</b>，也可用<b>导入</b>读取页面上的音符（仅音高与顺序；<b>节奏由符头黑白推测</b>，不读取符尾、符杠、休止符与小节线）。需要准确的指法与播放数据时，请导入 MusicXML。',
-    'pdf_empty'      => '选择 PDF 文件后将显示在这里',
 
     'tuner_t'        => '调音器 / 音准判定',
 
@@ -264,9 +260,6 @@ return [
     'measure_flash'        => '第%s小节',
     'store_ok'             => '修改后的指法会自动保存（保存在本机）',
     'store_ng'             => '当前环境无法自动保存，请用“导出”保存为 JSON',
-    'pdf_lib_fail'         => '无法载入 PDF 显示库。',
-    'pdf_pages'            => 'PDF：%s 页',
-    'pdf_open_fail'        => '无法打开 PDF：%s',
     'scale_out_of_range'   => '当前设置超出音域，请减少八度数。',
     'xml_parse_fail'       => '无法解析 XML，文件可能已损坏。',
     'timewise_unsupported' => '不支持 score-timewise 格式，请以 partwise 格式导出。',
@@ -285,14 +278,8 @@ return [
     'skip_to_first'        => '跳到第一个音（第 %s 小节 / %s）',
     'midi_tracks'          => 'MIDI：%s 个音轨 → 可从列表选择',
     'score_loaded'         => '载入完成：%s 个事件',
-    /* ===== PDF乐谱读取（src/omr-import.js）。tt() 只替换 %s ===== */
-    'omr_run'              => '正在读取乐谱…',
-    'omr_nostaff'          => '未检测到五线谱。可能是扫描倾斜或分辨率过低',
-    'omr_nonote'           => '未检测到音符',
-    'omr_done'             => '已导入%s个音（%s行・节奏由符头黑白推测）',
-    'omr_lowconf'          => '／有%s行的谱号判断不确定',
-    'omr_fail'             => '读取失败：%s',
     'fing_restored_suffix' => ' / 已恢复指法',
+    'swan_title'           => '天鹅',
     'swan_loaded'          => '已载入天鹅',
     'preset_err'           => '预设载入错误：%s',
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 没有乐曲<small>请检查 public/songs/manifest.json</small></button>',
@@ -343,7 +330,7 @@ return [
     'faqs' => [
       ['需要安装吗？', '不需要。用浏览器打开即可使用。载入的谱面与修改的指法都保存在本机，不会发送到外部。'],
       ['麦克风没有反应', '麦克风仅在 https:// 或 localhost 下可用。以 file:// 直接打开文件，或未在浏览器中允许使用麦克风时无法工作。'],
-      ['支持哪些谱面文件？', 'MusicXML（.xml / .musicxml / .mxl）与 MIDI（.mid）。PDF 仅作参考显示，不会从图像中识别音符。'],
+      ['支持哪些谱面文件？', 'MusicXML（.xml / .musicxml / .mxl）与 MIDI（.mid）。'],
       ['可以自己修改指法吗？', '点击音符会显示候选项。选择的指法会自动保存，也可以导出与导入。'],
     ],
     'note'  => '所有处理均在本机完成，不会向外部发送数据。',

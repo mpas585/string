@@ -33,6 +33,7 @@ return [
     'cello'  => 'チェロ',
     'violin' => 'バイオリン',
     'viola'  => 'ビオラ',
+    'contrabass' => 'コントラバス',
   ],
 
   /* %s = 楽器名 */
@@ -147,7 +148,6 @@ return [
 
     'score'          => '譜面',
     'file_open'      => '🎼 開く',
-    'pdf_btn'        => '📄 PDF',
     'file_note'      => 'MusicXML（.xml/.musicxml/.mxl）と MIDI（.mid）に対応',
     'tracks'         => 'MIDIトラック選択',
     'skip_start'     => '⏭ 最初の音へスキップ',
@@ -177,10 +177,6 @@ return [
 
     'drawer_note_html' => '押弦位置は弦長比（1 − 2<sup>−半音/12</sup>）から算出。ポジション名・指番号は目安です。',
 
-    'pdf_open'       => '📄 開く',
-    'pdf_import'     => '取り込む',
-    'pdf_note_html'  => 'PDFは<b>参照表示</b>のほか、<b>取り込む</b>で音符を読み取れます（音高と並びのみ。<b>リズムは符頭の白黒からの推定</b>で、旗・連桁・休符・小節線は読みません）。正確な運指・再生データは MusicXML から取り込んでください。',
-    'pdf_empty'      => 'PDFファイルを選ぶとここに表示されます',
 
     'tuner_t'        => 'チューナー / ピッチ判定',
 
@@ -270,9 +266,6 @@ return [
     'measure_flash'        => '第%s小節',
     'store_ok'             => '編集した運指は自動保存されます（この端末に保存）',
     'store_ng'             => 'この環境では自動保存が使えません。「書き出し」でJSON保存してください',
-    'pdf_lib_fail'         => 'PDF表示ライブラリを読み込めませんでした。',
-    'pdf_pages'            => 'PDF：%sページ',
-    'pdf_open_fail'        => 'PDFを開けません：%s',
     'scale_out_of_range'   => 'この設定では音域外です。オクターブを減らしてください。',
     'xml_parse_fail'       => 'XMLを解析できませんでした。ファイルが壊れている可能性があります。',
     'timewise_unsupported' => 'score-timewise 形式は未対応です。partwise形式で書き出してください。',
@@ -291,14 +284,8 @@ return [
     'skip_to_first'        => '最初の音へ（第%s小節 / %s）',
     'midi_tracks'          => 'MIDI：%sトラック → 一覧から選べます',
     'score_loaded'         => '読み込み完了：%sイベント',
-    /* ===== PDF譜面の読み取り（src/omr-import.js）。tt() は %s だけ差し替える ===== */
-    'omr_run'              => '譜面を読み取っています…',
-    'omr_nostaff'          => '五線を検出できませんでした。傾きや解像度の低いスキャンかもしれません',
-    'omr_nonote'           => '音符を検出できませんでした',
-    'omr_done'             => '%s音を取り込みました（%s段・リズムは符頭の白黒からの推定）',
-    'omr_lowconf'          => '／音部記号が怪しい段が%s個あります',
-    'omr_fail'             => '読み取りに失敗しました：%s',
     'fing_restored_suffix' => ' / 運指を復元',
+    'swan_title'           => '白鳥',
     'swan_loaded'          => '白鳥を読み込みました',
     'preset_err'           => 'プリセット読込エラー：%s',
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 曲がありません<small>public/songs/manifest.json を確認してください</small></button>',
@@ -350,7 +337,7 @@ return [
     'faqs' => [
       ['インストールは必要ですか？', 'いりません。ブラウザで開くだけで動きます。読み込んだ譜面や編集した運指は端末内に保存され、外部へ送信されることはありません。'],
       ['マイクが反応しません', 'マイクは https:// または localhost でのみ使えます。file:// でファイルを直接開いた場合や、ブラウザでマイクの使用を許可していない場合は動作しません。'],
-      ['どの譜面ファイルが使えますか？', 'MusicXML（.xml / .musicxml / .mxl）と MIDI（.mid）です。PDF は参照表示のみで、画像から音符を読み取る機能はありません。'],
+      ['どの譜面ファイルが使えますか？', 'MusicXML（.xml / .musicxml / .mxl）と MIDI（.mid）です。'],
       ['運指は自分で直せますか？', '音符をタップすると候補が表示されます。選んだ運指は自動で保存され、書き出し・読み込みもできます。'],
     ],
     'note'  => '処理はすべて端末内で完結します。データを外部へ送信することはありません。',

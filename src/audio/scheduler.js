@@ -171,9 +171,14 @@ export function seekTo(beat){
   setSeekHead(beat);
 }
 
-export function scheduleMetro(ctx, bus, tBar, bs, beats){
-  const n=Math.max(1, Math.round(beats));
-  for(let i=0;i<n;i++) metroClick(ctx, bus, tBar + i*bs, i===0);
+/* 1小節ぶんのメトロノーム。
+   beats = 1小節の長さ（4分音符=1）／unit = 1拍の長さ（4分音符=1）。
+   ※ 以前は unit を見ずに常に4分音符で刻んでいたため、6/8 や 3/8 の譜面で
+      拍数も間隔も合わなかった（3/8 では小節の外にクリックがはみ出していた）。 */
+export function scheduleMetro(ctx, bus, tBar, bs, beats, unit){
+  const u=(unit>0) ? unit : 1;
+  const n=Math.max(1, Math.round(beats/u));
+  for(let i=0;i<n;i++) metroClick(ctx, bus, tBar + i*bs*u, i===0);
 }
 
 /* 1小節ぶんの伴奏（next = 次のコード。ベースのアプローチ音に使う）
@@ -382,8 +387,11 @@ export function startPlay(fromBeat, noCount){
   const doCount = ST.countIn && !noCount && !wasPlaying;
   /* カウント数は設定（4 / 8）。譜面の拍子ではなく利用者が選んだ数を使う */
   const countN = (ST.countBeats===8) ? 8 : 4;
+  /* カウントの間隔も本編と同じ「1拍」にそろえる（8分の曲でカウントだけ4分になるのを防ぐ） */
+  const cu = (ST.beatUnit>0) ? ST.beatUnit : 1;
+  const countSec = ST.beatSec * cu;
   const countBeats = doCount ? countN : 0;
-  ST.t0 = ctx.currentTime + lead + countBeats*ST.beatSec - (from - ST.range.sB)*ST.beatSec;
+  ST.t0 = ctx.currentTime + lead + countBeats*countSec - (from - ST.range.sB)*ST.beatSec;
 
   if(!ST.range.list.length && !ST.enjoy){
     toast(tt('msg.loop_no_notes'));
@@ -393,11 +401,11 @@ export function startPlay(fromBeat, noCount){
   /* 冒頭カウント＝1小節ぶん（画面全体に数字＋クリック） */
   if(doCount){
     for(let i=0;i<countN;i++){
-      const at=ctx.currentTime + lead + i*ST.beatSec;
+      const at=ctx.currentTime + lead + i*countSec;
       metroClick(ctx, ST.buses.metro, at, i===0);
       ST.timers.push(setTimeout(()=> showCount(i+1), Math.max(0,(at-ctx.currentTime)*1000)));
     }
-    ST.timers.push(setTimeout(hideCount, Math.max(0,(lead + countN*ST.beatSec - 0.05)*1000)));
+    ST.timers.push(setTimeout(hideCount, Math.max(0,(lead + countN*countSec - 0.05)*1000)));
   } else {
     hideCount();
   }
@@ -460,7 +468,7 @@ export function pumpQueue(){
       const n = it.prog.length;
       if(acc) scheduleBar(ctx, B, it.t, bs, it.prog[it.bar%n], it.prog[(it.bar+1)%n], it.beats, ST.beatUnit);
       /* メトロノーム：伴奏OFF時は常に。スケール練習は伴奏ONでも鳴らす（練習の基準） */
-      if(!acc || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats);
+      if(!acc || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats, ST.beatUnit);
     } else if(it.kind==='end'){
       ST.timers.push(setTimeout(stopPlay, Math.max(0,(it.t - ctx.currentTime)*1000)));
     }

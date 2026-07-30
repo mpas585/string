@@ -11,9 +11,9 @@
   依存: state(ST), util(midiName), fingerboard(recommend/scrollBoardToActive),
         notation(scrollStaffToActive), scale(buildScaleEvents),
         scheduler(measureOfBeat/setSeekHead/setTempo/startPlay/updateTransport),
-        modes(render/scrollStripToActive/setScore/syncLoopUI), drawer(closeDrawer/openDrawer/openPdfOverlay),
-        dom(toast), pdf(openPdf)。JSZip は index.html でグローバル読み込み。
-  ※ pdf は Batch7 で作成。それまで PDFファイルを開く経路のみ実行時未解決。
+        modes(render/scrollStripToActive/setScore/syncLoopUI), drawer(closeDrawer/openDrawer/setScoreSub),
+        dom(toast), uploads(beginUpload/rememberUpload)。JSZip は基幹PHPでグローバル読み込み。
+  ※ PDFの参照表示・読み取り（OMR）は廃止した（.pdf は受け付けない）。
 */
 import { ST } from './state.js';
 import { midiName, NOTE_NAMES, OPEN, tt, pickText, localFile, localUrl } from './util.js';
@@ -22,11 +22,10 @@ import { scrollStaffToActive } from './notation.js';
 import { buildScaleEvents, SCALE_LABEL } from './scale.js';
 import { measureOfBeat, setSeekHead, setTempo, startPlay, updateTransport } from './audio/scheduler.js';
 import { render, scrollStripToActive, setScore, syncDock, syncLoopUI } from './modes.js';
-import { closeDrawer, openDrawer, openPdfOverlay } from './drawer.js';
+import { closeDrawer, openDrawer, setScoreSub } from './drawer.js';
 import { toast } from './dom.js';
-import { openPdf } from './pdf.js';
 /* 読み込んだ譜面を保存番号に紐づけて残す（保存番号が無ければ何もしない） */
-import { rememberUpload } from './uploads.js';
+import { beginUpload, rememberUpload } from './uploads.js';
 
 export function pitchToMidi(pEl){
   const step = pEl.querySelector('step').textContent.trim();
@@ -54,13 +53,13 @@ export function parseMusicXML(text){
   else { const pm = doc.querySelector('metronome per-minute'); if(pm) tempo = parseFloat(pm.textContent); }
 
   /* 拍子（4分音符=1拍 換算の1小節の長さ） */
-  let beatsPerMeasure = 4;
+  let beatsPerMeasure = 4, beatUnit = 1;
   const timeEl = doc.querySelector('time');
   if(timeEl){
     const bEl = timeEl.querySelector('beats'), tEl = timeEl.querySelector('beat-type');
     if(bEl && tEl){
       const b = parseInt(bEl.textContent,10), bt = parseInt(tEl.textContent,10);
-      if(b>0 && bt>0) beatsPerMeasure = b * (4/bt);
+      if(b>0 && bt>0){ beatsPerMeasure = b * (4/bt); beatUnit = beatUnitOf(b, bt); }
     }
   }
 
@@ -121,7 +120,26 @@ export function parseMusicXML(text){
   evs.forEach(e=>{ e.fing = recommend(e.pitches[e.leadIdx].midi); });
 
   if(!evs.length) throw new Error(tt('msg.no_notes'));
-  return {events:evs, tempo, measures:mList, beatsPerMeasure};
+  return {events:evs, tempo, measures:mList, beatsPerMeasure, beatUnit};
+}
+
+/* MIDI のテキスト（トラック名など）には文字コードの指定が無い。
+   UTF-8 として筋の通る並びなら UTF-8、そうでなければ日本語のSMFで多い Shift_JIS として読む。
+   どちらでも読めないときだけ従来どおり1バイト＝1文字として扱う。
+   ※ 以前は常に1バイト＝1文字（Latin-1）で読み、そのうえで日本語以外を捨てていたため、
+      日本語のトラック名が文字化けしたり丸ごと消えたりしていた。 */
+export function decodeMidiText(bytes){
+  const clean=(s)=> s.replace(/[\x00-\x1f\x7f]/g,'').trim();
+  if(typeof TextDecoder==='function'){
+    try{ return clean(new TextDecoder('utf-8',{fatal:true}).decode(bytes)); }catch(e){}
+    try{
+      const s=new TextDecoder('shift_jis').decode(bytes);
+      if(s.indexOf('\ufffd')<0) return clean(s);
+    }catch(e){}
+  }
+  let s='';
+  for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]);
+  return clean(s);
 }
 
 export function parseMidi(buf){
@@ -136,7 +154,7 @@ export function parseMidi(buf){
   p += Math.max(0, hlen-6);
   if(division & 0x8000) throw new Error(tt('msg.smpte_unsupported'));
 
-  let tempo=120, tempoSet=false, tsNum=4, tsDen=4;
+  let tempo=120, tempoSet=false, tsNum=4, tsDen=4, tsSet=false;
   const tracks=[];
 
   for(let t=0; t<ntrk && p+8<=dv.byteLength; t++){
@@ -165,14 +183,18 @@ export function parseMidi(buf){
         let ln=0,bb;
         do{ bb=dv.getUint8(p++); ln=(ln<<7)|(bb&0x7f); }while((bb&0x80) && p<end);
         if(meta===0x03 && ln>0){
-          let s=''; for(let i=0;i<ln && p+i<end;i++) s+=String.fromCharCode(dv.getUint8(p+i));
-          name=s.replace(/[^\x20-\x7e\u3000-\u9fff\uff00-\uffef]/g,'').trim();
+          const bytes=new Uint8Array(Math.max(0, Math.min(ln, end-p)));
+          for(let i=0;i<bytes.length;i++) bytes[i]=dv.getUint8(p+i);
+          name=decodeMidiText(bytes);
         } else if(meta===0x51 && ln===3 && !tempoSet){
           const us=(dv.getUint8(p)<<16)|(dv.getUint8(p+1)<<8)|dv.getUint8(p+2);
           if(us>0){ tempo=Math.round(60000000/us); tempoSet=true; }
-        } else if(meta===0x58 && ln>=2){
+        } else if(meta===0x58 && ln>=2 && !tsSet){
+          /* 拍子は【最初のものだけ】採る。曲の途中で変わる譜面で最後の拍子を拾うと、
+             小節の切り方とメトロノームが曲全体でずれる（テンポと同じ扱いにそろえた）。 */
           tsNum=dv.getUint8(p) || 4;
           tsDen=Math.pow(2, dv.getUint8(p+1)) || 4;
+          tsSet=true;
         }
         p+=ln;
       } else if(status===0xf0 || status===0xf7){
@@ -255,9 +277,22 @@ export function bestTrackIndex(tracks){
   return bestScore>0 ? best : 0;
 }
 
+/* 拍子から「1拍の長さ」を出す（4分音符＝1）。メトロノームが刻む間隔になる。
+     4/4・3/4 → 1（4分音符）
+     6/8・9/8・12/8 → 1.5（付点4分音符。複合拍子は付点で数えるのが普通）
+     3/8 → 0.5（8分音符）
+     2/2 → 2（2分音符）
+   これを渡さないと ST.beatUnit が 1 のままになり、8分の曲でメトロノームが合わない。 */
+export function beatUnitOf(tsNum, tsDen){
+  const num=tsNum || 4, den=tsDen || 4;
+  if(den===8 && num>3 && num%3===0) return 1.5;
+  return 4/den;
+}
+
 /* MIDIトラック → イベント列 */
 export function midiTrackToEvents(track, division, tsNum, tsDen){
   const beatsPerMeasure = (tsNum * (4/tsDen)) || 4;
+  const beatUnit = beatUnitOf(tsNum, tsDen);
   const raw = track.notes.map(n=>({
     onset: n.startTick/division,
     dur: Math.max((n.endTick-n.startTick)/division, 0.06),
@@ -292,7 +327,7 @@ export function midiTrackToEvents(track, division, tsNum, tsDen){
   const measures=[];
   for(let m=1;m<=maxM;m++) measures.push({num:m, start:(m-1)*beatsPerMeasure, end:m*beatsPerMeasure});
 
-  return {events:evs, measures, beatsPerMeasure};
+  return {events:evs, measures, beatsPerMeasure, beatUnit};
 }
 
 export async function readAsText(file){ return await file.text(); }
@@ -327,10 +362,12 @@ export function selectTrack(i, play){
   const t=midiFile.tracks[i];
   const parsed=midiTrackToEvents(t, midiFile.division, midiFile.tsNum, midiFile.tsDen);
   setTempo(Math.round(midiFile.tempo));
-  setScore(parsed, midiFile.name+'#'+i);
+  setScore(parsed, midiFile.name+'#'+i, midiFile.name+' / '+t.name);
   /* 選んだトラックを保存番号に紐づけて残す（自動選択ぶんもここを通るので、
-     loadScoreFile 側では呼ばない＝二重に保存しない）。名前にトラック名を含める。 */
-  rememberUpload(midiFile.name+' / '+t.name, parsed, midiFile.tempo);
+     loadScoreFile 側では呼ばない＝二重に保存しない）。
+     一覧に出す名前はファイル名だけにして、選んだトラックは副題として持たせる
+     ＝トラックを選び直しても件数は増えず、同じ1件が書き換わる。 */
+  rememberUpload(midiFile.name, parsed, midiFile.tempo, {track:i, trackName:t.name});
   renderTracks();
   const out=parsed.events.filter(e=> !e.fing).length;
   toast(tt('msg.track_loaded', t.name, parsed.events.length) + (out ? tt('msg.out_range_suffix', out) : ''));
@@ -364,7 +401,8 @@ export function skipToStart(){
 
 export async function loadScoreFile(file){
   const name=file.name.toLowerCase();
-  if(name.endsWith('.pdf')){ closeDrawer(); openPdfOverlay(); return openPdf(file); }
+  /* この読み込み操作で作る／書き換えるアップロード1件を決める（MIDIのトラック選び直しも同じ1件） */
+  beginUpload(file.name);
 
   try{
     /* ---- MIDI ---- */
@@ -373,7 +411,8 @@ export async function loadScoreFile(file){
       const m=parseMidi(buf);
       const sel=bestTrackIndex(m.tracks);
       midiFile={tracks:m.tracks, tempo:m.tempo, tsNum:m.tsNum, tsDen:m.tsDen, division:m.division, name:file.name, sel};
-      selectTrack(sel);        /* 保存は selectTrack 側で行う（トラックを選び直したぶんも残る） */
+      selectTrack(sel);        /* 保存は selectTrack 側で行う（トラックを選び直したぶんも同じ1件を更新） */
+      setScoreSub('tracks');   /* 読み込んだ直後はトラックを選ぶ面を出す */
       openDrawer();
       const box=document.getElementById('tracks');
       if(box.scrollIntoView) box.scrollIntoView({block:'nearest'});
@@ -391,8 +430,8 @@ export async function loadScoreFile(file){
     }
     const parsed=parseMusicXML(text);
     setTempo(Math.round(parsed.tempo));
-    const restored=setScore(parsed, file.name);
-    rememberUpload(file.name, parsed, parsed.tempo);
+    const restored=setScore(parsed, file.name, file.name);
+    rememberUpload(file.name, parsed, parsed.tempo, null);
     closeDrawer();
     toast(tt('msg.score_loaded', parsed.events.length) + (restored ? tt('msg.fing_restored_suffix') : ''));
   }catch(err){
@@ -517,7 +556,7 @@ export function loadSample(quiet){
     midiFile=null; renderTracks();
     const parsed=parseMusicXML(SAMPLE_XML);
     setTempo(Math.round(parsed.tempo));
-    setScore(parsed, 'le-cygne');
+    setScore(parsed, 'le-cygne', tt('msg.swan_title'));
     ST.songChords=buildChords(SAMPLE_CHORDS);   /* setScore が消すので、その後に入れる */
     syncDock();
     if(!quiet){ closeDrawer(); toast(tt('msg.swan_loaded')); }
@@ -641,9 +680,12 @@ export async function loadSong(id, quiet){
     const data=await res.json();
     const parsed=buildSongFromData(data);
     setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
-    setScore(parsed, 'song:'+id);
+    /* 上部バーに出すのは曲名（言語ごとの表示名）。'song:xxx' は運指の保存キー用の内部IDで、
+       画面には出さない。 */
+    const title=pickText(data.title) || pickText(s.title) || id;
+    setScore(parsed, 'song:'+id, title);
     ST.songChords=buildChords(data.chords);   /* setScore が消すので、その後に入れる */
     syncDock();
-    if(!quiet){ closeDrawer(); toast(tt('msg.song_loaded', pickText(data.title) || pickText(s.title) || id)); }
+    if(!quiet){ closeDrawer(); toast(tt('msg.song_loaded', title)); }
   }catch(e){ toast(tt('msg.song_err', e.message)); }
 }

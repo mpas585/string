@@ -5,8 +5,9 @@
   保存番号を持っているあいだだけ働く。番号が無ければ一覧に案内を出すだけで、
   譜面の読み込み自体はこれまでどおり動く（＝この機能が落ちても本体は止まらない）。
 
-    譜面を読み込む   … songs.js / omr-import.js が rememberUpload() を呼ぶ
-                       MIDI は selectTrack() から呼ばれる＝選んだトラックごとに残る
+    譜面を読み込む   … songs.js が beginUpload(ファイル名) → rememberUpload() を呼ぶ
+                       【1ファイル＝1件】。MIDI のトラックを選び直しても件数は増えず、
+                       同じ1件が書き換わる（どのトラックを選んでいたかは sub に持つ）
     一覧に出す       … refreshUploads()（保存番号が変わるたび account.js から呼ばれる）
     一覧から開く     … openUpload()   … サーバから取り出して setScore ＋ 運指を復元
     一覧から消す     … deleteUpload()
@@ -38,7 +39,10 @@ const LANG = (window.APP && window.APP.lang) || 'ja';
 export const MAX_ITEMS = 99;        /* サーバ側 SCORE_MAX_ITEMS と合わせる */
 const MAX_BYTES = 512000;           /* サーバ側 SCORE_MAX_BYTES と合わせる */
 
-let items    = [];                  /* [{id, name, notes, sig, updated_at}] */
+let items    = [];                  /* [{id, name, sub, notes, sig, updated_at}] */
+/* いま進行中の読み込み操作。MIDI のトラックを選び直したときに、新しい行を作らず
+   同じ1件を書き換えるために持つ（beginUpload でファイルごとに引き直す）。 */
+let session  = { name: '', id: 0 };
 let busy     = false;
 let curId    = 0;                   /* いま画面に出ている譜面に対応する id（0＝対応なし） */
 let curScore = '';                  /* そのときの ST.scoreName。別の譜面に移ったかを見るために持つ
@@ -70,10 +74,13 @@ function sigOf(s) {
 }
 
 /* ===== 譜面 ⇄ 保存する形 ===== */
-export function packScore(parsed, tempo) {
+export function packScore(parsed, tempo, meta) {
   return {
     v: 1,
     tempo: Math.round(tempo || ST.tempo),
+    /* MIDI のときは選んでいたトラック（番号と名前）。開き直したときにこれを見せる */
+    track: (meta && meta.track != null) ? meta.track : null,
+    trackName: (meta && meta.trackName) ? String(meta.trackName) : '',
     beatsPerMeasure: parsed.beatsPerMeasure || 4,
     beatUnit: (parsed.beatUnit > 0) ? parsed.beatUnit : 1,
     events: parsed.events.map(e => [e.onset, e.dur, e.measure, e.pitches.map(p => p.midi), e.leadIdx]),
@@ -116,8 +123,9 @@ export function renderUploads() {
   } else {
     box.innerHTML = items.map(it => {
       const on = (it.id === curId) ? ' on' : '';
+      const sub = tt('msg.track_count', it.notes) + (it.sub ? ' · ' + it.sub : '');
       return '<div class="uprow' + on + '" data-id="' + it.id + '">'
-        + '<span class="un">' + esc(it.name) + '<small>' + esc(tt('msg.track_count', it.notes)) + '</small></span>'
+        + '<span class="un">' + esc(it.name) + '<small>' + esc(sub) + '</small></span>'
         + '<button type="button" class="ud" data-id="' + it.id + '">' + esc(tt('ui.uploads_delete')) + '</button>'
         + '</div>';
     }).join('');
@@ -127,7 +135,7 @@ export function renderUploads() {
 
 export async function refreshUploads() {
   const code = getSaveCode();
-  if (!code) { items = []; curId = 0; curScore = ''; renderUploads(); return; }
+  if (!code) { items = []; curId = 0; curScore = ''; session = { name: '', id: 0 }; renderUploads(); return; }
   try {
     const r = await call('list', { code });
     items = (r && r.ok && Array.isArray(r.items)) ? r.items : [];
@@ -151,28 +159,47 @@ function findSimilar(name, packed, sig) {
   return items.find(it => it.notes === notes) || null;
 }
 
+/* ファイルを1つ読み込み始めた合図。ここから先の rememberUpload は同じ1件として扱う
+   （MIDI のトラックを選び直しても行が増えないのはこのため）。 */
+export function beginUpload(name) {
+  session = { name: String(name || ''), id: 0 };
+}
+
 /* ===== 保存（譜面を読み込んだ経路から呼ばれる） ===== */
-export async function rememberUpload(name, parsed, tempo) {
+export async function rememberUpload(name, parsed, tempo, meta) {
   const code = getSaveCode();
   if (!code || !parsed || !parsed.events || !parsed.events.length) return;
 
   let packed, data;
-  try { packed = packScore(parsed, tempo); data = JSON.stringify(packed); }
+  try { packed = packScore(parsed, tempo, meta); data = JSON.stringify(packed); }
   catch (e) { return; }
   if (data.length > MAX_BYTES) { toast(tt('msg.up_err', tt('save.err.payload'))); return; }
 
   const nm  = String(name || '').slice(0, 120);
+  const sub = (meta && meta.trackName) ? String(meta.trackName) : '';
   const sig = sigOf(data);
+
+  /* 同じ読み込み操作の続き（MIDI のトラックを選び直した）＝尋ねずに同じ1件を書き換える */
+  if (session.name === nm && session.id) {
+    await sendUpload({ code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: session.id }, true);
+    return;
+  }
+
   const hit = findSimilar(nm, packed, sig);
 
   /* 名前も中身も同じ＝ただ開き直しただけ。尋ねず、書き換えもしない（運指もそのまま残す）。
      MIDI のトラックを行き来しても尋ねられないのはこの判定のため。
      以後の運指の編集がこの1件に届くよう、対応だけ付け替える。 */
-  if (hit && hit.name === nm && hit.sig === sig) { curId = hit.id; curScore = ST.scoreName; renderUploads(); return; }
+  if (hit && hit.name === nm && hit.sig === sig) {
+    curId = hit.id; curScore = ST.scoreName;
+    if (session.name === nm) session.id = hit.id;
+    renderUploads();
+    return;
+  }
 
   /* 似ているものがある＝上書きか新規追加かを尋ねる（サーバは黙って上書きしない） */
   if (hit) {
-    pending = { code: code, nm: nm, sig: sig, data: data, notes: packed.events.length, id: hit.id };
+    pending = { code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: hit.id };
     const body = document.getElementById('upDupBody');
     if (body) body.textContent = tt('ui.up_dup_body', hit.name, nm);
     openDockModal('mUpDup');
@@ -180,14 +207,14 @@ export async function rememberUpload(name, parsed, tempo) {
   }
 
   /* 初めての譜面。読み込みのトーストを上書きしないよう、ここでは黙って保存する */
-  await sendUpload({ code: code, nm: nm, sig: sig, data: data, notes: packed.events.length, id: 0 }, true);
+  await sendUpload({ code: code, nm: nm, sub: sub, sig: sig, data: data, notes: packed.events.length, id: 0 }, true);
 }
 
 /* 実際に送る。id>0 なら上書き、0 なら新規追加 */
 async function sendUpload(p, quiet) {
   try {
     const r = await call('save', {
-      code: p.code, name: p.nm, notes: p.notes, data: p.data, sig: p.sig,
+      code: p.code, name: p.nm, sub: p.sub || '', notes: p.notes, data: p.data, sig: p.sig,
       fing: packFing(), id: p.id || 0,
     });
     if (!r || !r.ok) {
@@ -197,6 +224,7 @@ async function sendUpload(p, quiet) {
     }
     curId = r.id;
     curScore = ST.scoreName;        /* この譜面を見ているあいだの運指の編集は、この1件に送る */
+    if (session.name === p.nm) session.id = r.id;   /* 以後のトラック選び直しは同じ1件へ */
     await refreshUploads();
     if (!quiet) toast(tt(r.mode === 'update' ? 'msg.up_overwritten' : 'msg.up_added', p.nm));
   } catch (e) { /* 通信できないときは黙って諦める（本体の読み込みは済んでいる） */ }
@@ -227,6 +255,7 @@ export async function openUpload(id) {
     const fing = r.fing;
 
     setMidiFile(null); renderTracks();          /* 前のMIDIのトラック一覧を残さない */
+    session = { name: '', id: 0 };               /* 読み込み操作の続きではない */
     /* 運指は保存時のオクターブで計算されているので、setScore（＝applyOctave）より前に戻す */
     if (fing && fing.octave != null) ST.octave = (fing.octave === 'auto') ? 'auto' : (parseInt(fing.octave, 10) || 0);
     setTempo(Math.round((r.data && r.data.tempo) || ST.tempo));
@@ -264,6 +293,7 @@ export async function deleteUpload(id) {
     const r = await call('delete', { code, id: id });
     if (!r || !r.ok) { toast(tt('msg.up_err', (r && r.message) || '')); return; }
     if (Number(id) === curId) { curId = 0; curScore = ''; }
+    if (Number(id) === session.id) session.id = 0;
     await refreshUploads();
     toast(tt('msg.up_deleted'));
   } catch (e) {

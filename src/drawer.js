@@ -1,15 +1,15 @@
 /*
-  drawer.js — ストレージ・設定の保存/復元・運指の保存/読込・ドロワー/ギア/PDF開閉。
+  drawer.js — ストレージ・設定の保存/復元・運指の保存/読込・ドロワー/ギアの開閉・子タブ切替。
   元 cello-finger.html より無改変で移植。
     Store（localStorage / 不可環境はメモリ）      … L1870–1882
     SETTINGS_KEY/saveSettings/loadSettings/syncSettingsUI … L1883–1944
     scoreSig/fingerData/applyFingerData          … L1945–1975
     saveTimer/saveFingering/loadFingering         … L1976–1987
     exportFingering/importFingering/resetFingering … L1988–2013
-    openDrawer/openGear/closeGear/toggleGear/closeDrawer/openPdfOverlay/closePdfOverlay … L3491–3497
+    openDrawer/openGear/closeGear/toggleGear/closeDrawer … L3491–3497
   依存: state(ST/volProfileKey), util(fracOf/zoneOf/fingerHint), fingerboard(recommend),
-        modes(render/syncLayoutClass), dom(toast), pdf(pdfDoc/renderPdfPage)。
-  ※ pdf は Batch7 で作成。それまで PDF開閉のみ実行時未解決（構文・元一致は検証済み）。
+        modes(render/syncLayoutClass), dom(toast)。
+  ※ PDFの参照表示・読み取り（OMR）は廃止した（openPdfOverlay / closePdfOverlay も削除）。
 */
 import { ST, volProfileKey, VOL_KEYS } from './state.js';
 import { fracOf, zoneOf, fingerHint, INSTRUMENT_ID, tt } from './util.js';
@@ -17,7 +17,6 @@ import { recommend } from './fingerboard.js';
 import { SCALES } from './scale.js';
 import { render, syncLayoutClass, syncDock } from './modes.js';
 import { toast, clearPlayAttn } from './dom.js';
-import { pdfDoc, renderPdfPage } from './pdf.js';
 /* 保存（保存番号）への通知。設定と運指の保存はここが唯一の出口なので、ここから知らせる */
 import { settingsChanged } from './account.js';
 
@@ -253,8 +252,13 @@ export function openGearPage(name, back){
 export function closeGear(){ document.getElementById('gearPanel').classList.remove('open'); document.getElementById('gearScrim').classList.remove('open'); clearPlayAttn(); }
 export function toggleGear(){ document.getElementById('gearPanel').classList.contains('open') ? closeGear() : openGear(); }
 export function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); clearPlayAttn(); }
-export function openPdfOverlay(){ document.getElementById('pdfOverlay').classList.add('open'); if(pdfDoc) renderPdfPage(); }
-export function closePdfOverlay(){ document.getElementById('pdfOverlay').classList.remove('open'); }
+/* ===== コピー練習モードの子タブ（曲を選ぶ / 譜面を読み込む / MIDIトラック選択） =====
+   'tracks' はタブを持たない面で、MIDIを読み込んだときに songs.js から切り替える
+   （「‹ 戻る」で 'load' に戻る）。main.js と songs.js の両方から呼ぶので drawer.js に置く。 */
+export function setScoreSub(sub){
+  document.querySelectorAll('#scoreSubSeg button').forEach(b=> b.classList.toggle('on', b.dataset.sub===sub));
+  document.querySelectorAll('.subpanel').forEach(p=> p.classList.toggle('m-hide', p.dataset.sub!==sub));
+}
 
 /* ===== 画面左下ドックのモーダル（テンポ / オクターブ / ループ） ===== */
 /* モーダルの開閉は dom.js へ移した（トップページからも使うため）。

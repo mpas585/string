@@ -20,6 +20,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 const SCORE_MAX_ITEMS = 99;      /* 保存番号1つあたりの件数の上限 */
 const SCORE_MAX_BYTES = 512000;  /* 譜面1件の JSON の上限（約500KB） */
 const SCORE_NAME_MAX  = 120;     /* 一覧に出す名前の長さ */
+const SCORE_SUB_MAX   = 80;      /* 副題（MIDIで選んだトラック名）の長さ */
 
 /* テーブルは初回アクセス時に作る（saves と同じファイルの中）。
    列を足したときは、既に出来ているテーブルにも ALTER で足す（作り直さない＝データを消さない）。 */
@@ -31,6 +32,7 @@ function score_table(PDO $db): void {
        id         INTEGER PRIMARY KEY AUTOINCREMENT,
        code       TEXT    NOT NULL,
        name       TEXT    NOT NULL,
+       sub        TEXT    NOT NULL DEFAULT \'\',
        notes      INTEGER NOT NULL DEFAULT 0,
        data       TEXT    NOT NULL,
        sig        TEXT    NOT NULL DEFAULT \'\',
@@ -44,6 +46,7 @@ function score_table(PDO $db): void {
   foreach ($db->query('PRAGMA table_info(scores)') as $c) { $have[(string)($c['name'] ?? '')] = true; }
   if (!isset($have['sig']))  $db->exec("ALTER TABLE scores ADD COLUMN sig  TEXT NOT NULL DEFAULT ''");
   if (!isset($have['fing'])) $db->exec("ALTER TABLE scores ADD COLUMN fing TEXT NOT NULL DEFAULT ''");
+  if (!isset($have['sub']))  $db->exec("ALTER TABLE scores ADD COLUMN sub  TEXT NOT NULL DEFAULT ''");
   $db->exec('CREATE INDEX IF NOT EXISTS ix_scores_code ON scores (code, id)');
   $done = true;
 }
@@ -69,13 +72,15 @@ function score_list(string $code): array {
   $g = score_open($code);
   if (!$g['ok']) return $g;
 
-  $st = $g['db']->prepare('SELECT id, name, notes, sig, updated_at FROM scores WHERE code = ? ORDER BY id DESC');
+  $st = $g['db']->prepare('SELECT id, name, sub, notes, sig, updated_at FROM scores WHERE code = ? ORDER BY id DESC');
   $st->execute([$g['code']]);
   $rows = [];
   foreach ($st->fetchAll() as $r) {
     $rows[] = [
       'id'         => (int)$r['id'],
       'name'       => (string)$r['name'],
+      /* 副題＝MIDIで選んでいたトラック名（無いこともある） */
+      'sub'        => (string)$r['sub'],
       'notes'      => (int)$r['notes'],
       'sig'        => (string)$r['sig'],
       'updated_at' => (int)$r['updated_at'],
@@ -87,7 +92,7 @@ function score_list(string $code): array {
 /* 保存。$id を渡せばその1件を上書きし、渡さなければ新しく追加する。
    「同じ譜面っぽいものがあるか」の判定と、上書き / 新規追加の選択は画面側（src/uploads.js）で行う
    ＝サーバが黙って上書きすることはない。 */
-function score_save(string $code, string $name, int $notes, string $data, string $sig = '', string $fing = '', int $id = 0): array {
+function score_save(string $code, string $name, int $notes, string $data, string $sig = '', string $fing = '', int $id = 0, string $sub = ''): array {
   $g = score_open($code);
   if (!$g['ok']) return $g;
   $db = $g['db']; $code = $g['code'];
@@ -105,12 +110,15 @@ function score_save(string $code, string $name, int $notes, string $data, string
 
   if (strlen($fing) > SCORE_MAX_BYTES) return ['ok' => false, 'error' => 'payload'];
   $sig = substr(preg_replace('/[^A-Za-z0-9]/', '', $sig), 0, 32);
+  $sub = trim(preg_replace('/[\x00-\x1f]+/', ' ', $sub));
+  if (preg_match('/\A.{0,' . SCORE_SUB_MAX . '}/us', $sub, $ms)) { $sub = $ms[0]; }
+  else { $sub = substr($sub, 0, SCORE_SUB_MAX); }
   $now = time();
 
   /* 上書き（画面で選ばれた1件だけ。自分の保存番号のものに限る） */
   if ($id > 0) {
-    $st = $db->prepare('UPDATE scores SET name = ?, notes = ?, data = ?, sig = ?, fing = ?, updated_at = ? WHERE code = ? AND id = ?');
-    $st->execute([$name, $notes, $data, $sig, $fing, $now, $code, $id]);
+    $st = $db->prepare('UPDATE scores SET name = ?, sub = ?, notes = ?, data = ?, sig = ?, fing = ?, updated_at = ? WHERE code = ? AND id = ?');
+    $st->execute([$name, $sub, $notes, $data, $sig, $fing, $now, $code, $id]);
     if ($st->rowCount() < 1) return ['ok' => false, 'error' => 'notfound'];
     return ['ok' => true, 'id' => $id, 'mode' => 'update'];
   }
@@ -120,8 +128,8 @@ function score_save(string $code, string $name, int $notes, string $data, string
   $st->execute([$code]);
   if (((int)$st->fetchColumn()) >= SCORE_MAX_ITEMS) return ['ok' => false, 'error' => 'limit'];
 
-  $db->prepare('INSERT INTO scores (code, name, notes, data, sig, fing, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)')
-     ->execute([$code, $name, $notes, $data, $sig, $fing, $now, $now]);
+  $db->prepare('INSERT INTO scores (code, name, sub, notes, data, sig, fing, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
+     ->execute([$code, $name, $sub, $notes, $data, $sig, $fing, $now, $now]);
   return ['ok' => true, 'id' => (int)$db->lastInsertId(), 'mode' => 'insert'];
 }
 

@@ -14,7 +14,7 @@ python3 -m http.server 8000      # → http://localhost:8000
 ```
 
 - `import` は必ず**拡張子付き**（`'./state.js'`）。素のブラウザは拡張子を補完しない。
-- CDN依存（jszip / pdfjs）は `index.html` の **importmap** で解決（npm不使用）。
+- CDN依存は JSZip（.mxl の解凍）のみで、基幹PHPの `<script>` でグローバル読み込み（npm不使用）。
 - 設置先はサブディレクトリ（例 `gud.co.jp/cello/`）でも可。参照は相対パス（`../../src/...`）。
 - 入口は PHP になったので静的サーバーでは不可。`php -S localhost:8000` などで確認する。
 
@@ -78,8 +78,6 @@ string/
    ├─ songs.js           # 曲ローダ（manifest取得, loadSong, データ→events変換）
    ├─ notation.js        # 五線譜レンダラ（静的import）
    ├─ tuner.js           # ピッチ検出（静的import）
-   ├─ pdf.js             # PDF表示（pdfjsは基幹PHPでグローバル読み込み）+ 検出用の描画
-   ├─ omr-import.js      # PDFのページを読み取って譜面にする（omr/ とアプリの橋渡し）
    ├─ account.js         # 設定の保存＝保存番号（歯車のいちばん上）。api/auth.php を叩く
    ├─ uploads.js         # アップロードした楽譜の一覧・保存・削除。api/scores.php を叩く
    ├─ contact.js         # お問い合わせ（歯車のいちばん下）。api/contact.php を叩く
@@ -166,20 +164,19 @@ export const tt = (k, d='') => k.split('.').reduce((o,x)=> (o&&o[x]!=null)?o[x]:
 
 ### 依存の向き（上が下に依存）
 ```
-main → modes → { scale, songs, notation★, tuner★, pdf★ }
+main → modes → { scale, songs, notation★, tuner★ }
 modes → fingerboard → dom
 audio/* → audio/context
 すべて → state, dom, util（末端）
 ```
 
 ### モジュール読み込み（最終実装）
-すべて静的 import。当初は notation/tuner/pdf を動的 import（遅延）にする計画だったが、
+すべて静的 import。当初は notation/tuner を動的 import（遅延）にする計画だったが、
 `render` 統括や `transportTick` が同期で呼ぶため静的に変更した。重いライブラリは
-pdfjs / JSZip のみで、これらは元コードどおり index.html の `<script>` でグローバル
-（`window.pdfjsLib` / `window.JSZip`）読み込み。曲データは `public/songs/` にあるが、
+JSZip のみで、これは元コードどおり基幹PHPの `<script>` でグローバル（`window.JSZip`）読み込み。曲データは `public/songs/` にあるが、
 曲データは `public/songs/` から fetch する（`SONGS` のハードコードは廃止）。
 
-初期表示に必要なのは state/dom/util/audio(context,synth,scheduler)/fingerboard/drawer/modes/scale のみ。譜面・チューナー・PDF・IR・曲は初期ロードから外れる。
+初期表示に必要なのは state/dom/util/audio(context,synth,scheduler)/fingerboard/drawer/modes/scale のみ。譜面・チューナー・IR・曲は初期ロードから外れる。
 
 **曲・スケールは外部JSON化済み。** `main.js` の初期化は
 `await Promise.all([loadScales(), loadSongManifest()])` → `loadSettings()` の順。
@@ -213,7 +210,6 @@ fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCAL
 | `buildSongKirakira` / `SONGS` / `loadSong` / `loadSample`(白鳥) | 現L3088–3114付近 | `songs.js` |
 | 五線譜レンダラ | — | `notation.js`（動的import） |
 | チューナー（`startTuner` / `TUN`） | — | `tuner.js`（動的import） |
-| PDF取り込み（`pdfOpen`） | — | `pdf.js`（動的import） |
 
 ### 曲データの外部化フォーマット（確定）
 `buildSongKirakira` のハードコードを廃し、`public/songs/*.json` へ（実装済み）。
@@ -262,7 +258,7 @@ fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCAL
 4. **scale** ✅完了 … `scale.js`（定義＋生成ロジック。`genScale` 統括は 5 へ。`scales.json` 用意済み）
 5. **scheduler / notation / tuner / modes / drawer** ✅完了 … 再生・五線譜・チューナー・統括(render/setMode/genScale/オクターブ)・設定/永続化。相互依存の葉から順に結線
 6. **songs** ✅完了 … `songs.js`（MusicXML/MIDIパーサ・トラック・曲/サンプル読込）。`SONGS`はコード内、外部フォーマットは `public/` に用意
-7. **pdf + 配線** ✅完了 … `pdf.js` / `main.js`（全 on(...) 配線＋初期化）。押弦発音は fingerboard.js に統合
+7. **配線** ✅完了 … `main.js`（全 on(...) 配線＋初期化）。押弦発音は fingerboard.js に統合
 
 **全16モジュール移植完了。** 各モジュールは元コードと diff 一致（無改変＋export付与）、全 import 解決済み。
 ※ 実ブラウザ（Chromium）で通し動作を確認済み：モード選択・再生/停止・子タブ・曲選択（キラキラ星）・
@@ -293,45 +289,6 @@ fetch できない環境（file:// 等）ではスケールのみ `FALLBACK_SCAL
 * 頭出しの行き先は `firstNoteBeat()`＝**最初に音が鳴る拍**（MIDIは冒頭が休符のことがある）。
   MIDIトラック一覧の `#skipStart` と同じ関数なので、動きは常に一致する。
 
-## PDF譜面の読み取り（OMR）
-
-`src/omr/`（五線・符頭・音高の検出）は単体で完結したモジュール群で、
-`tools/omr-test.html` で各段階を目視確認できる。アプリ本体との橋渡しは `src/omr-import.js`。
-
-入口は PDF表示オーバーレイの「取り込む」ボタン。処理は次の順:
-
-```
-renderPageForOmr(300dpi で裏描画) → detectStaves → detectNoteheads → assignPitches
-  → groupHeads（段→左から右に並べ、縦に重なる符頭を和音にまとめる）
-  → toScore（events 化。parseMusicXML と同じ形）→ setScore
-```
-
-### 検出の検証用データ
-
-`src/omr/` を触ったら、**答えの分かっている譜面**で通すこと。目視では退行に気づけない。
-Verovio で MusicXML から浄書した1ページ（全音符・2分・4分・8分連桁・16分2重連桁・付点4分を
-含むヘ音記号6小節、300dpi）を使って、24音すべての音高と白黒が一致することを確認している。
-
-**過去に見つかった誤りと原因**（同じ罠を踏まないための記録）:
-
-| 症状 | 原因 |
-|---|---|
-| ページが3つに割れ右半分の音符が全滅 | `detectColumns` の空判定がページ高基準。段数が少ないと本文が余白扱いになる |
-| 段まるごと音高がずれる | `detectClef` が五線の左の**パート名の文字**を記号と誤認 |
-| ヘ音記号がト音記号に化ける | 記号の外接矩形に**小節番号**が混入し高さが1.5d→5.9dに膨らむ |
-| 拍子記号の数字が音符になる | 調号が無いと `startX` が記号の直後で止まり拍子記号を跨げない |
-| 全音符・2分音符が消える | 間に置かれた白玉は楕円の上下が五線の線そのもの。線を消すと輪が切れて穴が漏れる |
-| 連桁の下に偽の白玉 | 符幹2本＋五線2本で囲まれた空きが穴に見える |
-
-**読み取れる範囲をコード側の前提として明記しておく。**
-
-* 読める：音の高さ、左から右への並び、和音、音部記号、調号
-* 読めない：**音価**（符頭の白黒しか見ていない。旗・連桁・付点は未実装）、休符、
-  小節線、拍子、タイ、スラー、繰り返し
-* したがって **リズムは推定**（白玉2拍・黒玉1拍）で、拍子は4/4と仮定して小節を切っている。
-  音程と運指の練習には使えるが、曲としての再生は正確でない。正確な再生が要るなら MusicXML。
-* 対象は**表示中の1ページだけ**。複数ページはページごとに取り込む（後から取り込むと置き換わる）。
-* 音部記号の判定が怪しい段があれば、取り込み後のトーストで件数を出す（黙って通さない）。
 
 ## PWA（ホーム画面に保存したときの挙動）
 
@@ -420,9 +377,11 @@ LocalStorage に置いて起動時に自動で読み込むので、番号を打�
 `includes/scores.php`（実処理）/ `api/scores.php`（JSON API）/ `src/uploads.js`（画面）。
 
 ```
-読み込んだ時   … songs.js（MusicXML）と omr-import.js（PDF取り込み）が
-                 rememberUpload(名前, parsed, テンポ) を呼ぶ
-                 MIDI は selectTrack() から呼ばれる＝【選んだトラックごとに1件】残る
+読み込んだ時   … songs.js の loadScoreFile が beginUpload(ファイル名) を呼んでから
+                 rememberUpload(名前, parsed, テンポ, meta) を呼ぶ
+                 MIDI は selectTrack() から呼ばれる。beginUpload で引いた「この操作の1件」を
+                 書き換えるので【1ファイル＝1件】。トラックを選び直しても件数は増えず、
+                 どのトラックを選んでいたかが sub 列（一覧の副題）と data.track に入る
                  保存番号が無ければ何もしない（＝譜面の読み込み自体はこれまでどおり動く）
 一覧に出す     … 保存番号が変わるたび account.js の syncUI() から知らせが来る
                  （setSaveWatcher で登録。作成・読込・解除・削除・起動時の復元が全てここを通る）
@@ -436,7 +395,7 @@ LocalStorage に置いて起動時に自動で読み込むので、番号を打�
   超えたら `limit` を返し、画面には「古いものを削除してください」と出す。
   **上限は「新規追加」のときだけ見る**（既存の1件の上書きは99件でも通る）。
 * 預けるのは**音の並び**（`data`＝`[開始拍, 長さ, 小節, [midi…], リード番号]`）と**運指**（`fing`）だけ。
-  元のファイル（MusicXML / MIDI / PDF）は預けない。
+  元のファイル（MusicXML / MIDI）は預けない。
 
 ### 運指もいっしょに残す
 `fing` 列に `{v:1, octave, data:[{l,s,o,f,m}…]}` を入れる。`data` の中身は `drawer.js` の
@@ -473,6 +432,13 @@ LocalStorage に置いて起動時に自動で読み込むので、番号を打�
   **`includes/scores.php` は `includes/auth.php` を読み込んだ後に require すること。**
 * 保存番号は URL に出さない＝読み出しも含めて全て POST ＋ `X-Requested-With: fetch`（api/auth.php と同条件）。
 * 他人の保存番号では取り出せない（`WHERE code = ? AND id = ?` で必ず両方を見る）。
+
+## 廃止した機能（戻すときの手がかり）
+| 機能 | 廃止した理由 | 残してあるもの |
+| --- | --- | --- |
+| PDFの参照表示・読み取り（OMR） | 読み取り精度が実用に届かなかった | なし。`src/pdf.js` / `src/omr-import.js` / `src/omr/` / `tools/omr-test.html` は**削除**。文言（`ui.pdf_*` / `msg.pdf_*` / `msg.omr_*`）も4言語から削除 |
+| 運指の保存（書き出し／読み込み／リセット） | 運指は編集した時点で端末と保存番号の両方へ自動保存されるため不要 | `drawer.js` の `exportFingering` / `importFingering` / `resetFingering` は残置。戻すときは `views/app.php` のHTMLと `main.js` の配線を復活させる |
+| 推奨ポジション（`.pref`） | （以前から） | `modes.js` の `ST.pref` / `setPref()` は残置 |
 
 ## お問い合わせ
 

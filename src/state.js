@@ -80,8 +80,10 @@ export const ST = {
   buses: null,
   /* ストリップの手動スワイプ時刻 */
   stripHold: 0,
-  /* 譜面ID（運指保存用） */
+  /* 譜面ID（運指保存用。'song:sakura' のような内部IDで、画面には出さない） */
   scoreName: '',
+  /* 上部バーに出す譜面の表示名（曲名・ファイル名など。言語ごとの表示名を入れる） */
+  scoreTitle: '',
   /* 表示 */
   lastScrollId: null,
   holding: false,

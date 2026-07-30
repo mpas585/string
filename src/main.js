@@ -11,22 +11,19 @@ import { applyZoom, centerBoardH, hideHoldDot, holdActive, holdStart, holdStop, 
 import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop, markScaleDirty } from './modes.js';
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
-import { importFingering, loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, exportFingering, resetFingering, openDrawer, closeDrawer, openPdfOverlay, closePdfOverlay, openDockModal, closeDockModal } from './drawer.js';
+import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
-import { pdfDoc, pdfPage, setPdfPage, openPdf, renderPdfPage } from './pdf.js';
 import { tt } from './util.js';
 import { initSave, openSave, createSave, loadSave, toggleSaveLoad, copySaveCode, unlinkSave, deleteSave, askCreate, askSkip, setSaveApply, armSave } from './account.js';
 import { openContact, sendContact } from './contact.js';
 import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel } from './uploads.js';
-import { importPdfScore } from './omr-import.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
 /* --- 取りこぼしていた基本配線（元 L3509–3520。fab=再生ボタン等） --- */
 on('file','change', e=>{ if(e.target.files[0]) loadScoreFile(e.target.files[0]); e.target.value=''; });
-on('pdffile','change', e=>{ if(e.target.files[0]) openPdf(e.target.files[0]); e.target.value=''; });
 on('fab','click', ()=>{
   if(ST.playing){ stopPlay(); return; }
   /* ドロワーでスケール設定を変えた直後は、▶ が「反映して再生」を兼ねる。
@@ -37,9 +34,6 @@ on('fab','click', ()=>{
 on('menu','click', openDrawer);
 on('drawerClose','click', closeDrawer);
 on('scrim','click', closeDrawer);
-on('pdfOpen','click', openPdfOverlay);
-on('pdfImport','click', importPdfScore);   /* 表示中のページを読み取って譜面にする */
-on('pdfClose','click', closePdfOverlay);
 on('tempo','input', e=>{ setTempo(+e.target.value, true); saveSettings(); });
 /* 数値入力：打ち込み途中（空欄・1桁）で勝手に補正しない。確定時にだけ範囲へ丸める */
 on('tempoNum','input', e=>{
@@ -60,8 +54,6 @@ on('tempoUp','click', ()=>{ setTempo(ST.tempo+1, true); saveSettings(); });
 on('tempoReset','click', ()=>{ setTempo(ST.tempoOrig || 80, true); saveSettings(); });
 /* 推奨ポジション（.pref）のUIは廃止＝配線も外した。
    ST.pref / setPref() は modes.js に残してあるので、戻すときはここも戻す。 */
-on('pdfprev','click', ()=>{ if(pdfPage>1){ setPdfPage(pdfPage-1); renderPdfPage();} });
-on('pdfnext','click', ()=>{ if(pdfDoc&&pdfPage<pdfDoc.numPages){ setPdfPage(pdfPage+1); renderPdfPage();} });
 
 /* ===== 運指ストリップ：スワイプ＋タップ選択 ===== */
 let sDrag=null, sMoved=false;
@@ -309,11 +301,8 @@ on('modeSeg','click', e=>{
   if(b) setMode(b.dataset.mode, true);   /* ドロワー内タブ切替では横ウィンドウを閉じない */
 });
 
-/* ===== コピー練習：子タブ（曲を選ぶ / 譜面を読み込む） ===== */
-function setScoreSub(sub){
-  document.querySelectorAll('#scoreSubSeg button').forEach(b=> b.classList.toggle('on', b.dataset.sub===sub));
-  document.querySelectorAll('.subpanel').forEach(p=> p.classList.toggle('m-hide', p.dataset.sub!==sub));
-}
+/* ===== コピー練習：子タブ（曲を選ぶ / 譜面を読み込む / MIDIトラック選択） =====
+   setScoreSub は songs.js からも呼ぶので drawer.js にある */
 on('scoreSubSeg','click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   setScoreSub(b.dataset.sub);
@@ -427,6 +416,8 @@ on('trackList','click', e=>{
   if(row) selectTrack(+row.dataset.i, true);      /* 名前タップで再生 */
 });
 on('skipStart','click', skipToStart);
+/* MIDIトラック選択の面から「譜面を読み込む」へ戻る */
+on('trackBack','click', ()=> setScoreSub('load'));
 
 /* ===== アップロードした楽譜（保存番号に紐づく一覧） ===== */
 on('upList','click', e=>{
@@ -441,15 +432,9 @@ on('upDupNew','click',  upDupAddNew);
 /* ✕ で閉じたら保存しない（待たせていた内容を捨てる） */
 document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListener('click', upDupCancel));
 
-/* ===== 運指の保存 ===== */
-on('fingExport','click', exportFingering);
-on('fingReset','click', resetFingering);
-on('fingFile','change', e=>{
-  if(e.target.files[0]) importFingering(e.target.files[0]);
-  e.target.value='';
-});
-
-window.addEventListener('resize', ()=>{ if(pdfDoc && document.getElementById('pdfOverlay').classList.contains('open')) renderPdfPage(); });
+/* ===== 運指の保存 =====
+   書き出し／読み込み／リセットのUIは廃止した（運指は編集した時点で端末と保存番号の
+   両方へ自動保存されるため）。drawer.js に関数は残してあるので、戻すときはここも戻す。 */
 
 /* 初期描画
    スケール定義（public/scales/scales.json）と曲一覧（public/songs/manifest.json）は

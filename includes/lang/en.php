@@ -28,6 +28,7 @@ return [
     'cello'  => 'Cello',
     'violin' => 'Violin',
     'viola'  => 'Viola',
+    'contrabass' => 'Double Bass',
   ],
 
   'page_title' => '%s practice app | fingerboard positions, fingering and tuner | GEN strings',
@@ -141,7 +142,6 @@ return [
 
     'score'          => 'Score',
     'file_open'      => '🎼 Open',
-    'pdf_btn'        => '📄 PDF',
     'file_note'      => 'Supports MusicXML (.xml/.musicxml/.mxl) and MIDI (.mid)',
     'tracks'         => 'MIDI track',
     'skip_start'     => '⏭ Skip to first note',
@@ -171,10 +171,6 @@ return [
 
     'drawer_note_html' => 'Stopping positions are derived from the string-length ratio (1 − 2<sup>−semitones/12</sup>). Position names and finger numbers are a guide only.',
 
-    'pdf_open'       => '📄 Open',
-    'pdf_import'     => 'Import',
-    'pdf_note_html'  => 'A PDF can be <b>viewed for reference</b>, and <b>Import</b> reads the notes off the page (pitch and order only &mdash; <b>rhythm is guessed from filled/hollow noteheads</b>; flags, beams, rests and barlines are not read). For accurate fingering and playback data, import MusicXML.',
-    'pdf_empty'      => 'Choose a PDF file to display it here',
 
     'tuner_t'        => 'Tuner / pitch detection',
 
@@ -264,9 +260,6 @@ return [
     'measure_flash'        => 'Bar %s',
     'store_ok'             => 'Edited fingering is saved automatically (on this device)',
     'store_ng'             => 'Automatic saving is unavailable here. Use Export to save a JSON file',
-    'pdf_lib_fail'         => 'Could not load the PDF viewer library.',
-    'pdf_pages'            => 'PDF: %s page(s)',
-    'pdf_open_fail'        => 'Could not open the PDF: %s',
     'scale_out_of_range'   => 'That setting goes out of range. Try fewer octaves.',
     'xml_parse_fail'       => 'Could not parse the XML. The file may be corrupted.',
     'timewise_unsupported' => 'score-timewise is not supported. Please export as score-partwise.',
@@ -285,14 +278,8 @@ return [
     'skip_to_first'        => 'To the first note (bar %s / %s)',
     'midi_tracks'          => 'MIDI: %s tracks — pick one from the list',
     'score_loaded'         => 'Loaded: %s events',
-    /* ===== PDF score reading (src/omr-import.js). tt() only substitutes %s ===== */
-    'omr_run'              => 'Reading the score...',
-    'omr_nostaff'          => 'No staves found. The scan may be skewed or too low resolution',
-    'omr_nonote'           => 'No notes found',
-    'omr_done'             => 'Imported %s notes from %s staves (rhythm is guessed from filled/hollow noteheads)',
-    'omr_lowconf'          => ' / the clef is uncertain on %s staves',
-    'omr_fail'             => 'Could not read the score: %s',
     'fing_restored_suffix' => ' / fingering restored',
+    'swan_title'           => 'The Swan',
     'swan_loaded'          => 'The Swan loaded',
     'preset_err'           => 'Preset load error: %s',
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 No songs<small>Check public/songs/manifest.json</small></button>',
@@ -343,7 +330,7 @@ return [
     'faqs' => [
       ['Do I need to install anything?', 'No. It runs in the browser. Scores you load and fingerings you edit are stored on your device and are never sent anywhere.'],
       ['The microphone does not work', 'The microphone only works over https:// or localhost. It will not work from a file:// URL, or if the browser has not been given permission.'],
-      ['Which score files can I use?', 'MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid). PDF is displayed for reference only; notes are not read from the image.'],
+      ['Which score files can I use?', 'MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid).'],
       ['Can I change the fingering myself?', 'Tap a note and the alternatives appear. Your choice is saved automatically, and can be exported and imported.'],
     ],
     'note'  => 'Everything runs on your device. No data is sent anywhere.',

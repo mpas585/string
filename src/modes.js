@@ -104,7 +104,7 @@ export function setMode(mode, keepDrawer){
   ST.mode=mode;
   ST.scaleDirty=false;                 /* モードが変われば保留は無効 */
   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
-  ST.lastScrollId=null; ST.scoreName='';
+  ST.lastScrollId=null; ST.scoreName=''; ST.scoreTitle='';
   setMidiFile(null); renderTracks();
   applyMode();
   ST.vol = ST.volProfiles[volProfileKey()];      /* モード別の音量プロファイル */
@@ -193,7 +193,9 @@ export function micUnavailableReason(){
 
 export function renderNow(ev){
   const el=document.getElementById('nowline');
-  if(!ev || !ev.fing){ el.innerHTML=''; return; }
+  /* 押さえる音が決まっていないときは、いま開いている譜面の名前を出す。
+     ST.scoreName（'song:sakura' 等）は運指の保存キー用の内部IDなので画面には出さない。 */
+  if(!ev || !ev.fing){ el.textContent=ST.scoreTitle || ''; return; }
   const lead=ev.pitches[ev.leadIdx];
   el.innerHTML = `<b>${lead.name}</b> · ${strFingerText(ev.fing.str, ev.fing.off, ev.fing.finger)} · ${ev.fing.zone}`;
 }
@@ -380,8 +382,10 @@ export function setOctave(v){
   if(at!=null) startPlay(at, true);      /* 再生中はその位置で組み直す（カウントなし） */
 }
 
-/* 譜面をセット（共通処理：運指の自動復元・ループ範囲の初期化） */
-export function setScore(parsed, scoreName){
+/* 譜面をセット（共通処理：運指の自動復元・ループ範囲の初期化）
+   scoreName … 運指の保存キーに使う内部ID（画面には出さない）
+   title     … 上部バーに出す表示名。省略時は内部IDを出さずに空にする */
+export function setScore(parsed, scoreName, title){
   /* 各読み込み経路は setScore の直前に setTempo() を呼ぶので、ここが譜面本来のテンポ */
   ST.tempoOrig=ST.tempo;
   ST.parsed=parsed;
@@ -390,6 +394,7 @@ export function setScore(parsed, scoreName){
   ST.beatsPerMeasure=parsed.beatsPerMeasure || 4;
   ST.beatUnit=(parsed.beatUnit>0) ? parsed.beatUnit : 1;
   ST.scoreName=scoreName || '';
+  ST.scoreTitle=title || '';
   ST.selected=0; ST.current=null; ST.lastScrollId=null; ST.playhead=0;
   applyOctave();
 
@@ -426,7 +431,7 @@ export function genScale(quiet){
     setMidiFile(null); renderTracks();
     const parsed=buildScaleEvents(ST.keyRoot, ST.scaleType, ST.scaleOct);
     const label=`${NOTE_NAMES[ST.keyRoot]} ${SCALE_LABEL[ST.scaleType]} ${ST.scaleOct}oct`;
-    setScore(parsed, 'scale:'+label);
+    setScore(parsed, 'scale:'+label, label);
     /* ループ範囲はスケール全体（ON/OFFは利用者に任せる） */
     ST.loop.from=1;
     ST.loop.to=parsed.measures.length || 1;
@@ -521,7 +526,7 @@ export function updateChrome(){
   fab.classList.toggle('attn', dirty);
   document.body.classList.toggle('scale-dirty', dirty);
   document.getElementById('gear').style.display = ST.mode ? 'inline-flex' : 'none';
-  document.getElementById('storeInfo').textContent =
-    Store.ok ? tt('msg.store_ok')
-             : tt('msg.store_ng');
+  /* 「運指の保存」欄は廃止したので無いのが普通（戻したときだけ書き換わる） */
+  const si=document.getElementById('storeInfo');
+  if(si) si.textContent = Store.ok ? tt('msg.store_ok') : tt('msg.store_ng');
 }

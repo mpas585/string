@@ -31,6 +31,7 @@ return [
     'cello'  => 'violonchelo',
     'violin' => 'violín',
     'viola'  => 'viola',
+    'contrabass' => 'contrabajo',
   ],
 
   'page_title' => 'App de práctica de %s | diapasón, digitación y afinador | GEN strings',
@@ -144,7 +145,6 @@ return [
 
     'score'          => 'Partitura',
     'file_open'      => '🎼 Abrir',
-    'pdf_btn'        => '📄 PDF',
     'file_note'      => 'Compatible con MusicXML (.xml/.musicxml/.mxl) y MIDI (.mid)',
     'tracks'         => 'Pista MIDI',
     'skip_start'     => '⏭ Ir a la primera nota',
@@ -174,10 +174,6 @@ return [
 
     'drawer_note_html' => 'La posición del dedo se calcula con la proporción de la cuerda (1 − 2<sup>−semitonos/12</sup>). Los nombres de posición y los números de dedo son orientativos.',
 
-    'pdf_open'       => '📄 Abrir',
-    'pdf_import'     => 'Importar',
-    'pdf_note_html'  => 'El PDF se puede <b>ver como referencia</b> y con <b>Importar</b> se leen las notas de la página (solo altura y orden; <b>el ritmo se deduce de las cabezas llenas/huecas</b>, no se leen corchetes, barras, silencios ni compases). Para datos exactos de digitación y reproducción, importa MusicXML.',
-    'pdf_empty'      => 'Elige un archivo PDF para verlo aquí',
 
     'tuner_t'        => 'Afinador / detección de altura',
 
@@ -267,9 +263,6 @@ return [
     'measure_flash'        => 'Compás %s',
     'store_ok'             => 'La digitación editada se guarda automáticamente (en este dispositivo)',
     'store_ng'             => 'El guardado automático no está disponible aquí. Usa Exportar para guardar un JSON',
-    'pdf_lib_fail'         => 'No se pudo cargar la biblioteca de PDF.',
-    'pdf_pages'            => 'PDF: %s página(s)',
-    'pdf_open_fail'        => 'No se puede abrir el PDF: %s',
     'scale_out_of_range'   => 'Ese ajuste se sale del registro. Prueba con menos octavas.',
     'xml_parse_fail'       => 'No se pudo analizar el XML. El archivo puede estar dañado.',
     'timewise_unsupported' => 'score-timewise no es compatible. Exporta como score-partwise.',
@@ -288,14 +281,8 @@ return [
     'skip_to_first'        => 'A la primera nota (compás %s / %s)',
     'midi_tracks'          => 'MIDI: %s pistas — elige una de la lista',
     'score_loaded'         => 'Cargado: %s eventos',
-    /* ===== Lectura de partituras PDF (src/omr-import.js). tt() solo sustituye %s ===== */
-    'omr_run'              => 'Leyendo la partitura...',
-    'omr_nostaff'          => 'No se encontraron pentagramas. El escaneo puede estar torcido o ser de baja resolución',
-    'omr_nonote'           => 'No se encontraron notas',
-    'omr_done'             => 'Se importaron %s notas de %s pentagramas (el ritmo se deduce de las cabezas llenas/huecas)',
-    'omr_lowconf'          => ' / la clave es dudosa en %s pentagramas',
-    'omr_fail'             => 'No se pudo leer la partitura: %s',
     'fing_restored_suffix' => ' / digitación restaurada',
+    'swan_title'           => 'El cisne',
     'swan_loaded'          => 'El cisne cargado',
     'preset_err'           => 'Error al cargar el preajuste: %s',
     'no_songs_html'        => '<button class="songbtn" disabled>🎼 No hay canciones<small>Revisa public/songs/manifest.json</small></button>',
@@ -346,7 +333,7 @@ return [
     'faqs' => [
       ['¿Hay que instalar algo?', 'No. Funciona en el navegador. Las partituras que cargues y las digitaciones que edites se guardan en tu dispositivo y no se envían a ningún sitio.'],
       ['El micrófono no funciona', 'El micrófono solo funciona en https:// o localhost. No funciona con una URL file:// ni si no has dado permiso en el navegador.'],
-      ['¿Qué archivos de partitura puedo usar?', 'MusicXML (.xml / .musicxml / .mxl) y MIDI (.mid). El PDF se muestra solo como referencia; no se leen las notas de la imagen.'],
+      ['¿Qué archivos de partitura puedo usar?', 'MusicXML (.xml / .musicxml / .mxl) y MIDI (.mid).'],
       ['¿Puedo cambiar la digitación?', 'Toca una nota y aparecerán las alternativas. Tu elección se guarda automáticamente y puede exportarse e importarse.'],
     ],
     'note'  => 'Todo el proceso ocurre en tu dispositivo. No se envía ningún dato al exterior.',

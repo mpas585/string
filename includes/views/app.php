@@ -95,14 +95,12 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <hr class="sep">
 
-    <div class="gp-t"><?php e('ui.view') ?></div>
     <!-- 表示（指板/五線譜・フレット線・横画面・指板ズーム）はサブメニューへ。
          右端の値は src/drawer.js の syncSettingsUI() が書き換える -->
     <button class="gp-row" data-gpopen="view">
       <span><?php e('ui.view') ?></span><span class="v" id="viewRowV"></span><span class="cv">›</span>
     </button>
 
-    <div class="gp-t"><?php e('ui.playback') ?></div>
     <!-- 開始カウント（ON/OFF と 4 / 8）もサブメニューへ。右端の値は syncCountSeg() が書き換える -->
     <button class="gp-row" data-gpopen="count">
       <span><?php e('ui.countin') ?></span><span class="v" id="countRowV"></span><span class="cv">›</span>
@@ -600,8 +598,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="subpanel m-hide" data-sub="load">
       <div class="seclbl"><?php e('ui.score') ?></div>
       <div class="row controls">
-        <label class="filebtn"><?php e('ui.file_open') ?><input id="file" type="file" accept=".xml,.musicxml,.mxl,.mid,.midi,.pdf,audio/midi,audio/x-midi"></label>
-        <button id="pdfOpen" class="ghost"><?php e('ui.pdf_btn') ?></button>
+        <label class="filebtn" style="flex:1; justify-content:center"><?php e('ui.file_open') ?><input id="file" type="file" accept=".xml,.musicxml,.mxl,.mid,.midi,audio/midi,audio/x-midi"></label>
       </div>
       <div class="sub"><?php e('ui.file_note') ?></div>
 
@@ -611,8 +608,16 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <div id="upList" class="uplist"></div>
       <div id="upNote" class="sub"><?php e('ui.uploads_note', 99) ?></div>
 
+    </div>
+
+    <!-- 子タブ内容：MIDIトラック選択（MIDIを読み込むと自動でこの面に切り替わる）
+         タブは出さず、「‹ 戻る」で「譜面を読み込む」へ戻る。切替は src/drawer.js の setScoreSub() -->
+    <div class="subpanel m-hide" data-sub="tracks">
+      <div class="gp-back">
+        <button type="button" id="trackBack">‹ <?php e('ui.back') ?></button>
+        <span class="t"><?php e('ui.tracks') ?></span>
+      </div>
       <div id="tracks" class="tracks">
-        <div class="seclbl"><?php e('ui.tracks') ?></div>
         <div id="trackList"></div>
         <div class="row controls">
           <button id="skipStart" class="ghost" style="flex:1; justify-content:center"><?php e('ui.skip_start') ?></button>
@@ -627,17 +632,12 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
        ST.pref / setPref() は src/modes.js に残してあるので、戻すときは
        このブロックの HTML と main.js の .pref 配線をいっしょに戻すこと。 -->
 
-  <!-- ========== コピー練習モード：添削・保存 ========== -->
-  <div data-m="score">
-    <hr class="sep">
-    <div class="seclbl"><?php e('ui.fing_save') ?></div>
-    <div class="row controls">
-      <button id="fingExport" class="ghost"><?php e('ui.fing_export') ?></button>
-      <label class="filebtn"><?php e('ui.fing_import') ?><input id="fingFile" type="file" accept=".json"></label>
-      <button id="fingReset" class="ghost"><?php e('ui.fing_reset') ?></button>
-    </div>
-    <div id="storeInfo" class="sub"><?php e('ui.fing_note') ?></div>
-  </div>
+  <!-- ========== コピー練習モード：添削・保存 ==========
+       「運指の保存」（書き出し／読み込み／リセット）のUIは廃止した。
+       運指は編集した時点で端末と保存番号の両方へ自動保存されるため
+       （src/drawer.js の saveFingering → src/uploads.js の updateUploadFingering）。
+       exportFingering / importFingering / resetFingering は drawer.js に残してあるので、
+       戻すときはこのブロックの HTML と main.js の配線をいっしょに戻すこと。 -->
 
   <!-- ========== スケール練習モード：生成（一番下） ========== -->
   <div data-m="scale">
@@ -651,25 +651,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <?php er('ui.drawer_note_html') ?>
   </div>
 </aside>
-
-<!-- PDF参照オーバーレイ -->
-<div id="pdfOverlay" class="pdf-overlay">
-  <div class="pdf-head">
-    <button id="pdfClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
-    <label class="filebtn"><?php e('ui.pdf_open') ?><input id="pdffile" type="file" accept=".pdf"></label>
-    <button id="pdfprev" class="iconbtn" disabled>‹</button>
-    <b id="pdfpage">– / –</b>
-    <button id="pdfnext" class="iconbtn" disabled>›</button>
-    <span class="sp"></span>
-    <!-- 表示中のページを読み取って譜面にする（src/omr-import.js）。リズムは推定 -->
-    <button id="pdfImport" class="ghost" disabled><?php e('ui.pdf_import') ?></button>
-  </div>
-  <div class="pdf-scroll">
-    <div class="note-note"><?php er('ui.pdf_note_html') ?></div>
-    <canvas id="pdfcanvas"></canvas>
-    <div id="pdfempty" class="empty" style="position:static; display:block; pointer-events:auto; padding:30px 0; text-align:center"><?php e('ui.pdf_empty') ?></div>
-  </div>
-</div>
 
 <!-- チューナー（下部シート） -->
 <div id="tunerSheet" class="sheet">
@@ -755,9 +736,9 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 </div><!-- /#app -->
 
-  <!-- optional: .mxl 解凍 / PDF表示（読み込めなくてもコア機能は動作）。元と同じくグローバル読み込み。 -->
+  <!-- optional: .mxl（zip形式のMusicXML）の解凍。読み込めなくても .xml / .mid は動作する。
+       ※ PDFの参照表示・読み取り（OMR）は廃止したので pdf.js は読み込まない。 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" onerror="window.__noZip=1"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" onerror="window.__noPdf=1"></script>
   <script type="module" src="<?= h($BASE) ?>src/main.js"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
   api/scores.php — アップロードした楽譜（保存番号に紐づく譜面）の JSON API。
 
     POST  action=list    code= lang=                                    … 一覧（新しい順・data は返さない）
-    POST  action=save    code= name= notes= data= sig= fing= id= lang=  … 1件保存
+    POST  action=save    code= name= sub= notes= data= sig= fing= id= lang= … 1件保存
                                                                           id を付けるとその1件を上書き、
                                                                           付けなければ新しく追加する
     POST  action=fing    code= id= fing= lang=                          … 運指だけ更新（sig は変わらない）
@@ -47,6 +47,7 @@ $name   = (string)($_POST['name']   ?? '');
 $notes  = (int)   ($_POST['notes']  ?? 0);
 $data   = (string)($_POST['data']   ?? '');
 $sig    = (string)($_POST['sig']    ?? '');
+$sub    = (string)($_POST['sub']    ?? '');
 $fing   = (string)($_POST['fing']   ?? '');
 
 try {
@@ -59,7 +60,7 @@ try {
     }
 
     case 'save': {
-      $r = score_save($code, $name, $notes, $data, $sig, $fing, $id);
+      $r = score_save($code, $name, $notes, $data, $sig, $fing, $id, $sub);
       if (!$r['ok']) err($r['error'], SCORE_MAX_ITEMS);
       out(['ok' => true, 'id' => $r['id'], 'mode' => $r['mode']]);
     }
