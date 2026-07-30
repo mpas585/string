@@ -3,7 +3,6 @@
   includes/bootstrap.php — 言語まわりの共通処理（トップと楽器ページの両方で使う）。
 
   呼び出し側で $LANG と $URL_DEPTH を定義しておくこと:
-      $LANG = 'ja'; $URL_DEPTH = 0;   → /            （サイトのルート＝ホームページ）
       $LANG = 'ja'; $URL_DEPTH = 1;   → /{言語}/
       $LANG = 'ja'; $URL_DEPTH = 2;   → /{言語}/{楽器}/
 
@@ -32,6 +31,12 @@ if (!defined('APP_NAME')) {
   define('APP_CONTACT_TO',         $APP_CFG['contact_to']);
   define('APP_GA_ID',              $APP_CFG['ga_id'] ?? '');
   define('APP_DB_PATH',            $APP_CFG['db_path']);
+  /* アカウント（includes/account.php / api/account.php / oauth/google.php で使う） */
+  define('APP_SITE_URL',           rtrim((string)($APP_CFG['site_url'] ?? ''), '/'));
+  define('APP_MAIL_FROM',          (string)($APP_CFG['mail_from'] ?? ''));
+  define('APP_MAIL_FROM_NAME',     (string)($APP_CFG['mail_from_name'] ?? APP_NAME));
+  define('APP_GOOGLE_ID',          (string)($APP_CFG['google_client_id'] ?? ''));
+  define('APP_GOOGLE_SECRET',      (string)($APP_CFG['google_client_secret'] ?? ''));
 }
 
 /* ===== 2. 言語（require のパスに直接使うためホワイトリスト必須） ===== */
@@ -94,7 +99,10 @@ if (!function_exists('app_send_csp')) {
       "manifest-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",
-      "form-action 'self'",
+      /* Google ログイン：accounts.google.com へ遷移する（送信先ではなく location 遷移だが、
+         ブラウザによっては form-action で見られるため両方に入れてある）。
+         config/app.php の google_client_id が空でも、許可を出すだけなら害はない。 */
+      "form-action 'self' https://accounts.google.com",
       "frame-ancestors 'self'",
     ]);
     header('Content-Security-Policy: ' . $csp);
@@ -106,10 +114,7 @@ if (!function_exists('app_send_csp')) {
 /* ===== 4. パス ===== */
 $BASE      = str_repeat('../', $URL_DEPTH);              /* 今のページからルートまで */
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
-/* dirname() の第2引数は1以上でないと例外になるため、ルート（深さ0）は分けて扱う */
-$rootPath  = ($URL_DEPTH > 0)
-  ? rtrim(dirname($scriptDir, $URL_DEPTH), '/')
-  : rtrim($scriptDir, '/');                             /* 設置ディレクトリ（直下なら ''） */
+$rootPath  = rtrim(dirname($scriptDir, $URL_DEPTH), '/');/* 設置ディレクトリ（直下なら ''） */
 
 $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');

@@ -12,7 +12,7 @@
   更新するとき: 下の VER を上げる。古いキャッシュは activate で消える。
   ルート直下に置くこと（スコープが / になる）。
 */
-const VER   = 'gs-v11';
+const VER   = 'gs-v10';
 const CORE  = 'core-' + VER;    /* 先読みする最小限 */
 const ASSET = 'asset-' + VER;   /* src/ public/ の実行時キャッシュ */
 const PAGE  = 'page-' + VER;    /* HTML の控え */
@@ -64,8 +64,8 @@ self.addEventListener('fetch', (ev) => {
   const url = new URL(req.url);
   const sameOrigin = (url.origin === self.location.origin);
 
-  /* 送信系はキャッシュに触れない */
-  if (sameOrigin && url.pathname.includes('/api/')) return;
+  /* 送信系はキャッシュに触れない。/oauth/ は Google への転送なので同じ扱いにする */
+  if (sameOrigin && (url.pathname.includes('/api/') || url.pathname.includes('/oauth/'))) return;
 
   /* HTML: ネットワーク優先 */
   if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {

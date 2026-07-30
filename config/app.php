@@ -34,8 +34,24 @@ return [
   /* お問い合わせの宛先（転送専用アドレス）。件名の頭には上の 'name' が付く */
   'contact_to'         => 'mail@genstrings.sakura.ne.jp',
 
-  /* 設定の保存（保存番号）の SQLite ファイル。
+  /* アカウント・設定の保存の SQLite ファイル。
      公開ディレクトリの外に置ける契約なら、ここを絶対パスにして data/ ごと外へ移すこと。
      例: '/home/（アカウント）/db/genstrings.db' */
   'db_path'            => __DIR__ . '/../data/app.db',
+
+  /* ===== アカウント（メールアドレス＋パスワード / Google ログイン） =====
+     site_url … 確認メール・再発行メールに載せるリンクの起点。末尾スラッシュ無し。
+                空にすると実行中のリクエストから組み立てる（通常はそれで足りる）。
+     mail_from … 送信元。さくらの場合はこのドメインのアドレスにしないと弾かれる。
+     mail_from_name … 送信者名。日本語可（送信時に MIME エンコードする）。 */
+  'site_url'           => '',
+  'mail_from'          => 'no-reply@genstrings.sakura.ne.jp',
+  'mail_from_name'     => 'GEN strings',
+
+  /* Google ログイン。Google Cloud Console の「OAuth 2.0 クライアント ID」（種類：ウェブ アプリケーション）で発行する。
+     承認済みのリダイレクト URI には、このサイトの /oauth/google.php を登録すること。
+       例: https://genstrings.sakura.ne.jp/oauth/google.php
+     どちらかが空文字のあいだは「Google で続ける」ボタンを出さない（＝メールログインだけで動く）。 */
+  'google_client_id'     => '',
+  'google_client_secret' => '',
 ];

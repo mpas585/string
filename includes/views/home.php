@@ -24,15 +24,6 @@ foreach (APP_INSTRUMENTS as $ins) {
   <meta name="theme-color" content="#15110c">
   <title><?php e('home.title') ?></title>
   <meta name="description" content="<?php e('home.desc') ?>">
-<?php
-  /* サイトのルート。WebSite 構造化データの url に入れる（下を参照） */
-  $SITE_ROOT = $origin . $rootPath . '/';
-  /* 正規URLは言語別トップ（/{言語}/）のまま。ルート（/）は同じ内容の重複ページとして扱う。
-     Google のサイト名の項に「ホームページが重複している場合は、正規ページだけでなく
-     重複するすべてのページで同じ構造化データを使う」とあるため、
-     ルートを正規URLに変えなくても、ルートに構造化データがあれば拾ってもらえる。
-     ＝ 既存の /{言語}/ の正規化を崩さずに済む。 */
-?>
   <link rel="canonical" href="<?= h($origin . $LANG_HOME_URLS[$LANG]) ?>">
 <?php foreach (APP_LANGS as $l): ?>
   <link rel="alternate" hreflang="<?= h($l) ?>" href="<?= h($origin . $LANG_HOME_URLS[$l]) ?>">
@@ -53,9 +44,7 @@ foreach (APP_INSTRUMENTS as $ins) {
     '@context' => 'https://schema.org',
     '@type'    => 'WebSite',
     'name'     => APP_NAME,
-    /* url は【サイトのルート】を指すこと。言語別URL（/ja/ 等）を入れると
-       Google はここをホームページと見なさず、サイト名を拾ってくれない。 */
-    'url'      => $SITE_ROOT,
+    'url'      => $origin . $LANG_HOME_URLS[$LANG],
     'inLanguage' => $T['html_lang'],
     'description' => t('home.desc'),
   ], $JSON | JSON_HEX_TAG | JSON_PRETTY_PRINT);
@@ -76,15 +65,15 @@ foreach (APP_INSTRUMENTS as $ins) {
     /* トップで使うのは保存番号まわりと PWA の案内だけなので、辞書は ui と save に絞って渡す
        （アプリ本体のページは includes/views/app.php が $T 全体を渡している） */
     window.APP = <?= json_encode(['lang' => $LANG, 'name' => APP_NAME], $JSON) ?>;
-    window.T   = <?= json_encode(['ui' => $T['ui'], 'save' => $T['save']], $JSON) ?>;
+    window.T   = <?= json_encode(['ui' => $T['ui'], 'acc' => $T['acc']], $JSON) ?>;
   </script>
 </head>
 <body class="home">
 <main class="hm">
   <!-- 設定の保存（アプリ本体では歯車のいちばん上。表示の書き換えは src/account.js） -->
   <div class="hm-acc">
-    <span id="svWho" class="accwho"><?php e('ui.save_none') ?></span>
-    <button id="svBtn" class="ghost"><?php e('ui.save_start') ?></button>
+    <span id="svWho" class="accwho"><?php e('ui.acc_none') ?></span>
+    <button id="svBtn" class="ghost"><?php e('ui.acc_start') ?></button>
   </div>
 
   <header class="hm-head">
@@ -127,73 +116,153 @@ foreach (APP_INSTRUMENTS as $ins) {
 </main>
 <div id="dockScrim" class="dkscrim"></div>
 
-<!-- 設定の保存（右上の「設定を保存する」から開く。表示の出し分けは src/account.js） -->
-<div id="mSave" class="dkmodal" role="dialog" aria-modal="true">
+<!-- アカウント（歯車の「アカウント」から開く）。出し分け・切替は src/account.js -->
+<div id="mAcc" class="dkmodal acc" role="dialog" aria-modal="true">
   <div class="dk-head">
-    <span class="dk-tt"><?php e('ui.m_save') ?></span>
+    <span class="dk-tt"><?php e('ui.m_acc') ?></span>
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
 
-  <!-- 保存番号を持っているとき -->
-  <div id="svBound" hidden>
-    <div class="sv-label"><?php e('save.code_label') ?></div>
-    <div id="svCode" class="sv-code"></div>
-    <div class="row controls">
-      <button id="svCopy" class="ghost" style="flex:1; justify-content:center"><?php e('save.copy') ?></button>
-    </div>
-    <div class="sub"><?php e('save.code_note') ?></div>
-    <hr class="sep">
-  </div>
-
-  <!-- まだ持っていないとき -->
-  <div id="svUnbound" hidden>
-    <div class="sub"><?php e('save.none_note') ?></div>
-    <div class="row controls" style="margin-top:10px">
-      <button id="svCreate" class="primary" style="flex:1; justify-content:center"><?php e('save.create') ?></button>
-    </div>
-    <hr class="sep">
-  </div>
-
-  <!-- 他の端末の設定を引き継ぐ（両方の状態で使える） -->
-  <div class="row controls">
-    <button id="svLoadOpen" class="ghost" style="flex:1; justify-content:center"><?php e('save.load_open') ?></button>
-  </div>
-  <div id="svLoadBox" hidden>
+  <!-- ===== ログイン ===== -->
+  <div class="acp on" data-acp="signin">
     <div class="fmrow">
-      <label for="svInput"><?php e('save.input_label') ?></label>
-      <input id="svInput" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="G4821">
+      <label for="acEmail"><?php e('acc.email') ?></label>
+      <input id="acEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="254">
+    </div>
+    <div class="fmrow">
+      <label for="acPass"><?php e('acc.pass') ?></label>
+      <input id="acPass" type="password" autocomplete="current-password" maxlength="200">
     </div>
     <div class="row controls">
-      <button id="svLoad" class="primary" style="flex:1; justify-content:center"><?php e('save.load') ?></button>
+      <button id="acLogin" class="primary" style="flex:1; justify-content:center"><?php e('acc.login') ?></button>
     </div>
-    <div class="sub"><?php e('save.load_note') ?></div>
+    <div id="acResendRow" class="row controls" style="margin-top:8px" hidden>
+      <button id="acResend" class="ghost" style="flex:1; justify-content:center"><?php e('acc.resend') ?></button>
+    </div>
+    <div class="acgoogle" hidden>
+      <div class="acor"><?php e('acc.or') ?></div>
+      <div class="row controls">
+        <button id="acGoogle" class="ghost" style="flex:1; justify-content:center"><?php e('acc.google') ?></button>
+      </div>
+    </div>
+    <div class="aclinks">
+      <button type="button" id="acToSignup" class="aclink"><?php e('acc.to_signup') ?></button>
+      <button type="button" id="acToForgot" class="aclink"><?php e('acc.to_forgot') ?></button>
+    </div>
+    <div class="sub"><?php e('acc.signin_note') ?></div>
   </div>
 
-  <!-- 解除・削除（保存番号を持っているときだけ） -->
-  <div id="svBound2" hidden>
+  <!-- ===== 新規登録 ===== -->
+  <div class="acp" data-acp="signup">
+    <div class="fmrow">
+      <label for="acSuEmail"><?php e('acc.email') ?></label>
+      <input id="acSuEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="254">
+    </div>
+    <div class="fmrow">
+      <label for="acSuPass"><?php e('acc.pass_new') ?></label>
+      <input id="acSuPass" type="password" autocomplete="new-password" minlength="8" maxlength="200">
+    </div>
+    <div class="sub"><?php e('acc.pass_rule', 8) ?></div>
+    <div class="row controls">
+      <button id="acSignup" class="primary" style="flex:1; justify-content:center"><?php e('acc.signup') ?></button>
+    </div>
+    <div class="aclinks">
+      <button type="button" class="aclink" data-acback="signin">‹ <?php e('acc.to_signin') ?></button>
+    </div>
+    <div class="sub"><?php e('acc.signup_note') ?></div>
+  </div>
+
+  <!-- ===== パスワードを忘れた ===== -->
+  <div class="acp" data-acp="forgot">
+    <div class="sub"><?php e('acc.forgot_note') ?></div>
+    <div class="fmrow">
+      <label for="acFoEmail"><?php e('acc.email') ?></label>
+      <input id="acFoEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="254">
+    </div>
+    <div class="row controls">
+      <button id="acForgot" class="primary" style="flex:1; justify-content:center"><?php e('acc.forgot_send') ?></button>
+    </div>
+    <div class="aclinks">
+      <button type="button" class="aclink" data-acback="signin">‹ <?php e('acc.to_signin') ?></button>
+    </div>
+  </div>
+
+  <!-- ===== メールを送りました ===== -->
+  <div class="acp" data-acp="sent">
+    <div class="acsent">✉</div>
+    <div class="sv-label"><span id="acSentTo"></span></div>
+    <div class="sub"><?php e('acc.sent_note') ?></div>
+    <div class="aclinks">
+      <button type="button" class="aclink" data-acback="signin">‹ <?php e('acc.to_signin') ?></button>
+    </div>
+  </div>
+
+  <!-- ===== ログイン中 ===== -->
+  <div class="acp" data-acp="me">
+    <div class="sv-label"><?php e('acc.signed_in') ?></div>
+    <div id="acWho" class="sv-code acmail"></div>
+    <div class="sub"><?php e('acc.me_note') ?></div>
     <hr class="sep">
     <div class="row controls">
-      <button id="svUnlink" class="ghost" style="flex:1; justify-content:center"><?php e('save.unlink') ?></button>
+      <button id="acToPasswd" class="ghost" style="flex:1; justify-content:center"><?php e('acc.passwd') ?></button>
     </div>
-    <div class="sub"><?php e('save.unlink_note') ?></div>
-    <div class="row controls" style="margin-top:10px">
-      <button id="svDelete" class="ghost danger" style="flex:1; justify-content:center"><?php e('save.delete') ?></button>
+    <div class="row controls" style="margin-top:8px">
+      <button id="acLogout" class="ghost" style="flex:1; justify-content:center"><?php e('acc.logout') ?></button>
+    </div>
+    <hr class="sep">
+    <div class="row controls">
+      <button id="acToDestroy" class="ghost danger" style="flex:1; justify-content:center"><?php e('acc.destroy') ?></button>
     </div>
   </div>
 
-  <div id="svMsg" class="fmmsg" role="status"></div>
+  <!-- ===== パスワードの変更 ===== -->
+  <div class="acp" data-acp="passwd">
+    <div id="acPwNowRow" class="fmrow" hidden>
+      <label for="acPwNow"><?php e('acc.pass_now') ?></label>
+      <input id="acPwNow" type="password" autocomplete="current-password" maxlength="200">
+    </div>
+    <div class="fmrow">
+      <label for="acPwNext"><?php e('acc.pass_new') ?></label>
+      <input id="acPwNext" type="password" autocomplete="new-password" minlength="8" maxlength="200">
+    </div>
+    <div class="sub"><?php e('acc.pass_rule', 8) ?></div>
+    <div class="row controls">
+      <button id="acPasswd" class="primary" style="flex:1; justify-content:center"><?php e('acc.passwd_do') ?></button>
+    </div>
+    <div class="aclinks">
+      <button type="button" class="aclink" data-acback="me">‹ <?php e('acc.back') ?></button>
+    </div>
+    <div class="sub"><?php e('acc.passwd_note') ?></div>
+  </div>
+
+  <!-- ===== 退会 ===== -->
+  <div class="acp" data-acp="destroy">
+    <div class="sub"><?php e('acc.destroy_note') ?></div>
+    <div id="acDelPassRow" class="fmrow" hidden>
+      <label for="acDelPass"><?php e('acc.pass_now') ?></label>
+      <input id="acDelPass" type="password" autocomplete="current-password" maxlength="200">
+    </div>
+    <div class="row controls">
+      <button id="acDestroy" class="primary danger" style="flex:1; justify-content:center"><?php e('acc.destroy_do') ?></button>
+    </div>
+    <div class="aclinks">
+      <button type="button" class="aclink" data-acback="me">‹ <?php e('acc.back') ?></button>
+    </div>
+  </div>
+
+  <div id="acMsg" class="fmmsg" role="status"></div>
 </div>
 
-<!-- 保存が要る操作をしたときに出す（保存番号をまだ持っていないときだけ） -->
-<div id="mSaveAsk" class="dkmodal" role="dialog" aria-modal="true">
+<!-- 保存が要る操作をしたときに出す（ログインしていないときだけ） -->
+<div id="mAccAsk" class="dkmodal" role="dialog" aria-modal="true">
   <div class="dk-head">
-    <span class="dk-tt"><?php e('save.ask_title') ?></span>
+    <span class="dk-tt"><?php e('acc.ask_title') ?></span>
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
-  <div class="sub sv-ask"><?php e('save.ask_body') ?></div>
+  <div class="sub sv-ask"><?php e('acc.ask_body') ?></div>
   <div class="startrow" style="margin-top:12px">
-    <button id="svAskYes" class="primary"><?php e('save.ask_yes') ?></button>
-    <button id="svAskNo" class="ghost"><?php e('save.ask_no') ?></button>
+    <button id="acAskYes" class="primary"><?php e('acc.ask_yes') ?></button>
+    <button id="acAskNo" class="ghost"><?php e('acc.ask_no') ?></button>
   </div>
 </div>
 
