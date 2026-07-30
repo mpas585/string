@@ -14,7 +14,8 @@ if (!defined('APP_ROOT'))   { define('APP_ROOT', dirname(__DIR__)); }
 /* 直接 URL で叩かれた場合は拒否（$LANG が無いまま既定のページを二重に配信してしまうため） */
 if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) { http_response_code(403); exit; }
 
-$URL_DEPTH = 1;                                         /* 公開URLは /{言語}/ の1階層 */
+/* 公開URLは /{言語}/ の1階層。ルート（/）から呼ばれたときだけ 0 が渡ってくる */
+$URL_DEPTH = isset($URL_DEPTH) ? (int)$URL_DEPTH : 1;
 require __DIR__ . '/bootstrap.php';
 
 $JSON = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;

@@ -3,6 +3,7 @@
   includes/bootstrap.php — 言語まわりの共通処理（トップと楽器ページの両方で使う）。
 
   呼び出し側で $LANG と $URL_DEPTH を定義しておくこと:
+      $LANG = 'ja'; $URL_DEPTH = 0;   → /            （サイトのルート＝ホームページ）
       $LANG = 'ja'; $URL_DEPTH = 1;   → /{言語}/
       $LANG = 'ja'; $URL_DEPTH = 2;   → /{言語}/{楽器}/
 
@@ -105,7 +106,10 @@ if (!function_exists('app_send_csp')) {
 /* ===== 4. パス ===== */
 $BASE      = str_repeat('../', $URL_DEPTH);              /* 今のページからルートまで */
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
-$rootPath  = rtrim(dirname($scriptDir, $URL_DEPTH), '/');/* 設置ディレクトリ（直下なら ''） */
+/* dirname() の第2引数は1以上でないと例外になるため、ルート（深さ0）は分けて扱う */
+$rootPath  = ($URL_DEPTH > 0)
+  ? rtrim(dirname($scriptDir, $URL_DEPTH), '/')
+  : rtrim($scriptDir, '/');                             /* 設置ディレクトリ（直下なら ''） */
 
 $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');

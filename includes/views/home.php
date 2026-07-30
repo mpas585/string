@@ -24,6 +24,15 @@ foreach (APP_INSTRUMENTS as $ins) {
   <meta name="theme-color" content="#15110c">
   <title><?php e('home.title') ?></title>
   <meta name="description" content="<?php e('home.desc') ?>">
+<?php
+  /* サイトのルート。WebSite 構造化データの url に入れる（下を参照） */
+  $SITE_ROOT = $origin . $rootPath . '/';
+  /* 正規URLは言語別トップ（/{言語}/）のまま。ルート（/）は同じ内容の重複ページとして扱う。
+     Google のサイト名の項に「ホームページが重複している場合は、正規ページだけでなく
+     重複するすべてのページで同じ構造化データを使う」とあるため、
+     ルートを正規URLに変えなくても、ルートに構造化データがあれば拾ってもらえる。
+     ＝ 既存の /{言語}/ の正規化を崩さずに済む。 */
+?>
   <link rel="canonical" href="<?= h($origin . $LANG_HOME_URLS[$LANG]) ?>">
 <?php foreach (APP_LANGS as $l): ?>
   <link rel="alternate" hreflang="<?= h($l) ?>" href="<?= h($origin . $LANG_HOME_URLS[$l]) ?>">
@@ -44,7 +53,9 @@ foreach (APP_INSTRUMENTS as $ins) {
     '@context' => 'https://schema.org',
     '@type'    => 'WebSite',
     'name'     => APP_NAME,
-    'url'      => $origin . $LANG_HOME_URLS[$LANG],
+    /* url は【サイトのルート】を指すこと。言語別URL（/ja/ 等）を入れると
+       Google はここをホームページと見なさず、サイト名を拾ってくれない。 */
+    'url'      => $SITE_ROOT,
     'inLanguage' => $T['html_lang'],
     'description' => t('home.desc'),
   ], $JSON | JSON_HEX_TAG | JSON_PRETTY_PRINT);
