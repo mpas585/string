@@ -114,7 +114,11 @@ if (!function_exists('app_send_csp')) {
 /* ===== 4. パス ===== */
 $BASE      = str_repeat('../', $URL_DEPTH);              /* 今のページからルートまで */
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
-$rootPath  = rtrim(dirname($scriptDir, $URL_DEPTH), '/');/* 設置ディレクトリ（直下なら ''） */
+/* 設置ディレクトリ（直下なら ''）。
+   ルートの index.php から呼ばれたときは $URL_DEPTH が 0 で、そのときは遡らずに
+   $scriptDir がそのまま設置ディレクトリになる。
+   PHP 8 の dirname() は第2引数に 0 を渡すと ValueError を投げるので、先に分ける。 */
+$rootPath  = rtrim($URL_DEPTH > 0 ? dirname($scriptDir, $URL_DEPTH) : $scriptDir, '/');
 
 $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
