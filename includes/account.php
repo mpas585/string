@@ -38,6 +38,27 @@ const ACC_SEND_SEC      = 3600;     /* 確認・再発行メールの送信間�
 const ACC_SEND_MAX      = 5;        /* その窓で同じメールに送る上限 */
 
 /* ===== 1. DB ===== */
+
+/* 昔の users テーブル（ニックネーム＋暗証番号のころのもの）を退避する。
+   消さずに users_legacy へ改名するだけにしてある。中身を見たくなったときのため。
+   要らなくなったら手で DROP TABLE users_legacy; してよい。
+   今の形（email 列がある）なら何もしない。 */
+function acc_migrate_users(PDO $pdo): void {
+  $cols = [];
+  foreach ($pdo->query('PRAGMA table_info(users)') as $c) $cols[] = $c['name'];
+  if (!$cols) return;                              /* まだ無い＝このあと作られる */
+  if (in_array('email', $cols, true)) return;      /* 今の形。触らない */
+
+  /* 退避先の名前が埋まっていたら連番を足す */
+  $name = 'users_legacy';
+  $n = 1;
+  while ($pdo->query('SELECT 1 FROM sqlite_master WHERE type = ' . "'table'" . ' AND name = ' . $pdo->quote($name))->fetchColumn()) {
+    $name = 'users_legacy_' . (++$n);
+  }
+  $pdo->exec('ALTER TABLE users RENAME TO ' . $name);
+  error_log('[GEN strings account] 旧 users テーブルを ' . $name . ' へ退避し、新しい users を作りました');
+}
+
 function acc_db(): PDO {
   static $pdo = null;
   if ($pdo instanceof PDO) return $pdo;
@@ -52,6 +73,12 @@ function acc_db(): PDO {
   ]);
   $pdo->exec('PRAGMA journal_mode = WAL');
   $pdo->exec('PRAGMA busy_timeout = 3000');
+
+  /* 昔の users テーブルが残っていたら、先に退避しておく。
+     CREATE TABLE IF NOT EXISTS は「名前が同じなら中身が違っても何もしない」ので、
+     列の違う古い users が居座っていると、後の SELECT が
+     「no such column: email」で落ちる（実際にこれで登録・ログインが 500 になった）。 */
+  acc_migrate_users($pdo);
 
   /* 会員本体。
      email    … 小文字に寄せたもの（引き当てはこれで行う）
