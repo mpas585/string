@@ -20,7 +20,7 @@ export let staffSig='';
 export function staffSignature(){
   return [ST.events.length, ST.scoreName, ST.octShift, (ST.zoom||1).toFixed(2), ST.view,
           document.body.classList.contains('landscape-layout'),
-          ST.events.map(e=> e.fing ? (e.fing.str+''+e.fing.finger) : '-').join(',')].join('|');
+          ST.events.map(e=> e.fing ? (e.fing.str+''+(e.fing.finger ?? '')) : '-').join(',')].join('|');
 }
 /* 現在音のハイライトだけ差し替える（再構築しない＝スクロール位置を壊さない） */
 export function updateStaffActive(){
@@ -105,7 +105,7 @@ export function buildStaff(){
     const up = y > TOP+2*SPACE;
     p.push(`<line class="nk-st" data-nid="${ev.id}" data-ok="${ok}" x1="${up?x+5.4:x-5.4}" y1="${y}" x2="${up?x+5.4:x-5.4}" y2="${up?y-26:y+26}" stroke="${col}" stroke-width="1.4"/>`);
     /* 運指番号 */
-    if(ev.fing) p.push(`<text class="nk-fg" data-nid="${ev.id}" x="${x}" y="${up? y-32 : y+38}" font-size="10" text-anchor="middle" fill="${active?'var(--accent)':'var(--muted)'}" font-family="var(--mono)">${ev.fing.finger}</text>`);
+    if(ev.fing && ev.fing.finger) p.push(`<text class="nk-fg" data-nid="${ev.id}" x="${x}" y="${up? y-32 : y+38}" font-size="10" text-anchor="middle" fill="${active?'var(--accent)':'var(--muted)'}" font-family="var(--mono)">${ev.fing.finger}</text>`);
     /* タップ領域 */
     p.push(`<rect class="nh" data-id="${ev.id}" x="${x-NW/2}" y="6" width="${NW}" height="${H-12}" fill="transparent"/>`);
   });

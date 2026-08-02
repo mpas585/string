@@ -30,7 +30,10 @@ export function optionsFor(midi){
   }
   return out;
 }
-/* 推奨ポジ設定に応じて1つ選ぶ */
+/* 推奨ポジ設定に応じて1つ選ぶ。
+   弦とポジションは決めるが、指番号は入れない（finger:null）。
+   どの指で押さえるかは人と手の大きさで変わるので、利用者に決めてもらう。
+   目安の番号そのものは optionsFor() の finger に残してある。 */
 export function recommend(midi){
   const o = optionsFor(midi);
   if(!o.length) return null;
@@ -38,7 +41,7 @@ export function recommend(midi){
   else if(ST.pref==='high') o.sort((a,b)=> b.off-a.off);
   else                      o.sort((a,b)=> Math.abs(a.off-10)-Math.abs(b.off-10));
   const c=o[0];
-  return {str:c.str, off:c.off, frac:c.frac, zone:c.zone, klass:c.klass, finger:c.finger, manual:false};
+  return {str:c.str, off:c.off, frac:c.frac, zone:c.zone, klass:c.klass, finger:null, manual:false};
 }
 
 /* ===== 指板描画 ===== */
@@ -200,12 +203,12 @@ export function paintNotes(ev){
     const r=recommend(p.midi); if(!r) return;
     const x=FB.strX[r.str], y=yOf(r.off);
     parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="11" fill="var(--accent-dim)" opacity="0.9"/>`);
-    parts.push(`<text x="${x}" y="${(y+3.8).toFixed(1)}" fill="#241a08" font-size="11" text-anchor="middle" font-weight="700" font-family="var(--mono)">${r.finger}</text>`);
+    parts.push(`<text x="${x}" y="${(y+3.8).toFixed(1)}" fill="#241a08" font-size="11" text-anchor="middle" font-weight="700" font-family="var(--mono)">${r.finger ?? ''}</text>`);
   });
   if(f){
     const x=FB.strX[f.str], y=yOf(f.off);
     parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="15" fill="var(--accent)"/>`);
-    parts.push(`<text x="${x}" y="${(y+5).toFixed(1)}" fill="#241a08" font-size="13" text-anchor="middle" font-weight="800" font-family="var(--mono)">${f.finger}</text>`);
+    parts.push(`<text x="${x}" y="${(y+5).toFixed(1)}" fill="#241a08" font-size="13" text-anchor="middle" font-weight="800" font-family="var(--mono)">${f.finger ?? ''}</text>`);
     parts.push(`<text x="${x}" y="${(y+31).toFixed(1)}" fill="var(--accent)" font-size="12" text-anchor="middle" font-family="var(--mono)">${lead.name}</text>`);
   }
   g.innerHTML=parts.join('');

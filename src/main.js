@@ -16,6 +16,8 @@ import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } f
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { tt } from './util.js';
+import { initPractice } from './practice.js';
+import { initPracticeUI, openPractice, prevMonth, nextMonth } from './practice-ui.js';
 import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, showPasswd, showDelete, togglePassword, doLogin, doSignup,
          doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin, askLogin, askSkip,
          setSaveApply, armSave } from './account.js';
@@ -422,6 +424,10 @@ on('acSuEmail','keydown',e=>{ if(e.key==='Enter') doSignup(); });
 on('acSuPass','keydown', e=>{ if(e.key==='Enter') doSignup(); });
 on('acFoEmail','keydown',e=>{ if(e.key==='Enter') doForgot(); });
 on('acPwNext','keydown', e=>{ if(e.key==='Enter') doPasswd(); });
+/* 練習カレンダー（歯車の「累計練習時間」から） */
+on('pracBtn','click',  openPractice);
+on('pracPrev','click', prevMonth);
+on('pracNext','click', nextMonth);
 /* 「設定を保存しますか？」のモーダル */
 on('acAskYes','click', askLogin);
 on('acAskNo','click',  askSkip);
@@ -497,6 +503,9 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
   initUploads();
   /* ログイン状態は描画に関係しないので、初期描画の後で取りに行く */
   initAccount();
+  /* 練習時間の計測。ST.playing を1秒ごとに見るだけなので、他の処理には触らない */
+  initPractice();
+  initPracticeUI();
 })();
 window.addEventListener('orientationchange', ()=> setTimeout(applyZoom, 250));
 window.addEventListener('resize', centerBoardH);          /* はみ出しぶんは常に中央に置く */

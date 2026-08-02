@@ -21,6 +21,7 @@
 */
 import { tt } from './util.js';
 import { toast, openDockModal, closeDockModal, raisePlayAttn } from './dom.js';
+import { PRACTICE_KEY, mergePractice } from './practice.js';
 
 const API  = new URL('../api/account.php', import.meta.url).href;
 const OAUTH_GOOGLE = new URL('../oauth/google.php', import.meta.url).href;
@@ -82,6 +83,9 @@ function collect() {
 function applyPayload(p) {
   if (!LS || !p || p.v !== 1 || !p.keys || typeof p.keys !== 'object') return false;
   try {
+    /* 消す前に、この端末の練習時間を取っておく（下で突き合わせる） */
+    let keep = null;
+    try { keep = LS.getItem(PRACTICE_KEY); } catch (e) {}
     const drop = [];
     for (let i = 0; i < LS.length; i++) {
       const k = LS.key(i);
@@ -91,6 +95,13 @@ function applyPayload(p) {
     for (const k of Object.keys(p.keys)) {
       const v = p.keys[k];
       if (k.indexOf(PREFIX) === 0 && k.indexOf(SELF) !== 0 && typeof v === 'string') LS.setItem(k, v);
+    }
+    /* 練習時間だけは置き換えず、日ごとに大きいほうを残す。
+       設定は上書きで構わないが、練習した記録が消えるのは困るため
+       （この端末で練習した日と、別の端末で練習した日の両方を残す）。 */
+    if (keep !== null) {
+      const merged = mergePractice(keep, p.keys[PRACTICE_KEY]);
+      if (merged) LS.setItem(PRACTICE_KEY, merged);
     }
   } catch (e) { return false; }
   return true;

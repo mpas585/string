@@ -941,7 +941,7 @@
   .accwho.on{color:var(--accent)}
 
   /* dkmodal は本来ドック用に左下固定。アカウントとお問い合わせは画面中央に置く（#mInst と同じ扱い） */
-  #mAcc, #mAccAsk, #mContact{
+  #mAcc, #mAccAsk, #mContact, #mPractice{
     left:50%; right:auto; top:50%; bottom:auto;
     transform:translate(-50%,-50%);
     width:min(340px, calc(100vw - 40px));
@@ -968,6 +968,52 @@
   .fmrow textarea{resize:vertical; min-height:96px; line-height:1.6}
   .fmrow input:focus, .fmrow textarea:focus{outline:none; border-color:var(--accent)}
   .fmrow input::placeholder, .fmrow textarea::placeholder{color:var(--faint)}
+  /* ---- 練習カレンダー ---- */
+  /* 7列ぶん置くので、他のモーダルより少し広くする */
+  #mPractice{width:min(400px, calc(100vw - 32px))}
+
+  /* 歯車パネルの「累計練習時間」の1行 */
+  .pracline{
+    display:flex; width:100%; align-items:center; justify-content:space-between; gap:8px;
+    margin-top:8px; padding:9px 11px; min-height:auto; border-radius:9px;
+    background:var(--panel2); border:1px solid var(--line); box-shadow:none; cursor:pointer;
+  }
+  .pracline:hover{border-color:var(--accent)}
+  .pracline .pl-l{font-size:12px; color:var(--muted); font-weight:400}
+  .pracline .pl-v{font-family:var(--mono); font-size:13px; font-weight:700; color:var(--accent)}
+
+  /* 上の3つの集計 */
+  .prac-sum{display:flex; gap:6px; margin-bottom:12px}
+  .prac-sum > div{
+    flex:1; text-align:center; padding:8px 4px; border-radius:9px;
+    background:var(--panel2); border:1px solid var(--line);
+  }
+  .prac-sum span{display:block; font-size:10px; color:var(--muted); margin-bottom:3px}
+  .prac-sum b{font-family:var(--mono); font-size:13px; color:var(--accent)}
+
+  /* 月の送り */
+  .prac-nav{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px}
+  .prac-mon{font-size:14px; font-weight:700; min-width:9em; text-align:center}
+
+  /* 曜日と日付のマス */
+  .pc-wd{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:3px}
+  .pc-wd span{text-align:center; font-size:10px; color:var(--muted)}
+  .pc-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+  .pc-cell{
+    position:relative; aspect-ratio:1; border-radius:8px;
+    background:var(--panel2); border:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    padding:3px 1px 0; overflow:hidden;
+  }
+  .pc-cell.pad{background:none; border-color:transparent}   /* 1日より前の空きマス */
+  .pc-cell .pc-d{font-family:var(--mono); font-size:10px; color:var(--muted); line-height:1}
+  /* 花丸は数字の上に重ねる。マスが小さいので並べると入りきらない */
+  .pc-cell .pc-mark{position:absolute; top:calc(50% - 2px); transform:translateY(-50%); font-size:17px; line-height:1}
+  .pc-cell .pc-t{position:absolute; bottom:2px; font-family:var(--mono); font-size:8px; color:var(--accent); line-height:1}
+  .pc-cell.done{background:var(--panel); border-color:var(--accent-dim)}
+  .pc-cell.done .pc-d{color:var(--ink)}
+  .pc-cell.today{border-color:var(--accent)}
+
   /* ---- ログイン ⇄ 新規登録 のタブ ---- */
   .actabs{display:flex; gap:4px; margin:0 0 14px; padding:3px; border-radius:10px; background:var(--panel2)}
   .actabs[hidden]{display:none}

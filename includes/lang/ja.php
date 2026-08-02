@@ -226,6 +226,7 @@ return [
     'zoom_fit'             => '全体表示（%s%）',
     'str_finger'           => '%s線%s指',
     'str_open'             => '%s線 開放',
+    'str_only'             => '%s線',
     'str_chip'             => '%s線',
     'staff_landscape'      => '五線譜：横画面にしました',
     'vol_reset_done'       => '音量を初期値に戻しました（%s）',
@@ -406,6 +407,26 @@ return [
 
   /* ===== アカウント（メールアドレス＋パスワード / Google ログイン）。
            api/account.php・oauth/google.php・api/scores.php も同じ文言を返す ===== */
+  /* ===== 練習カレンダー（src/practice.js / practice-ui.js） =====
+           month_fmt の %1$s は年、%2$s は月の名前。言語ごとに並び順を変えられるようにしてある */
+  'prac' => [
+    'title'     => '練習カレンダー',
+    'total'     => '累計練習時間',
+    'sum_all'   => '累計',
+    'sum_month' => 'この月',
+    'sum_days'  => '練習した日',
+    'days_n'    => '%s日',
+    'sec'       => '%s秒',
+    'min'       => '%s分',
+    'hm'        => '%s時間%s分',
+    'month_fmt' => '%1$s年 %2$s',
+    'months'    => '1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月',
+    'wd'        => '日,月,火,水,木,金,土',
+    'prev'      => '前の月',
+    'next'      => '次の月',
+    'note'      => '再生していた時間だけを数えます。止めているあいだは増えません。',
+  ],
+
   'acc' => [
     'email'         => 'メールアドレス',
     'pass'          => 'パスワード',

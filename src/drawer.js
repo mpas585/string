@@ -177,7 +177,8 @@ export function applyFingerData(data){
     if(d.s!=null && d.o!=null && d.m){
       /* 手で直した運指だけ復元する */
       const z=zoneOf(d.o);
-      ev.fing={str:d.s, off:d.o, frac:fracOf(d.o), zone:z.zone, klass:z.klass, finger:d.f||fingerHint(d.o), manual:true};
+      /* 保存してある番号をそのまま戻す。空で保存されていれば空のまま（目安で埋めない） */
+      ev.fing={str:d.s, off:d.o, frac:fracOf(d.o), zone:z.zone, klass:z.klass, finger:(d.f ?? null), manual:true};
     }else{
       /* 自動ぶんは「今の推奨ポジション」で計算し直す。
          保存時のポジションをそのまま復元すると、ロー/ミドル/ハイを切り替えても

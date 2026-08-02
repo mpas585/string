@@ -105,5 +105,8 @@ export function fingerHint(off){
 export function strFingerText(strIdx, off, finger){
   const name=STRNAME[strIdx];
   if(off===0) return tt('msg.str_open', name);
-  return tt('msg.str_finger', name, (finger!=null) ? finger : fingerHint(off));
+  /* 指番号は初期状態では空にしてある（利用者が決める）。
+     決まっていないうちは目安の番号で埋めず、弦の名前だけを出す。 */
+  if(finger==null || finger==='') return tt('msg.str_only', name);
+  return tt('msg.str_finger', name, finger);
 }

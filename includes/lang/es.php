@@ -223,6 +223,7 @@ return [
     'zoom_fit'             => 'Ajustado a la pantalla (%s%)',
     'str_finger'           => 'cuerda %s, dedo %s',
     'str_open'             => 'cuerda %s, al aire',
+    'str_only'             => 'cuerda %s',
     'str_chip'             => 'cuerda %s',
     'staff_landscape'      => 'Partitura: cambiado a horizontal',
     'vol_reset_done'       => 'Volúmenes restablecidos (%s)',
@@ -401,6 +402,26 @@ return [
 
   /* ===== Cuentas (correo + contraseña / inicio con Google).
            api/account.php, oauth/google.php y api/scores.php devuelven estos textos ===== */
+  /* ===== Calendario de práctica (src/practice.js / practice-ui.js) =====
+           En month_fmt, %1$s es el año y %2$s el nombre del mes, para poder cambiar el orden por idioma */
+  'prac' => [
+    'title'     => 'Calendario de práctica',
+    'total'     => 'Tiempo total de práctica',
+    'sum_all'   => 'Total',
+    'sum_month' => 'Este mes',
+    'sum_days'  => 'Días practicados',
+    'days_n'    => '%s días',
+    'sec'       => '%s s',
+    'min'       => '%s min',
+    'hm'        => '%s h %s min',
+    'month_fmt' => '%2$s de %1$s',
+    'months'    => 'enero,febrero,marzo,abril,mayo,junio,julio,agosto,septiembre,octubre,noviembre,diciembre',
+    'wd'        => 'dom,lun,mar,mié,jue,vie,sáb',
+    'prev'      => 'Mes anterior',
+    'next'      => 'Mes siguiente',
+    'note'      => 'Solo se cuenta el tiempo de reproducción. No aumenta mientras está detenido.',
+  ],
+
   'acc' => [
     'email'         => 'Correo electrónico',
     'pass'          => 'Contraseña',

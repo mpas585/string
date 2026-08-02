@@ -220,6 +220,7 @@ return [
     'zoom_fit'             => 'Fit to screen (%s%)',
     'str_finger'           => '%s string, finger %s',
     'str_open'             => '%s string, open',
+    'str_only'             => '%s string',
     'str_chip'             => '%s string',
     'staff_landscape'      => 'Staff view switched to landscape',
     'vol_reset_done'       => 'Volumes reset to default (%s)',
@@ -398,6 +399,26 @@ return [
 
   /* ===== Accounts (email + password / Google sign-in).
            api/account.php, oauth/google.php and api/scores.php return these too ===== */
+  /* ===== Practice calendar (src/practice.js / practice-ui.js) =====
+           In month_fmt, %1$s is the year and %2$s the month name, so the order can differ per language */
+  'prac' => [
+    'title'     => 'Practice calendar',
+    'total'     => 'Total practice time',
+    'sum_all'   => 'Total',
+    'sum_month' => 'This month',
+    'sum_days'  => 'Days practised',
+    'days_n'    => '%s days',
+    'sec'       => '%s sec',
+    'min'       => '%s min',
+    'hm'        => '%sh %smin',
+    'month_fmt' => '%2$s %1$s',
+    'months'    => 'January,February,March,April,May,June,July,August,September,October,November,December',
+    'wd'        => 'Sun,Mon,Tue,Wed,Thu,Fri,Sat',
+    'prev'      => 'Previous month',
+    'next'      => 'Next month',
+    'note'      => 'Only time spent playing is counted. It does not grow while stopped.',
+  ],
+
   'acc' => [
     'email'         => 'Email address',
     'pass'          => 'Password',

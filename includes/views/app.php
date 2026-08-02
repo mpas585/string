@@ -98,6 +98,11 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="row controls">
       <button id="svBtn" class="ghost"><?php e('ui.acc_start') ?></button>
     </div>
+    <!-- 累計練習時間。数字は src/practice-ui.js が入れる。押すとカレンダーが開く -->
+    <button type="button" id="pracBtn" class="pracline">
+      <span class="pl-l">💮 <?php e('prac.total') ?></span>
+      <span id="pracTotal" class="pl-v">–</span>
+    </button>
     <hr class="sep">
 
     <!-- 表示（指板/五線譜・フレット線・横画面・指板ズーム）はサブメニューへ。
@@ -400,6 +405,30 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <span class="nm"><?= h(t('instrument.' . $ins)) ?><?php if (empty($ic['ready'])): ?><small><?php e('ui.inst_soon') ?></small><?php endif; ?></span>
   </a>
 <?php endforeach; ?>
+</div>
+
+<!-- 練習カレンダー（歯車の「累計練習時間」から開く）。中身は src/practice-ui.js が作る -->
+<div id="mPractice" class="dkmodal prac" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt">💮 <?php e('prac.title') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+
+  <div class="prac-sum">
+    <div><span><?php e('prac.sum_all') ?></span><b id="pracSumAll">–</b></div>
+    <div><span><?php e('prac.sum_month') ?></span><b id="pracSumMon">–</b></div>
+    <div><span><?php e('prac.sum_days') ?></span><b id="pracSumDays">–</b></div>
+  </div>
+
+  <div class="prac-nav">
+    <button type="button" id="pracPrev" class="iconbtn" aria-label="<?php e('prac.prev') ?>">‹</button>
+    <span id="pracMonth" class="prac-mon"></span>
+    <button type="button" id="pracNext" class="iconbtn" aria-label="<?php e('prac.next') ?>">›</button>
+  </div>
+
+  <div id="pracCal" class="prac-cal"></div>
+
+  <div class="sub"><?php e('prac.note') ?></div>
 </div>
 
 <!-- アカウント（歯車の「アカウント」から開く）。出し分け・切替は src/account.js -->

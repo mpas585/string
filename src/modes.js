@@ -244,7 +244,7 @@ export function renderEdit(ev){
 export let stripSig='';
 export function stripSignature(){
   return [ST.events.length, ST.scoreName, ST.octShift,
-          ST.events.map(e=> e.fing ? (e.fing.str+''+e.fing.finger) : '-').join(',')].join('|');
+          ST.events.map(e=> e.fing ? (e.fing.str+''+(e.fing.finger ?? '')) : '-').join(',')].join('|');
 }
 export function updateStripActive(){
   const el=document.getElementById('strip');
@@ -269,7 +269,8 @@ export function renderStrip(){
     const lead=ev.pitches[ev.leadIdx];
     const f=ev.fing;
     const zc = f ? (f.klass==='low'?'zone-low':f.klass==='mid'?'zone-mid':'zone-high') : '';
-    const sub = f ? `${STRNAME[f.str]}·${f.finger}` : tt('msg.out_of_range');
+    /* 指番号がまだ決まっていない音は、弦の名前だけ出す */
+    const sub = f ? (f.finger ? `${STRNAME[f.str]}·${f.finger}` : STRNAME[f.str]) : tt('msg.out_of_range');
     const chord = (ev.pitches.length>1) ? '<i class="ch"></i>' : '';
     const cls = (ev.id===ST.selected?' on':'') + (ev.id===ST.current?' playing':'') + (f?'':' out');
     html += `<div class="nchip${cls}" data-id="${ev.id}">${chord}<b>${lead.name}</b><small class="${zc}">${sub}</small></div>`;
@@ -305,7 +306,8 @@ export function setStringForSelected(strIdx){
   const midi=ev.pitches[ev.leadIdx].midi;
   const off=midi-OPEN[strIdx];
   const z=zoneOf(off);
-  ev.fing={str:strIdx, off, frac:fracOf(off), zone:z.zone, klass:z.klass, finger:fingerHint(off), manual:true};
+  /* 弦を変えるとポジションが変わり、押さえる指も変わる。番号は入れずに選び直してもらう */
+  ev.fing={str:strIdx, off, frac:fracOf(off), zone:z.zone, klass:z.klass, finger:null, manual:true};
   saveFingering();
   render();
 }

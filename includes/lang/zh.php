@@ -220,6 +220,7 @@ return [
     'zoom_fit'             => '全览显示（%s%）',
     'str_finger'           => '%s弦%s指',
     'str_open'             => '%s弦 空弦',
+    'str_only'             => '%s弦',
     'str_chip'             => '%s弦',
     'staff_landscape'      => '五线谱：已切换为横屏',
     'vol_reset_done'       => '已恢复默认音量（%s）',
@@ -398,6 +399,26 @@ return [
 
   /* ===== 账户（邮箱＋密码 / Google 登录）。
            api/account.php、oauth/google.php 与 api/scores.php 也返回这些文案 ===== */
+  /* ===== 练习日历（src/practice.js / practice-ui.js）=====
+           month_fmt 的 %1$s 为年、%2$s 为月名，可按语言调整顺序 */
+  'prac' => [
+    'title'     => '练习日历',
+    'total'     => '累计练习时间',
+    'sum_all'   => '累计',
+    'sum_month' => '本月',
+    'sum_days'  => '练习天数',
+    'days_n'    => '%s天',
+    'sec'       => '%s秒',
+    'min'       => '%s分钟',
+    'hm'        => '%s小时%s分钟',
+    'month_fmt' => '%1$s年 %2$s',
+    'months'    => '1月,2月,3月,4月,5月,6月,7月,8月,9月,10月,11月,12月',
+    'wd'        => '日,一,二,三,四,五,六',
+    'prev'      => '上个月',
+    'next'      => '下个月',
+    'note'      => '只统计正在播放的时间。停止期间不会增加。',
+  ],
+
   'acc' => [
     'email'         => '邮箱地址',
     'pass'          => '密码',
