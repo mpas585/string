@@ -109,10 +109,44 @@ function openPane(name) {
   const box = $('mAcc');
   if (!box) return;
   box.querySelectorAll('.acp').forEach(p => p.classList.toggle('on', p.dataset.acp === name));
+  /* ログインと新規登録のときだけタブを出す。他のページでは行き先が違うので隠す */
+  const tabs = $('acTabs');
+  if (tabs) {
+    const onTab = (name === 'signin' || name === 'signup');
+    tabs.hidden = !onTab;
+    tabs.querySelectorAll('.actab').forEach(t => {
+      const on = t.dataset.actab === name;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+  /* ページを移ったら、見せていたパスワードは伏せ字に戻す（置きっぱなしで覗かれないように） */
+  hideAllPasswords();
   setMsg('');
   /* 最初の入力へ寄せる。スマホで勝手に拡大されないよう少し待つ */
   const first = box.querySelector('.acp.on input');
   if (first) setTimeout(() => { try { first.focus(); } catch (e) {} }, 60);
+}
+
+/* ===== パスワードの目マーク ===== */
+/* 押すたびに伏せ字と平文を入れ替える。読み上げ用の説明文も一緒に差し替える */
+export function togglePassword(btn) {
+  const el = btn && $(btn.dataset.pweye);
+  if (!el) return;
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  btn.classList.toggle('on', show);
+  btn.setAttribute('aria-label', tt(show ? 'acc.pw_hide' : 'acc.pw_show'));
+  /* 押したあともそのまま打ち続けられるように、文字の位置を末尾へ戻して入力欄に返す */
+  try { const n = el.value.length; el.focus(); el.setSelectionRange(n, n); } catch (e) {}
+}
+function hideAllPasswords() {
+  document.querySelectorAll('#mAcc .pweye.on').forEach(b => {
+    const el = $(b.dataset.pweye);
+    if (el) el.type = 'password';
+    b.classList.remove('on');
+    b.setAttribute('aria-label', tt('acc.pw_show'));
+  });
 }
 
 function syncUI() {
@@ -225,7 +259,10 @@ export function googleSignin() {
 /* ===== 操作（配線は main.js / home.js） ===== */
 function val(id) { const el = $(id); return el ? el.value.trim() : ''; }
 function raw(id) { const el = $(id); return el ? el.value : ''; }
-function clearPass() { ['acPass', 'acSuPass', 'acPwNow', 'acPwNext', 'acDelPass'].forEach(id => { const el = $(id); if (el) el.value = ''; }); }
+function clearPass() {
+  ['acPass', 'acSuPass', 'acPwNow', 'acPwNext', 'acDelPass'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+  hideAllPasswords();
+}
 
 export async function doLogin() {
   if (busy) return;

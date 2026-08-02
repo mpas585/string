@@ -65,3 +65,36 @@ export function clearPlayAttn(){
   const fab=document.getElementById('fab');
   if(fab) fab.style.zIndex='';     /* styles.css の既定（6）へ戻す */
 }
+
+/* ===== 画面キーボードよけ =====
+   スマホでパスワードなどを打つと下からキーボードがせり上がり、
+   画面のまん中に置いたモーダル（#mAcc / #mContact）が隠れてしまう。
+
+   position:fixed はキーボードが出ても縮まない「レイアウトビューポート」を基準にするので、
+   CSS だけでは避けられない。実際に見えている範囲は visualViewport が教えてくれるので、
+   その高さと上端を CSS 変数にして body へ渡し、あとは styles.css 側で位置を決める。
+
+     --vvh … いま見えている高さ
+     --vvt … 見えている範囲の上端（ページを押し上げるブラウザだとここがずれる）
+     body.kbd … キーボードが出ていると判断した状態
+
+   visualViewport が無いブラウザ（古い端末）では何もしない。
+   その場合もこれまでどおり中央に出るだけで、壊れはしない。 */
+(function watchKeyboard(){
+  const vv = window.visualViewport;
+  if (!vv) return;
+  let raf = 0;
+  const apply = () => {
+    raf = 0;
+    const st = document.body.style;
+    st.setProperty('--vvh', vv.height + 'px');
+    st.setProperty('--vvt', (vv.offsetTop || 0) + 'px');
+    /* 見えている高さが窓の 3/4 を切ったらキーボードが出ていると見なす。
+       アドレスバーの伸び縮み（せいぜい1割程度）では反応しない値にしてある。 */
+    document.body.classList.toggle('kbd', vv.height < window.innerHeight * 0.75);
+  };
+  const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
+  vv.addEventListener('resize', schedule);
+  vv.addEventListener('scroll', schedule);
+  apply();
+})();

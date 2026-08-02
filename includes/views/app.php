@@ -409,6 +409,12 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
 
+  <!-- ログインと新規登録の行き来。この2枚のときだけ出す（切替は src/account.js） -->
+  <div id="acTabs" class="actabs" role="tablist">
+    <button type="button" class="actab on" data-actab="signin" role="tab"><?php e('acc.tab_signin') ?></button>
+    <button type="button" class="actab"    data-actab="signup" role="tab"><?php e('acc.tab_signup') ?></button>
+  </div>
+
   <!-- ===== ログイン ===== -->
   <div class="acp on" data-acp="signin">
     <div class="fmrow">
@@ -417,7 +423,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <div class="fmrow">
       <label for="acPass"><?php e('acc.pass') ?></label>
-      <input id="acPass" type="password" autocomplete="current-password" maxlength="200">
+      <div class="pwwrap">
+        <input id="acPass" type="password" autocomplete="current-password" maxlength="200">
+        <button type="button" class="pweye" data-pweye="acPass" aria-label="<?php e('acc.pw_show') ?>">👁</button>
+      </div>
     </div>
     <div class="row controls">
       <button id="acLogin" class="primary" style="flex:1; justify-content:center"><?php e('acc.login') ?></button>
@@ -432,7 +441,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       </div>
     </div>
     <div class="aclinks">
-      <button type="button" id="acToSignup" class="aclink"><?php e('acc.to_signup') ?></button>
       <button type="button" id="acToForgot" class="aclink"><?php e('acc.to_forgot') ?></button>
     </div>
     <div class="sub"><?php e('acc.signin_note') ?></div>
@@ -446,14 +454,20 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <div class="fmrow">
       <label for="acSuPass"><?php e('acc.pass_new') ?></label>
-      <input id="acSuPass" type="password" autocomplete="new-password" minlength="8" maxlength="200">
+      <div class="pwwrap">
+        <input id="acSuPass" type="password" autocomplete="new-password" minlength="8" maxlength="200">
+        <button type="button" class="pweye" data-pweye="acSuPass" aria-label="<?php e('acc.pw_show') ?>">👁</button>
+      </div>
     </div>
     <div class="sub"><?php e('acc.pass_rule', 8) ?></div>
     <div class="row controls">
       <button id="acSignup" class="primary" style="flex:1; justify-content:center"><?php e('acc.signup') ?></button>
     </div>
-    <div class="aclinks">
-      <button type="button" class="aclink" data-acback="signin">‹ <?php e('acc.to_signin') ?></button>
+    <div class="acgoogle" hidden>
+      <div class="acor"><?php e('acc.or') ?></div>
+      <div class="row controls">
+        <button id="acGoogleSu" class="ghost" style="flex:1; justify-content:center"><?php e('acc.google') ?></button>
+      </div>
     </div>
     <div class="sub"><?php e('acc.signup_note') ?></div>
   </div>
@@ -505,11 +519,17 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="acp" data-acp="passwd">
     <div id="acPwNowRow" class="fmrow" hidden>
       <label for="acPwNow"><?php e('acc.pass_now') ?></label>
-      <input id="acPwNow" type="password" autocomplete="current-password" maxlength="200">
+      <div class="pwwrap">
+        <input id="acPwNow" type="password" autocomplete="current-password" maxlength="200">
+        <button type="button" class="pweye" data-pweye="acPwNow" aria-label="<?php e('acc.pw_show') ?>">👁</button>
+      </div>
     </div>
     <div class="fmrow">
       <label for="acPwNext"><?php e('acc.pass_new') ?></label>
-      <input id="acPwNext" type="password" autocomplete="new-password" minlength="8" maxlength="200">
+      <div class="pwwrap">
+        <input id="acPwNext" type="password" autocomplete="new-password" minlength="8" maxlength="200">
+        <button type="button" class="pweye" data-pweye="acPwNext" aria-label="<?php e('acc.pw_show') ?>">👁</button>
+      </div>
     </div>
     <div class="sub"><?php e('acc.pass_rule', 8) ?></div>
     <div class="row controls">
@@ -526,7 +546,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="sub"><?php e('acc.destroy_note') ?></div>
     <div id="acDelPassRow" class="fmrow" hidden>
       <label for="acDelPass"><?php e('acc.pass_now') ?></label>
-      <input id="acDelPass" type="password" autocomplete="current-password" maxlength="200">
+      <div class="pwwrap">
+        <input id="acDelPass" type="password" autocomplete="current-password" maxlength="200">
+        <button type="button" class="pweye" data-pweye="acDelPass" aria-label="<?php e('acc.pw_show') ?>">👁</button>
+      </div>
     </div>
     <div class="row controls">
       <button id="acDestroy" class="primary danger" style="flex:1; justify-content:center"><?php e('acc.destroy_do') ?></button>

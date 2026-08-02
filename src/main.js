@@ -16,7 +16,7 @@ import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } f
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { tt } from './util.js';
-import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, showPasswd, showDelete, doLogin, doSignup,
+import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, showPasswd, showDelete, togglePassword, doLogin, doSignup,
          doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin, askLogin, askSkip,
          setSaveApply, armSave } from './account.js';
 import { openContact, sendContact } from './contact.js';
@@ -400,14 +400,21 @@ on('acPasswd','click', doPasswd);
 on('acLogout','click', doLogout);
 on('acDestroy','click', doDestroy);
 on('acGoogle','click', googleSignin);
-on('acToSignup','click',  showSignup);
+on('acGoogleSu','click', googleSignin);
 on('acToForgot','click',  showForgot);
 on('acToPasswd','click',  showPasswd);
 on('acToDestroy','click', showDelete);
-/* 「‹ 戻る」は行き先を data-acback に持たせている（ボタンごとに配線しない） */
-document.querySelectorAll('#mAcc [data-acback]').forEach(b=> b.addEventListener('click', ()=>{
-  if(b.dataset.acback==='me') showMe(); else showSignin();
-}));
+/* タブ（ログイン ⇄ 新規登録）とパスワードの目マーク。
+   どちらもボタンが複数あるので、#mAcc に一度だけ付けて中で振り分ける。 */
+const mAcc = document.getElementById('mAcc');
+if (mAcc) mAcc.addEventListener('click', e => {
+  const tab = e.target.closest('.actab');
+  if (tab) { tab.dataset.actab === 'signup' ? showSignup() : showSignin(); return; }
+  const eye = e.target.closest('.pweye');
+  if (eye) { togglePassword(eye); return; }
+  const back = e.target.closest('[data-acback]');
+  if (back) { back.dataset.acback === 'me' ? showMe() : showSignin(); }
+});
 /* 入力欄で Enter を押したらそのまま送る（フォーム要素を使っていないため自前で拾う） */
 on('acEmail','keydown',  e=>{ if(e.key==='Enter') doLogin(); });
 on('acPass','keydown',   e=>{ if(e.key==='Enter') doLogin(); });

@@ -338,8 +338,10 @@
   .upempty{font-size:11px; color:var(--faint); line-height:1.6; padding:2px 0}
 
   /* ---- 歯車パネル（指板の表示設定） ---- */
-  .gscrim{position:fixed; inset:0; z-index:36; display:none}
-  .gscrim.open{display:block}
+  /* 右上の歯車パネルの暗幕。左ドロワーの .scrim と同じ濃さ・同じ出方にそろえてある
+     （以前はクリックを受けるだけの透明な板だった） */
+  .gscrim{position:fixed; inset:0; z-index:36; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:.2s}
+  .gscrim.open{opacity:1; pointer-events:auto}
   .gearpanel{
     position:fixed; right:8px; z-index:38; top:calc(56px + env(safe-area-inset-top));
     width:min(290px, calc(100vw - 16px));
@@ -945,6 +947,15 @@
     width:min(340px, calc(100vw - 40px));
     max-height:calc(100dvh - 100px); overflow-y:auto; overscroll-behavior:contain;
   }
+  /* 画面キーボードが出ているあいだは、まん中ではなく「見えている範囲の上」に寄せる。
+     position:fixed はキーボードで縮まないレイアウトビューポート基準なので、
+     中央のままだと入力欄がキーボードの下に隠れてしまう。
+     --vvh / --vvt / body.kbd は src/dom.js が visualViewport から入れている。 */
+  body.kbd #mAcc, body.kbd #mContact{
+    top:calc(var(--vvt, 0px) + 8px);
+    transform:translate(-50%, 0);
+    max-height:calc(var(--vvh, 100dvh) - 16px);
+  }
 
   /* 入力欄（ログイン／お問い合わせ共通） */
   .fmrow{margin-bottom:10px}
@@ -957,6 +968,29 @@
   .fmrow textarea{resize:vertical; min-height:96px; line-height:1.6}
   .fmrow input:focus, .fmrow textarea:focus{outline:none; border-color:var(--accent)}
   .fmrow input::placeholder, .fmrow textarea::placeholder{color:var(--faint)}
+  /* ---- ログイン ⇄ 新規登録 のタブ ---- */
+  .actabs{display:flex; gap:4px; margin:0 0 14px; padding:3px; border-radius:10px; background:var(--panel2)}
+  .actabs[hidden]{display:none}
+  .actab{
+    flex:1; min-height:34px; justify-content:center; padding:0 8px; border:none; border-radius:8px;
+    background:transparent; color:var(--muted); font-size:13px; font-weight:700; box-shadow:none; cursor:pointer;
+  }
+  .actab.on{background:var(--panel); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.35)}
+
+  /* ---- パスワードの目マーク ---- */
+  .pwwrap{position:relative}
+  /* ボタンのぶんだけ右を空ける。空けないと文字がボタンの下に潜る */
+  .pwwrap input{padding-right:44px}
+  .pweye{
+    position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    width:36px; min-height:36px; padding:0; border:none; border-radius:8px;
+    background:transparent; box-shadow:none; cursor:pointer;
+    font-size:15px; line-height:1; opacity:.45; filter:grayscale(1);
+  }
+  .pweye:hover{opacity:.75}
+  /* 見せているあいだは色を戻して、いま平文であることが分かるようにする */
+  .pweye.on{opacity:1; filter:none}
+
   /* ---- アカウント（#mAcc）----
      表示するページは常に1枚だけ（.acp.on）。切替は src/account.js の openPane()。
      歯車のサブメニューと同じ作法にそろえてある。 */

@@ -9,7 +9,7 @@
      降ろした設定は LocalStorage に入るので、そのままアプリ本体へ持ち込まれる。
 */
 import { on, closeDockModal } from './dom.js';
-import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, showPasswd, showDelete,
+import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, showPasswd, showDelete, togglePassword,
          doLogin, doSignup, doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin,
          askLogin, askSkip } from './account.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
@@ -23,13 +23,21 @@ on('acPasswd','click', doPasswd);
 on('acLogout','click', doLogout);
 on('acDestroy','click', doDestroy);
 on('acGoogle','click', googleSignin);
-on('acToSignup','click',  showSignup);
+on('acGoogleSu','click', googleSignin);
 on('acToForgot','click',  showForgot);
 on('acToPasswd','click',  showPasswd);
 on('acToDestroy','click', showDelete);
-document.querySelectorAll('#mAcc [data-acback]').forEach(b=> b.addEventListener('click', ()=>{
-  if(b.dataset.acback==='me') showMe(); else showSignin();
-}));
+/* タブ（ログイン ⇄ 新規登録）とパスワードの目マーク。
+   どちらもボタンが複数あるので、#mAcc に一度だけ付けて中で振り分ける。 */
+const mAcc = document.getElementById('mAcc');
+if (mAcc) mAcc.addEventListener('click', e => {
+  const tab = e.target.closest('.actab');
+  if (tab) { tab.dataset.actab === 'signup' ? showSignup() : showSignin(); return; }
+  const eye = e.target.closest('.pweye');
+  if (eye) { togglePassword(eye); return; }
+  const back = e.target.closest('[data-acback]');
+  if (back) { back.dataset.acback === 'me' ? showMe() : showSignin(); }
+});
 on('acEmail','keydown',  e=>{ if(e.key==='Enter') doLogin(); });
 on('acPass','keydown',   e=>{ if(e.key==='Enter') doLogin(); });
 on('acSuEmail','keydown',e=>{ if(e.key==='Enter') doSignup(); });
