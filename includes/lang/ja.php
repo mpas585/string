@@ -569,7 +569,7 @@ return [
     'link'       => 'プライバシーポリシー',
     'sections'   => [
       ['運営者と連絡先', [
-        '運営者：GEN strings',
+        '運営者：ito apps',
         'サービス名：GEN strings（https://genstrings.sakura.ne.jp/）',
         '連絡先：mail@genstrings.sakura.ne.jp（アプリの中のお問い合わせフォームからも送れます）',
       ]],

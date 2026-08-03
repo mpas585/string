@@ -563,7 +563,7 @@ return [
     'link'       => 'Política de privacidad',
     'sections'   => [
       ['Responsable y contacto', [
-        'Responsable: GEN strings',
+        'Responsable: ito apps',
         'Servicio: GEN strings (https://genstrings.sakura.ne.jp/)',
         'Contacto: mail@genstrings.sakura.ne.jp (también puedes usar el formulario de contacto dentro de la aplicación)',
       ]],

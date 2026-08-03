@@ -560,7 +560,7 @@ return [
     'link'       => '隐私政策',
     'sections'   => [
       ['运营者与联系方式', [
-        '运营者：GEN strings',
+        '运营者：ito apps',
         '服务名称：GEN strings（https://genstrings.sakura.ne.jp/）',
         '联系方式：mail@genstrings.sakura.ne.jp（也可通过应用内的咨询表单联系）',
       ]],

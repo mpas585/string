@@ -560,7 +560,7 @@ return [
     'link'       => 'Privacy Policy',
     'sections'   => [
       ['Who runs this service, and how to reach us', [
-        'Operator: GEN strings',
+        'Operator: ito apps',
         'Service: GEN strings (https://genstrings.sakura.ne.jp/)',
         'Contact: mail@genstrings.sakura.ne.jp (you can also use the contact form inside the app)',
       ]],
