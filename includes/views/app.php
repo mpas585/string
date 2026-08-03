@@ -132,22 +132,20 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <div id="pwaNote" class="sub" hidden><?php e('ui.install_note') ?></div>
 
-    <!-- ===== 言語（いちばん下）===== -->
+    <!-- ===== 言語（いちばん下）=====
+         行数のある項目は行にして、押したらサブメニューへ差し替える（表示・音量と同じ作法）。
+         右端の値は src/drawer.js の syncSettingsUI() が書き換える -->
     <hr class="sep">
-    <div class="gp-t"><?php e('ui.lang_label') ?></div>
-    <select id="langSel">
-<?php foreach (APP_LANGS as $l):
-        $ln = require APP_ROOT . '/includes/lang/' . $l . '.php'; ?>
-      <option value="<?= h($l) ?>"<?= $l === $LANG ? ' selected' : '' ?>><?= h($ln['name']) ?></option>
-<?php endforeach; ?>
-    </select>
-    <div class="sub" style="margin:6px 0 10px"><?php e('ui.lang_note') ?></div>
+    <button class="gp-row" data-gpopen="lang">
+      <span><?php e('ui.lang_label') ?></span><span class="v" id="langRowV"></span><span class="cv">›</span>
+    </button>
 
-    <!-- ===== お問い合わせ（いちばん下）===== -->
-    <hr class="sep">
-    <div class="row controls">
-      <button id="contactBtn" class="ghost" style="flex:1; justify-content:center"><?php e('ui.contact') ?></button>
-    </div>
+    <!-- ===== お問い合わせ（いちばん下）=====
+         こちらもサブメニュー。開くのは src/contact.js の openContact()
+         （入力欄の初期化と焦点合わせがあるので data-gpopen ではなく ID で配線する） -->
+    <button class="gp-row" id="contactBtn">
+      <span><?php e('ui.contact') ?></span><span class="cv">›</span>
+    </button>
   </div>
 
   <!-- ===== サブ：表示（指板/五線譜・フレット線・横画面・指板ズーム） ===== -->
@@ -213,6 +211,50 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="row controls" style="margin-top:8px">
       <button id="volReset" class="ghost" style="flex:1; justify-content:center"><?php e('ui.vol_reset') ?></button>
     </div>
+  </div>
+
+  <!-- ===== サブ：言語 ===== -->
+  <div class="gp-page" data-gp="lang">
+    <div class="gp-back">
+      <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
+      <span class="t"><?php e('ui.lang_label') ?></span>
+    </div>
+    <select id="langSel">
+<?php foreach (APP_LANGS as $l):
+        $ln = require APP_ROOT . '/includes/lang/' . $l . '.php'; ?>
+      <option value="<?= h($l) ?>"<?= $l === $LANG ? ' selected' : '' ?>><?= h($ln['name']) ?></option>
+<?php endforeach; ?>
+    </select>
+    <div class="sub" style="margin:6px 0 10px"><?php e('ui.lang_note') ?></div>
+  </div>
+
+  <!-- ===== サブ：お問い合わせ =====
+       もとはドックのモーダル（#mContact）だったものを、そのままこの面へ移した。
+       入力欄のIDは変えていないので src/contact.js の送信処理はこれまでどおり。 -->
+  <div class="gp-page" data-gp="contact">
+    <div class="gp-back">
+      <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
+      <span class="t"><?php e('ui.m_contact') ?></span>
+    </div>
+    <div class="fmrow">
+      <label for="ctName"><?php e('contact.name') ?></label>
+      <input id="ctName" type="text" maxlength="60" autocomplete="name" placeholder="<?php e('contact.name_ph') ?>">
+    </div>
+    <div class="fmrow">
+      <label for="ctMail"><?php e('contact.email') ?></label>
+      <input id="ctMail" type="email" maxlength="120" autocomplete="email" placeholder="you@example.com">
+    </div>
+    <div class="fmrow">
+      <label for="ctBody"><?php e('contact.body') ?></label>
+      <textarea id="ctBody" rows="5" maxlength="4000" placeholder="<?php e('contact.body_ph') ?>"></textarea>
+    </div>
+    <!-- 罠フィールド：人には見えない。埋まっていれば機械なので送信しない -->
+    <div class="hp" aria-hidden="true"><label for="ctSite">website</label><input id="ctSite" type="text" tabindex="-1" autocomplete="off"></div>
+    <div class="row controls">
+      <button id="ctSend" class="primary" style="flex:1; justify-content:center"><?php e('contact.send') ?></button>
+    </div>
+    <div id="ctMsg" class="fmmsg" role="status"></div>
+    <div class="sub"><?php e('contact.note') ?></div>
   </div>
 </div>
 
@@ -604,31 +646,70 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
 </div>
 
-<!-- お問い合わせ（歯車のいちばん下から開く） -->
-<div id="mContact" class="dkmodal" role="dialog" aria-modal="true">
+<!-- 採点ゲーム：録音の準備。マイクの入力レベルを見せてから始める。
+     ✕・「やめる」・スクリムはどれも src/game.js の cancelGameCheck()（マイクも閉じる）。 -->
+<div id="mGameReady" class="dkmodal gready" role="dialog" aria-modal="true">
   <div class="dk-head">
-    <span class="dk-tt"><?php e('ui.m_contact') ?></span>
+    <span class="dk-tt"><?php e('ui.m_game_ready') ?></span>
+    <button id="gckClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <ul class="gck-tips">
+    <li><?php e('ui.game_tip_quiet') ?></li>
+    <li><?php e('ui.game_tip_phone') ?></li>
+    <li><?php e('ui.game_tip_near') ?></li>
+  </ul>
+  <!-- マイク入力レベル（チューナーと同じ見た目・同じ推奨区間） -->
+  <div class="tun-in">
+    <div class="tun-in-t"><span>🎤 <?php e('ui.tun_in') ?></span><b id="gckMsg">–</b></div>
+    <div class="tun-in-bar">
+      <div class="zones"></div>
+      <div id="gckLevel" class="lv"></div>
+      <div class="tick lo"></div>
+      <div class="tick hi"></div>
+    </div>
+    <div class="tun-in-scale">
+      <span class="s-lo"><?php e('ui.tun_in_lo') ?></span>
+      <span class="s-ok"><?php e('ui.tun_in_ok') ?></span>
+      <span class="s-hi"><?php e('ui.tun_in_hi') ?></span>
+    </div>
+  </div>
+  <div class="gck-heard">
+    <span><?php e('ui.game_heard') ?></span><b id="gckNote" class="gck-note">–</b>
+  </div>
+  <div class="row controls" style="margin-top:10px">
+    <button id="gckGo" class="primary" style="flex:1; justify-content:center"><?php e('ui.game_ready_go') ?></button>
+    <button id="gckCancel" class="ghost" style="flex:1; justify-content:center"><?php e('ui.game_ready_cancel') ?></button>
+  </div>
+  <div class="sub"><?php e('ui.game_ready_note') ?></div>
+</div>
+
+<!-- 採点ゲーム：採点結果。中身（点数・アドバイス・五線譜）は src/game.js が入れる -->
+<div id="mGameRes" class="dkmodal gres" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('ui.m_game_res') ?></span>
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
-  <div class="fmrow">
-    <label for="ctName"><?php e('contact.name') ?></label>
-    <input id="ctName" type="text" maxlength="60" autocomplete="name" placeholder="<?php e('contact.name_ph') ?>">
+  <div class="gres-top">
+    <div id="gresRank" class="gres-rank">–</div>
+    <div class="gres-num"><b id="gresScore">0.0</b><span><?php e('ui.game_point') ?></span></div>
   </div>
-  <div class="fmrow">
-    <label for="ctMail"><?php e('contact.email') ?></label>
-    <input id="ctMail" type="email" maxlength="120" autocomplete="email" placeholder="you@example.com">
+  <div id="gresCmp" class="gres-cmp"></div>
+  <div id="gresBreak" class="gres-break"></div>
+  <div class="seclbl"><?php e('ui.game_advice') ?></div>
+  <ul id="gresAdvice" class="gres-adv"></ul>
+  <div class="seclbl"><?php e('ui.game_staff') ?></div>
+  <div id="gresStaff" class="gres-staff"></div>
+  <div id="gresLegend" class="gres-legend">
+    <span><i class="gl gl-ok"></i><?php e('ui.game_lg_ok') ?></span>
+    <span><i class="gl gl-pitch"></i><?php e('ui.game_lg_pitch') ?></span>
+    <span><i class="gl gl-time"></i><?php e('ui.game_lg_time') ?></span>
+    <span><i class="gl gl-miss"></i><?php e('ui.game_lg_miss') ?></span>
   </div>
-  <div class="fmrow">
-    <label for="ctBody"><?php e('contact.body') ?></label>
-    <textarea id="ctBody" rows="5" maxlength="4000" placeholder="<?php e('contact.body_ph') ?>"></textarea>
+  <div class="row controls" style="margin-top:10px">
+    <button id="gresRetry" class="primary" style="flex:1; justify-content:center"><?php e('ui.game_retry') ?></button>
+    <button class="ghost" data-dkclose style="flex:1; justify-content:center"><?php e('ui.close') ?></button>
   </div>
-  <!-- 罠フィールド：人には見えない。埋まっていれば機械なので送信しない -->
-  <div class="hp" aria-hidden="true"><label for="ctSite">website</label><input id="ctSite" type="text" tabindex="-1" autocomplete="off"></div>
-  <div class="row controls">
-    <button id="ctSend" class="primary" style="flex:1; justify-content:center"><?php e('contact.send') ?></button>
-  </div>
-  <div id="ctMsg" class="fmmsg" role="status"></div>
-  <div class="sub"><?php e('contact.note') ?></div>
+  <div class="sub"><?php e('ui.game_res_note') ?></div>
 </div>
 
 <!-- アップロードした楽譜：同じ譜面っぽいものがあるとき、上書きか新規追加かを尋ねる
@@ -672,6 +753,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <button data-mode="scale"><?php e('ui.seg_scale') ?></button>
       <button data-mode="score"><?php e('ui.seg_score') ?></button>
       <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
+      <button data-mode="game"><?php e('ui.seg_game') ?></button>
     </div>
   </div>
 
@@ -743,7 +825,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
            一覧の中身・保存・削除は src/uploads.js。PHP 側では枠だけ出す。 -->
       <div class="seclbl"><?php e('ui.uploads') ?></div>
       <div id="upList" class="uplist"></div>
-      <div id="upNote" class="sub"><?php e('ui.uploads_note', 99) ?></div>
+      <div id="upNote" class="sub"><?php e('ui.uploads_note', 3) ?></div>
 
     </div>
 
@@ -762,6 +844,22 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
         <div class="sub"><?php e('ui.tracks_note', $INST_NAME) ?></div>
       </div>
     </div>
+  </div>
+
+  <!-- ========== 採点ゲームモード ==========
+       課題曲の一覧は「曲を練習する」と同じ public/songs/manifest.json から作る
+       （中身を入れるのは src/game.js の renderGameSongs）。 -->
+  <div data-m="game">
+    <div class="seclbl"><?php e('ui.game_songs') ?></div>
+    <div id="gameSongs" class="songlist">
+      <button class="songbtn" disabled><?php e('ui.songs_loading') ?><small>public/songs/manifest.json</small></button>
+    </div>
+    <div class="sub"><?php e('ui.game_songs_note') ?></div>
+    <hr class="sep">
+    <div class="row controls">
+      <button id="gameStart" class="primary" style="flex:1; justify-content:center; min-height:46px"><?php e('ui.game_start') ?></button>
+    </div>
+    <div class="sub"><?php e('ui.game_start_note') ?></div>
   </div>
 
   <!-- ========== 共通：推奨ポジション ==========
@@ -868,6 +966,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 <!-- 小節フラッシュ（シークバーで小節を移動した時に一瞬だけ出す） -->
 <div id="mflash" class="mflash" aria-hidden="true"></div>
+
+<!-- 採点ゲーム：録音中の表示（中身は src/game.js が書き換える） -->
+<div id="gameRec" class="grec" aria-live="polite">
+  <span class="gr-dot"></span>
+  <span class="gr-t"><?php e('ui.game_rec') ?></span>
+  <span id="gameRecPos" class="gr-pos">1</span>
+  <button id="gameAbort" class="ghost"><?php e('ui.game_abort') ?></button>
+</div>
 
 <div id="toast" class="toast"></div>
 

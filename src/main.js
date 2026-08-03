@@ -23,6 +23,7 @@ import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, s
          setSaveApply, armSave } from './account.js';
 import { openContact, sendContact } from './contact.js';
 import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel } from './uploads.js';
+import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
@@ -366,6 +367,24 @@ on('dkLoop','click',  ()=> openDockModal('mLoop'));
 on('dockScrim','click', closeDockModal);
 document.querySelectorAll('[data-dkclose]').forEach(b=> b.addEventListener('click', closeDockModal));
 
+/* ===== 採点ゲーム =====
+   課題曲を選ぶ → 開始カウント → メトロノームを聞きながら演奏 → 採点（src/game.js） */
+on('gameSongs','click', e=>{
+  const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;
+  const id=b.dataset.game;
+  if(!id){ toast(tt('msg.soon')); return; }
+  pickGameSong(id);
+});
+on('gameStart','click', startGame);
+on('gameAbort','click', ()=> abortGame());
+on('gresRetry','click', retryGame);
+/* 録音の準備：入力レベルを見てから始める。やめる／✕ ではマイクも閉じる */
+on('gckGo','click', beginRun);
+on('gckCancel','click', cancelGameCheck);
+on('gckClose','click', cancelGameCheck);
+/* スクリムで閉じたときもマイクを閉じる（closeDockModal の配線はそのまま残す） */
+on('dockScrim','click', cancelGameCheck);
+
 /* ===== ゲーム / チューナー ===== */
 on('micSw','click', async ()=>{
   if(TUN.on){ stopTuner(); return; }
@@ -479,6 +498,7 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
    （保存済みの scaleType を SCALES と照合するため／scaleType の <option> が必要なため）。 */
 (async ()=>{
   await Promise.all([ loadScales(), loadSongManifest() ]);
+  renderGameSongs();                 /* 採点ゲームの課題曲一覧も同じ manifest から作る */
   loadSettings();
   /* 表示言語は URL（/{言語}/{楽器}/）を正とする。保存値で選択欄がずれないように上書き */
   if(window.APP && window.APP.lang) ST.lang=window.APP.lang;

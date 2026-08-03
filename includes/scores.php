@@ -21,7 +21,7 @@
 */
 if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
-const SCORE_MAX_ITEMS = 99;      /* アカウント1つあたりの件数の上限 */
+const SCORE_MAX_ITEMS = 3;      /* アカウント1つあたりの件数の上限 */
 const SCORE_MAX_BYTES = 512000;  /* 譜面1件の JSON の上限（約500KB） */
 const SCORE_NAME_MAX  = 120;     /* 一覧に出す名前の長さ */
 const SCORE_SUB_MAX   = 80;      /* 副題（MIDIで選んだトラック名）の長さ */

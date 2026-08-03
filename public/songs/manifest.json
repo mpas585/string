@@ -152,40 +152,6 @@
       },
       "level": 2,
       "file": "pachelbel_canon.json"
-    },
-    {
-      "id": "kojo_no_tsuki",
-      "title": {
-        "ja": "荒城の月",
-        "en": "Kōjō no Tsuki (The Moon over the Ruined Castle)",
-        "es": "Kōjō no Tsuki (La luna sobre el castillo en ruinas)",
-        "zh": "荒城之月"
-      },
-      "desc": {
-        "ja": "ニ短調・4/4拍子",
-        "en": "D minor, 4/4",
-        "es": "Re menor, 4/4",
-        "zh": "d小调・4/4拍"
-      },
-      "level": 2,
-      "file": "kojo_no_tsuki.json"
-    },
-    {
-      "id": "furusato",
-      "title": {
-        "ja": "ふるさと",
-        "en": "Furusato (My Old Country Home)",
-        "es": "Furusato (Mi vieja tierra natal)",
-        "zh": "故乡"
-      },
-      "desc": {
-        "ja": "ト長調・3/4拍子",
-        "en": "G major, 3/4",
-        "es": "Sol mayor, 3/4",
-        "zh": "G大调・3/4拍"
-      },
-      "level": 1,
-      "file": "furusato.json"
     }
   ]
 }

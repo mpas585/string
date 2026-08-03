@@ -1,11 +1,11 @@
 /*
   contact.js — お問い合わせフォームのフロント側。送信先は api/contact.php。
-  画面は #mContact（歯車パネルのいちばん下から開く）。
+  画面は歯車パネルのサブメニュー（.gp-page[data-gp="contact"]）。
   宛先アドレスと件名の組み立てはサーバ側（config/app.php の contact_to）。
 */
 import { tt } from './util.js';
 import { toast } from './dom.js';
-import { openDockModal, closeDockModal } from './drawer.js';
+import { openGearPage } from './drawer.js';
 
 const API  = new URL('../api/contact.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
@@ -22,7 +22,7 @@ function setMsg(text, isErr) {
 
 export function openContact() {
   setMsg('');
-  openDockModal('mContact');
+  openGearPage('contact');
   const n = $('ctName');
   if (n) setTimeout(() => n.focus(), 60);
 }
@@ -54,9 +54,9 @@ export async function sendContact() {
     const r = await res.json();
     if (!r || !r.ok) { setMsg((r && r.message) || tt('contact.err.send'), true); return; }
 
-    /* 送信できたら中身を消して閉じる（二重送信よけも兼ねる） */
+    /* 送信できたら中身を消して一覧へ戻す（二重送信よけも兼ねる） */
     if ($('ctBody')) $('ctBody').value = '';
-    closeDockModal();
+    openGearPage('main', true);
     toast(r.message || tt('contact.ok'));
   } catch (e) {
     setMsg(tt('contact.err.offline'), true);

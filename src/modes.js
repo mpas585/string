@@ -22,8 +22,10 @@ import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/sched
 import { paintTunerDots, startTuner, stopTuner, TUN } from './tuner.js';
 import { warmAudio } from './audio/context.js';
 import { toast } from './dom.js';
-import { closeDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, openScoreStart, Store } from './drawer.js';
+import { closeDrawer, openDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, openScoreStart, Store } from './drawer.js';
 import { loadSample, renderTracks, midiFile, setMidiFile } from './songs.js';
+/* 採点ゲーム。モードの出入りで課題曲一覧を作り直し、録音中に抜けたら止める */
+import { abortGame, renderGameSongs, syncStartBtn } from './game.js';
 
 export function render(){
   const picker  = document.getElementById('picker');
@@ -54,9 +56,13 @@ export function render(){
     emptyEl.style.display='flex';
     emptyEl.innerHTML = (ST.mode==='score')
       ? tt('msg.empty_score_html')
+      : (ST.mode==='game') ? tt('msg.empty_game_html')
       : tt('msg.empty_scale_html');
     renderBoard(null);
-    document.getElementById('nowline').textContent = (ST.mode==='score') ? tt('ui.nowline') : tt('msg.nowline_scale');
+    document.getElementById('nowline').textContent =
+      (ST.mode==='score') ? tt('ui.nowline')
+      : (ST.mode==='game') ? tt('msg.nowline_game')
+      : tt('msg.nowline_scale');
     document.getElementById('edit').innerHTML=tt('msg.edit_empty_html');
     renderLegend(); updateTransport(); updateChrome();
     return;
@@ -93,13 +99,14 @@ export function applyMode(){
   });
 }
 export function setMode(mode, keepDrawer){
-  if(mode==='game'){ toast(tt('msg.game_soon')); return; }
   warmAudio();
   if(ST.mode===mode) return;
   stopPlay();
 
   /* チューナーモードを離れる → マイクとシートを必ず閉じる */
   if(ST.mode==='tuner' && mode!=='tuner') stopTuner();
+  /* 採点ゲームを離れる → 録音していたら止める（点数は出さずに捨てる） */
+  if(ST.mode==='game' && mode!=='game') abortGame(true);
 
   ST.mode=mode;
   ST.scaleDirty=false;                 /* モードが変われば保留は無効 */
@@ -126,6 +133,17 @@ export function setMode(mode, keepDrawer){
        ドロワー内のタブ切替（keepDrawer）は、そのままドロワーに選択肢が出ているので不要。 */
     if(!keepDrawer){ closeDrawer(); openScoreStart(); }
     toast(tt('msg.hint_swan'));
+
+  } else if(mode==='game'){
+    /* 採点ゲームは伴奏を使わない（メトロノームだけを聞いて弾く） */
+    ST.enjoy=false;
+    document.getElementById('enjoySw').classList.remove('on');
+    renderGameSongs();
+    syncStartBtn();
+    /* 課題曲の一覧はドロワーの中にあるので、入口から入った時は開いて見せる */
+    if(!keepDrawer) openDrawer();
+    render();
+    toast(tt('msg.hint_game'));
 
   } else if(mode==='tuner'){
     ST.enjoy=false;

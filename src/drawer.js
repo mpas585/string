@@ -120,6 +120,7 @@ export function syncSettingsUI(){
   if(liteEl) liteEl.classList.toggle('on', ST.lite);
   const langEl=document.getElementById('langSel');
   if(langEl) langEl.value=ST.lang;
+  syncLangRow();
   ST.vol = ST.volProfiles[volProfileKey()];
   for(const k of VOL_KEYS){
     const id='vol'+k[0].toUpperCase()+k.slice(1);
@@ -141,6 +142,16 @@ export function syncCountSeg(){
   if(!seg) return;
   seg.classList.toggle('off', !ST.countIn);
   seg.querySelectorAll('button').forEach(b=> b.classList.toggle('on', (+b.dataset.count)===ST.countBeats));
+}
+/* 歯車の一覧に出す「言語」の要約（いま選ばれている言語名）。サブメニューを開かなくても分かるように。
+   言語名は <select> の <option> が持っている（PHP が includes/lang/*.php の name を出力している）ので、
+   JS 側に言語名の一覧を持たずに済む。 */
+export function syncLangRow(){
+  const r=document.getElementById('langRowV');
+  if(!r) return;
+  const sel=document.getElementById('langSel');
+  const op=sel ? sel.options[sel.selectedIndex] : null;
+  r.textContent = op ? op.textContent : '';
 }
 /* 歯車の一覧に出す「音量」の要約（全体の値）。サブメニューを開かなくても分かるように */
 export function syncVolRow(){

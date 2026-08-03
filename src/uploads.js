@@ -42,7 +42,7 @@ import { setMidiFile, renderTracks, parseMidi, base64ToBytes } from './songs.js'
 const API  = new URL('../api/scores.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
 
-export const MAX_ITEMS = 99;        /* サーバ側 SCORE_MAX_ITEMS と合わせる */
+export const MAX_ITEMS = 3;        /* サーバ側 SCORE_MAX_ITEMS と合わせる */
 const MAX_BYTES = 512000;           /* サーバ側 SCORE_MAX_BYTES と合わせる */
 
 let items    = [];                  /* [{id, name, sub, notes, sig, updated_at}] */
