@@ -558,7 +558,7 @@ return [
                [見出し, [段落, 段落, …], アンカーid（省略可）]
            アンカーidを付けた節は /{言語}/privacy/#（id） で直接開ける。
            Google Play Console の「アカウント削除のウェブリンク」には #delete を登録する。
-           ※ 運営者名は下の sections の1つ目に置いてある。公開前に必ず書き換えること。 ===== */
+           ※ 運営者名は下の sections の1つ目。Play Console のデベロッパー名と揃えること。 ===== */
   'legal' => [
     'page_title' => 'プライバシーポリシー｜GEN strings',
     'page_desc'  => 'GEN strings がお預かりする情報と、その使い道・保存する期間・消し方についてのご案内です。',
@@ -569,7 +569,7 @@ return [
     'link'       => 'プライバシーポリシー',
     'sections'   => [
       ['運営者と連絡先', [
-        '運営者：【運営者名（個人名または屋号）をここに記入してください】',
+        '運営者：GEN strings',
         'サービス名：GEN strings（https://genstrings.sakura.ne.jp/）',
         '連絡先：mail@genstrings.sakura.ne.jp（アプリの中のお問い合わせフォームからも送れます）',
       ]],

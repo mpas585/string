@@ -549,7 +549,7 @@ return [
                [标题, [段落, 段落, …], 锚点 id（可省略）]
            带锚点 id 的小节可通过 /{语言}/privacy/#（id） 直接打开。
            请在 Google Play Console 的「删除账号网页链接」处登记 #delete。
-           注意：运营者名称位于下方第一节，发布前务必填写。 ===== */
+           注意：运营者名称位于下方第一节，须与 Play Console 的开发者名称保持一致。 ===== */
   'legal' => [
     'page_title' => '隐私政策｜GEN strings',
     'page_desc'  => 'GEN strings 会保存哪些信息、用途为何、保存多久，以及如何删除。',
@@ -560,7 +560,7 @@ return [
     'link'       => '隐私政策',
     'sections'   => [
       ['运营者与联系方式', [
-        '运营者：【请在此填写运营者名称（个人姓名或商号）】',
+        '运营者：GEN strings',
         '服务名称：GEN strings（https://genstrings.sakura.ne.jp/）',
         '联系方式：mail@genstrings.sakura.ne.jp（也可通过应用内的咨询表单联系）',
       ]],

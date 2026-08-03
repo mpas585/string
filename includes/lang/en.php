@@ -549,7 +549,7 @@ return [
                [heading, [paragraph, paragraph, ...], anchor id (optional)]
            A section with an anchor id can be opened directly at /{lang}/privacy/#(id).
            Register #delete as the account deletion web link in Google Play Console.
-           Note: the operator name sits in the first section below. Fill it in before release. ===== */
+           Note: the operator name sits in the first section below. Keep it identical to the Play Console developer name. ===== */
   'legal' => [
     'page_title' => 'Privacy Policy | GEN strings',
     'page_desc'  => 'What GEN strings keeps, what it is used for, how long it is kept, and how to delete it.',
@@ -560,7 +560,7 @@ return [
     'link'       => 'Privacy Policy',
     'sections'   => [
       ['Who runs this service, and how to reach us', [
-        'Operator: [Write the operator name (personal or business name) here]',
+        'Operator: GEN strings',
         'Service: GEN strings (https://genstrings.sakura.ne.jp/)',
         'Contact: mail@genstrings.sakura.ne.jp (you can also use the contact form inside the app)',
       ]],

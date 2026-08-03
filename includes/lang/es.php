@@ -552,7 +552,7 @@ return [
                [título, [párrafo, párrafo, ...], id de ancla (opcional)]
            Una sección con id de ancla se abre directamente en /{idioma}/privacy/#(id).
            Registra #delete como enlace web de eliminación de cuenta en Google Play Console.
-           Nota: el nombre del responsable está en la primera sección. Complétalo antes de publicar. ===== */
+           Nota: el nombre del responsable está en la primera sección. Debe coincidir con el nombre de desarrollador de Play Console. ===== */
   'legal' => [
     'page_title' => 'Política de privacidad | GEN strings',
     'page_desc'  => 'Qué datos guarda GEN strings, para qué se usan, cuánto tiempo se conservan y cómo eliminarlos.',
@@ -563,7 +563,7 @@ return [
     'link'       => 'Política de privacidad',
     'sections'   => [
       ['Responsable y contacto', [
-        'Responsable: [Escribe aquí el nombre del responsable, personal o comercial]',
+        'Responsable: GEN strings',
         'Servicio: GEN strings (https://genstrings.sakura.ne.jp/)',
         'Contacto: mail@genstrings.sakura.ne.jp (también puedes usar el formulario de contacto dentro de la aplicación)',
       ]],
