@@ -544,4 +544,75 @@ return [
     'body'  => 'This version is not ready yet. Please check back later.',
     'back'  => 'Open the %s version',
   ],
+  /* ===== Privacy policy (/{lang}/privacy/) =====
+           Rendered by includes/views/legal.php. Each entry of sections is
+               [heading, [paragraph, paragraph, ...], anchor id (optional)]
+           A section with an anchor id can be opened directly at /{lang}/privacy/#(id).
+           Register #delete as the account deletion web link in Google Play Console.
+           Note: the operator name sits in the first section below. Fill it in before release. ===== */
+  'legal' => [
+    'page_title' => 'Privacy Policy | GEN strings',
+    'page_desc'  => 'What GEN strings keeps, what it is used for, how long it is kept, and how to delete it.',
+    'page_h1'    => 'Privacy Policy',
+    'lead'       => 'This page explains what we keep when you use GEN strings (the Service), what it is used for, and how you can have it deleted.',
+    'updated'    => 'Last updated: 3 August 2026',
+    'back'       => 'Back to GEN strings',
+    'link'       => 'Privacy Policy',
+    'sections'   => [
+      ['Who runs this service, and how to reach us', [
+        'Operator: [Write the operator name (personal or business name) here]',
+        'Service: GEN strings (https://genstrings.sakura.ne.jp/)',
+        'Contact: mail@genstrings.sakura.ne.jp (you can also use the contact form inside the app)',
+      ]],
+      ['What we keep', [
+        'When you create an account: your email address and a hashed form of your password. The password itself is never stored.',
+        'When you sign in with Google: the email address Google gives us, and the stable Google user ID (sub).',
+        'While you are signed in: your app settings, your fingering notes, and the score data you have imported.',
+        'Your practice time record stays only on your device (in browser storage) and is never sent to us. While you are signed out, settings and fingering notes also stay only on your device.',
+        'For safety: when sign-in or password reset fails repeatedly, we briefly record the IP address and a one-way fingerprint made from the email address. This is used only to turn away brute-force attempts.',
+        'Cookies: one cookie (gsid) is used to keep you signed in.',
+        'When you contact us: your name, your email address if you supply one, and your message.',
+      ]],
+      ['Microphone and imported files', [
+        'The tuner uses the microphone. The sound is analysed for pitch on your device only. Nothing is recorded and nothing is sent to us.',
+        'Score files (MusicXML, MIDI, PDF, images) are read on your device. Only when you choose to save does the resulting score data reach our server.',
+      ]],
+      ['What it is used for', [
+        'To keep you signed in, and to let you retrieve your saved settings, fingering notes and scores from any device.',
+        'To turn away impersonation and brute-force attempts, and keep accounts safe.',
+        'To reply to your enquiries.',
+        'To get a rough picture of how the Service is used, so it can be improved.',
+      ]],
+      ['Analytics (Google Analytics)', [
+        'The Service uses Google Analytics (GA4) to understand how it is used. Through cookies and similar means, information such as which pages were viewed and what kind of device was used is sent to Google. Your name and email address are not sent.',
+        'For how Google handles this data, please see the Google Privacy Policy. You can stop the transmission through your browser settings or the opt-out add-on that Google provides.',
+      ]],
+      ['Sharing with others', [
+        'Except where the law requires it, we do not sell or hand over what we keep to anyone else. The Service carries no advertising.',
+        'To run the Service we rely on the following companies: SAKURA internet Inc. (hosting) and Google LLC (analytics and Google sign-in).',
+      ]],
+      ['How long we keep it', [
+        'Information tied to your account is kept until you delete your account.',
+        'The safety records (IP addresses and email fingerprints) fall out of use after a short period.',
+        'Enquiries are kept so that we can reply and look back at what was discussed.',
+      ]],
+      ['Deleting your account and your data', [
+        'You can delete your account yourself at any time from inside the app: gear (settings), then Account, then Delete account.',
+        'Deleting your account removes the account together with the settings, fingering notes and scores we were holding. This cannot be undone.',
+        'If you cannot sign in and therefore cannot use that path, write to mail@genstrings.sakura.ne.jp from your registered email address. We will delete it once we have confirmed it is you.',
+        'The practice time record that lives only on your device disappears when you clear your browser storage.',
+        'Records we need to keep for safety, such as those used to turn away abuse, are removed after a set period.',
+      ], 'delete'],
+      ['Keeping it safe', [
+        'All traffic uses HTTPS. Passwords are stored hashed and are never held in a reversible form. Form submissions are protected against CSRF, and sign-in attempts are rate limited.',
+      ]],
+      ['Children', [
+        'The Service is not directed at any particular age group, and we do not knowingly collect personal information from anyone under 13. If you become aware that a child has created an account, please tell us at the address above and we will delete it.',
+      ]],
+      ['Changes to this policy', [
+        'When the contents change, we update the last-updated date on this page.',
+      ]],
+    ],
+  ],
+
 ];

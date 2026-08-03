@@ -1148,6 +1148,7 @@
   }
   .hm-lang a.on{color:var(--accent); border-color:var(--accent-dim)}
   .hm-foot small{font-size:10px; color:var(--faint)}
+  .hm-foot small a{color:var(--muted)}
 
   /* ======== 歯車：iPhoneの設定風サブメニュー（音量 / 指板ズーム） ======== */
   /* ページは常に1枚だけ表示する。横から差し込むアニメーションで階層を感じさせる */

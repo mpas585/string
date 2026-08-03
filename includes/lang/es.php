@@ -547,4 +547,75 @@ return [
     'body'  => 'Todavía no está disponible. Vuelve a consultarlo más adelante.',
     'back'  => 'Abrir la versión para %s',
   ],
+  /* ===== Política de privacidad (/{idioma}/privacy/) =====
+           La pantalla es includes/views/legal.php. Cada entrada de sections es
+               [título, [párrafo, párrafo, ...], id de ancla (opcional)]
+           Una sección con id de ancla se abre directamente en /{idioma}/privacy/#(id).
+           Registra #delete como enlace web de eliminación de cuenta en Google Play Console.
+           Nota: el nombre del responsable está en la primera sección. Complétalo antes de publicar. ===== */
+  'legal' => [
+    'page_title' => 'Política de privacidad | GEN strings',
+    'page_desc'  => 'Qué datos guarda GEN strings, para qué se usan, cuánto tiempo se conservan y cómo eliminarlos.',
+    'page_h1'    => 'Política de privacidad',
+    'lead'       => 'Esta página explica qué guardamos cuando usas GEN strings (el Servicio), para qué se usa y cómo puedes eliminarlo.',
+    'updated'    => 'Última actualización: 3 de agosto de 2026',
+    'back'       => 'Volver a GEN strings',
+    'link'       => 'Política de privacidad',
+    'sections'   => [
+      ['Responsable y contacto', [
+        'Responsable: [Escribe aquí el nombre del responsable, personal o comercial]',
+        'Servicio: GEN strings (https://genstrings.sakura.ne.jp/)',
+        'Contacto: mail@genstrings.sakura.ne.jp (también puedes usar el formulario de contacto dentro de la aplicación)',
+      ]],
+      ['Qué guardamos', [
+        'Al crear una cuenta: tu correo electrónico y una forma cifrada (hash) de tu contraseña. La contraseña en sí nunca se guarda.',
+        'Al entrar con Google: el correo electrónico que nos facilita Google y el identificador estable de usuario de Google (sub).',
+        'Mientras tienes la sesión iniciada: los ajustes de la aplicación, tus anotaciones de digitación y las partituras que has importado.',
+        'El registro del tiempo de práctica queda solo en tu dispositivo (en el almacenamiento del navegador) y nunca se nos envía. Sin sesión iniciada, los ajustes y la digitación también quedan solo en tu dispositivo.',
+        'Por seguridad: cuando el inicio de sesión o el restablecimiento de contraseña falla repetidamente, registramos de forma temporal la dirección IP y una huella irreversible creada a partir del correo electrónico. Solo se usa para rechazar intentos por fuerza bruta.',
+        'Cookies: se usa una cookie (gsid) para mantener la sesión iniciada.',
+        'Cuando nos escribes: tu nombre, tu correo electrónico si lo indicas y el contenido de tu mensaje.',
+      ]],
+      ['Micrófono y archivos importados', [
+        'El afinador usa el micrófono. El sonido se analiza para detectar la altura tonal únicamente en tu dispositivo. No se graba ni se envía nada.',
+        'Los archivos de partitura (MusicXML, MIDI, PDF, imágenes) se leen en tu dispositivo. Solo cuando eliges guardar, los datos de la partitura llegan a nuestro servidor.',
+      ]],
+      ['Para qué se usa', [
+        'Para mantener la sesión iniciada y permitirte recuperar tus ajustes, digitaciones y partituras desde cualquier dispositivo.',
+        'Para rechazar suplantaciones e intentos por fuerza bruta y proteger las cuentas.',
+        'Para responder a tus consultas.',
+        'Para hacernos una idea general de cómo se usa el Servicio y poder mejorarlo.',
+      ]],
+      ['Analítica (Google Analytics)', [
+        'El Servicio usa Google Analytics (GA4) para conocer cómo se utiliza. Mediante cookies y medios similares se envía a Google información como las páginas vistas o el tipo de dispositivo. No se envían tu nombre ni tu correo electrónico.',
+        'Sobre cómo trata Google esos datos, consulta la Política de Privacidad de Google. Puedes detener el envío desde los ajustes de tu navegador o con el complemento de inhabilitación que ofrece Google.',
+      ]],
+      ['Cesión a terceros', [
+        'Salvo cuando la ley lo exija, no vendemos ni cedemos a terceros lo que guardamos. El Servicio no muestra publicidad.',
+        'Para el funcionamiento del Servicio utilizamos los siguientes proveedores: SAKURA internet Inc. (servidor) y Google LLC (analítica e inicio de sesión con Google).',
+      ]],
+      ['Plazo de conservación', [
+        'La información vinculada a tu cuenta se conserva hasta que la elimines.',
+        'Los registros de seguridad (direcciones IP y huellas del correo electrónico) dejan de usarse tras un periodo breve.',
+        'Las consultas se conservan para poder responder y consultar los antecedentes.',
+      ]],
+      ['Eliminar tu cuenta y tus datos', [
+        'Puedes eliminar tu cuenta tú mismo en cualquier momento desde la aplicación: engranaje (ajustes), luego Cuenta y luego Eliminar cuenta.',
+        'Al eliminar la cuenta se borran también los ajustes, las digitaciones y las partituras que guardábamos. No se puede deshacer.',
+        'Si no puedes iniciar sesión y por tanto no puedes usar esa vía, escribe a mail@genstrings.sakura.ne.jp desde el correo electrónico con el que te registraste. Lo eliminaremos tras comprobar tu identidad.',
+        'El registro del tiempo de práctica, que solo está en tu dispositivo, desaparece al borrar los datos de almacenamiento del navegador.',
+        'Los registros que debemos conservar por seguridad, como los usados para rechazar abusos, se borran pasado un plazo determinado.',
+      ], 'delete'],
+      ['Medidas de seguridad', [
+        'Todo el tráfico usa HTTPS. Las contraseñas se guardan cifradas mediante hash y nunca en una forma reversible. Los envíos de formularios están protegidos contra CSRF y los intentos de inicio de sesión están limitados en número.',
+      ]],
+      ['Menores', [
+        'El Servicio no se dirige a ningún grupo de edad concreto y no recogemos deliberadamente datos personales de menores de 13 años. Si detectas que un menor ha creado una cuenta, comunícanoslo en la dirección indicada arriba y la eliminaremos.',
+      ]],
+      ['Cambios en esta política', [
+        'Cuando cambie el contenido, actualizaremos la fecha de última actualización de esta página.',
+      ]],
+    ],
+  ],
+
 ];

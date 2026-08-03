@@ -46,6 +46,16 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
     <priority>1.0</priority>
   </url>
 <?php endforeach; ?>
+<?php /* 1.5) プライバシーポリシー（/{言語}/privacy/ ＝ includes/views/legal.php） */ ?>
+<?php foreach ($APP['langs'] as $lang): ?>
+  <url>
+    <loc><?= $x($origin . $root . '/' . $lang . '/privacy/') ?></loc>
+<?php foreach ($APP['langs'] as $alt): ?>
+    <xhtml:link rel="alternate" hreflang="<?= $x($alt) ?>" href="<?= $x($origin . $root . '/' . $alt . '/privacy/') ?>"/>
+<?php endforeach; ?>
+    <priority>0.3</priority>
+  </url>
+<?php endforeach; ?>
 <?php /* 2) 楽器ごとのアプリ本体 */ ?>
 <?php foreach ($instruments as $inst): ?>
 <?php foreach ($APP['langs'] as $lang): ?>
