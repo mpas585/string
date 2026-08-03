@@ -16,6 +16,30 @@ export function diatonicIndex(midi){             /* C4 を 0 とした白鍵段�
   const oct=Math.floor(midi/12)-1, pc=((midi%12)+12)%12;
   return (oct-4)*7 + DIA[pc];
 }
+/* ===== 音部記号 =====
+   使う記号は config/{楽器}.php の 'clef'（PHP が window.INSTRUMENT.clef に出力）で決める。
+   'auto' または未指定のときは従来どおり音域の中央値で ト音／ヘ音 を選ぶ（チェロはこれ）。
+     glyph … 記号の文字
+     size  … 文字の大きさ
+     dy    … 第1線（いちばん下の線）からの縦のずれ
+     base  … 第1線に来る音の MIDIノート番号
+             ト音＝E4(64) / アルト＝F3(53) / ヘ音＝G2(43)
+             （アルト記号は第3線が C4 なので、第1線はその2度分下の F3 になる）
+   ※ size と dy は表示を見ながら決めた値。記号の見え方は端末のフォントで変わるので、
+      上下にずれて見えるときはここだけを直せばよい。
+      treble / bass の値は楽器別対応より前と同じ（＝チェロの見え方は変わらない）。 */
+export const CLEFS = {
+  treble: {glyph:'𝄞', size:46, dy:-2, base:64},
+  alto:   {glyph:'𝄡', size:36, dy: 0, base:53},
+  bass:   {glyph:'𝄢', size:38, dy:-2, base:43},
+};
+const CLEF_PREF = (typeof window!=='undefined' && window.INSTRUMENT && window.INSTRUMENT.clef) || 'auto';
+/* 使う音部記号を返す。med＝音域の中央値（'auto' のときだけ見る） */
+export function clefOf(med){
+  if(CLEFS[CLEF_PREF]) return CLEFS[CLEF_PREF];
+  return (med >= 57) ? CLEFS.treble : CLEFS.bass;   /* A3 以上ならト音（従来どおり） */
+}
+
 export let staffSig='';
 export function staffSignature(){
   return [ST.events.length, ST.scoreName, ST.octShift, (ST.zoom||1).toFixed(2), ST.view,
@@ -58,13 +82,13 @@ export function buildStaff(){
   if(!box) return;
   if(!ST.events.length){ box.innerHTML=''; return; }
 
-  /* 音域からクレフを決める（高ければト音） */
+  /* 音部記号は楽器で決まる（'auto' のときだけ音域の中央値で選ぶ） */
   const mids=ST.events.map(e=>e.pitches[e.leadIdx].midi).sort((a,b)=>a-b);
   const med=mids[Math.floor(mids.length/2)];
-  const treble = med >= 57;                        /* A3 以上ならト音 */
+  const CLEF=clefOf(med);
   const H=190, TOP=58, SPACE=9;                    /* viewBoxの線間 */
-  /* 基準：ト音は E4(=diatonicIndex 2) が第1線、ヘ音は G2(=-16) が第1線 */
-  const baseIdx = treble ? diatonicIndex(64) : diatonicIndex(43);
+  /* 基準：CLEF.base の音が第1線（いちばん下の線）に来る */
+  const baseIdx = diatonicIndex(CLEF.base);
   const lineY = i => (TOP + 4*SPACE) - (i - baseIdx) * (SPACE/2);
 
   const NW=34;                                     /* 音符1つの横幅 */
@@ -78,7 +102,7 @@ export function buildStaff(){
     p.push(`<line x1="6" y1="${y}" x2="${W-6}" y2="${y}" stroke="var(--muted)" stroke-width="1" opacity="0.55"/>`);
   }
   /* クレフ */
-  p.push(`<text x="12" y="${TOP+4*SPACE-2}" font-size="${treble?46:38}" fill="var(--ink)">${treble?'𝄞':'𝄢'}</text>`);
+  p.push(`<text x="12" y="${TOP+4*SPACE+CLEF.dy}" font-size="${CLEF.size}" fill="var(--ink)">${CLEF.glyph}</text>`);
 
   let curM=-1;
   ST.events.forEach((ev,i)=>{

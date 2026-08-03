@@ -73,6 +73,9 @@ function fingering_markers(array $inst, array $lang): array {
 function fingering_js_config(array $inst, array $lang): array {
   return [
     'id'          => $inst['id'],
+    /* 五線譜の音部記号（src/notation.js の CLEFS）。指定が無ければ 'auto'
+       ＝従来どおり音域の中央値で ト音／ヘ音 を選ぶ（config/cello.php はこれ） */
+    'clef'        => (string)($inst['clef'] ?? 'auto'),
     'open'        => array_map('intval', $inst['open']),
     'strnames'    => array_values($inst['strnames']),
     'maxOff'      => (int)$inst['max_off'],

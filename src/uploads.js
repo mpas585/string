@@ -15,7 +15,11 @@
 
   ※ 預けるのは「音の並び」と「運指」だけ。元のファイル（MusicXML / MIDI / PDF）は預けない。
        data … [開始拍, 長さ, 小節, [midi…], リード番号] の並び。内容の指紋（sig）はこれで作る
-       fing … {octave, data:[{l,s,o,f,m}…]}（drawer.js の fingerData() と同じ形）
+       fing … {octave, data:[{l,s,o,f,m}…]}（drawer.js の fingerData() と同じ形）。
+              運指は弦とポジションの番号なので楽器が変わると別の音を指す。そこで通信のたびに
+              楽器名（inst）を添え、サーバ側で楽器ごとに分けて持つ（includes/scores.php）。
+              画面から見えるのは「いまの楽器の運指」だけなので、この形は従来のまま。
+              譜面そのものは楽器で分けない＝一覧はどの楽器から見ても同じものが出る。
        src  … MIDI のときだけ元ファイル（base64）。一覧から開き直したあとに
               トラックを選び直せるようにするため。MusicXML では預けない
      運指を data と分けているのは、運指を直しただけで sig が変わらないようにするため
@@ -26,7 +30,7 @@
      サーバが黙って上書きすることはない。内容まで同じ（sig が一致）ときだけ、尋ねずに何もしない。
 */
 import { ST } from './state.js';
-import { tt, midiName } from './util.js';
+import { tt, midiName, INSTRUMENT_ID } from './util.js';
 import { toast, openDockModal, closeDockModal } from './dom.js';
 import { isSignedIn, getCsrf, setSaveWatcher } from './account.js';
 import { setScore } from './modes.js';
@@ -57,7 +61,7 @@ let pending  = null;                /* #mUpDup で選ぶまで待たせている
 /* ===== 通信（アカウントと同じ作法：全て POST ＋ X-Requested-With ＋ CSRFトークン） =====
    誰の譜面かはサーバがセッションから決める（画面から保存番号を送っていた旧版とは違う）。 */
 async function call(action, data = {}) {
-  const body = new URLSearchParams(Object.assign({ action, lang: LANG, csrf: getCsrf() }, data));
+  const body = new URLSearchParams(Object.assign({ action, lang: LANG, inst: INSTRUMENT_ID, csrf: getCsrf() }, data));
   const res = await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'fetch' },

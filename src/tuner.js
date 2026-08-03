@@ -18,6 +18,21 @@ import { chimeOK, midiFreq } from './audio/synth.js';
 import { toast } from './dom.js';
 import { render, micUnavailableReason, setTunerHint, syncSheet, syncMicUI } from './modes.js';
 
+/* ===== 検出する高さの範囲 =====
+   自己相関で探す下限。いちばん低い開放弦の2半音下まで見えるようにする
+   （2^(-2/12)=0.891。合わせる前の弦が下がっていても拾えるようにするため）。
+   従来は 55Hz 固定で、チェロのC線（65.4Hz）・ビオラのC線（130.8Hz）・
+   バイオリンのG線（196.0Hz）はそれで足りていたが、コントラバスのE線は 41.2Hz、
+   A線は 55.0Hz でちょうど境目に乗ってしまい、下2本が検出できなかった。
+   ※ 55Hz より下げる必要が無い楽器では 55 のまま＝従来と同じ動きになる。 */
+export const DET_MAX_HZ = 1200;
+export const DET_MIN_HZ = Math.min(55, midiFreq(OPEN[0]) * 0.891);
+/* 解析に使う波形の長さ。自己相関は「探す周期の2倍以上」の波形が無いと精度が出ない。
+   48kHz で 37Hz を探すと1周期が約1300サンプルあり、2048 では2周期に届かないので、
+   下限が 55Hz を下回る楽器（＝コントラバス）だけ 4096 にする。
+   それ以外の楽器は従来どおり 2048（＝計算量も従来のまま）。 */
+export const FFT_SIZE = (DET_MIN_HZ < 55) ? 4096 : 2048;
+
 export const TUN={on:false, ctx:null, stream:null, analyser:null, buf:null, raf:0, last:0, hist:[],
                   out:null, wasOK:false, lastChime:0, muted:false};
 /* 合図の音を出す。マイク用 AudioContext をそのまま使う（出力先は付いていないので繋ぐ） */
@@ -56,8 +71,13 @@ export function refMidi(){
 }
 /* 実際に鳴らす高さ。開放弦そのままだと低すぎて端末のスピーカーで聞こえないので
    1オクターブ上げる（チェロのC線 65Hz → 131Hz、A線 220Hz → 440Hz）。
-   オクターブ違いでも合わせる基準としては同じなので、唸りの聞き取りに支障はない。 */
-export const REF_OCT = 12;
+   オクターブ違いでも合わせる基準としては同じなので、唸りの聞き取りに支障はない。
+   ただしコントラバスは1オクターブ上げてもE線が 82Hz にしかならず、
+   小さなスピーカーではまだ聞こえない。いちばん低い弦が C3(48) より下に残る楽器だけ
+   2オクターブ上げる（E1 41Hz → E3 165Hz）。
+   チェロ C2+12=C3 / ビオラ C3+12=C4 / バイオリン G3+12=G4 はどれも C3 以上なので
+   これまでどおり1オクターブのまま。 */
+export const REF_OCT = (OPEN[0] + 12 < 48) ? 24 : 12;
 export function refSoundMidi(){ return refMidi() + REF_OCT; }
 /* ===== 基準音の音量 =====
    端末のスピーカーは口径が小さく、低い音ほど鳴らない。4弦（チェロのC線）の基準音は
@@ -128,8 +148,8 @@ export function detectPitch(buf, sr){
   rms=Math.sqrt(rms/buf.length);
   if(rms < 0.006) return -1;
 
-  const minLag=Math.max(2, Math.floor(sr/1200));
-  const maxLag=Math.min(Math.floor(sr/55), buf.length-2);
+  const minLag=Math.max(2, Math.floor(sr/DET_MAX_HZ));
+  const maxLag=Math.min(Math.floor(sr/DET_MIN_HZ), buf.length-2);
   if(maxLag<=minLag) return -1;
 
   const c=new Float32Array(maxLag+2);
@@ -151,7 +171,7 @@ export function detectPitch(buf, sr){
     if(a) best = best - b/(2*a);
   }
   const f=sr/best;
-  if(f<55 || f>1200) return -1;
+  if(f<DET_MIN_HZ || f>DET_MAX_HZ) return -1;
   return f;
 }
 export async function startTuner(){
@@ -171,7 +191,7 @@ export async function startTuner(){
     const ctx=new AC();
     if(ctx.state==='suspended'){ try{ await ctx.resume(); }catch(e){} }
     const src=ctx.createMediaStreamSource(stream);
-    const an=ctx.createAnalyser(); an.fftSize=2048;
+    const an=ctx.createAnalyser(); an.fftSize=FFT_SIZE;
     src.connect(an);
     TUN.on=true; TUN.ctx=ctx; TUN.stream=stream; TUN.analyser=an;
     TUN.buf=new Float32Array(an.fftSize);

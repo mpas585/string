@@ -58,6 +58,57 @@ function score_table(PDO $db): void {
   $done = true;
 }
 
+/* ===== 運指を楽器ごとに分けて持つ =====
+   scores の行が持っているのは「音の並び」なので、楽器が変わっても同じものが使える。
+   ところが運指（fing）は弦の番号と開放弦からの半音数なので、楽器が変わると別の音を指す
+   （チェロの1弦目は C2、バイオリンの1弦目は G3）。分けずに持つと、チェロで運指を付けた
+   譜面をバイオリンで開いたときに、まったく違う場所を押さえる指示が出てしまう。
+
+   そこで fing 列の中身を楽器ごとの入れ物にする:
+     {"v":2,"byInst":{"cello":{"octave":…,"data":[…]},"violin":{…}}}
+   画面（src/uploads.js）とやり取りするのは従来どおり1楽器ぶんの
+     {"v":1,"octave":…,"data":[…]}
+   のままで、束ねる／取り出すのはこのファイルの中だけで行う。
+   ＝画面側は「いまの楽器の運指」だけを見ていればよい。
+
+   ※ 楽器別にする前に保存された行は {"v":1,…} のままなので、
+      既定楽器（config/app.php の default_instrument）で付けたものとして読む。
+   ※ 一覧（score_list）は分けない。譜面そのものはどの楽器でも使えるので、
+      同じ楽譜を楽器の数だけ預け直さなくてよい。 */
+
+/* 楽器名の検証。一覧に無い値が来たら既定楽器として扱う */
+function score_inst(string $inst): string {
+  return in_array($inst, APP_INSTRUMENTS, true) ? $inst : APP_DEFAULT_INSTRUMENT;
+}
+
+/* 列の中身を ['楽器' => 運指, …] に正規化する */
+function score_fing_all(string $stored): array {
+  if ($stored === '') return [];
+  $j = json_decode($stored, true);
+  if (!is_array($j)) return [];
+  if (isset($j['byInst']) && is_array($j['byInst'])) return $j['byInst'];
+  /* 楽器別にする前の形（{"v":1,"octave":…,"data":[…]}） */
+  if (isset($j['data']) && is_array($j['data']))     return [APP_DEFAULT_INSTRUMENT => $j];
+  return [];
+}
+
+/* いま入っている中身に、この楽器のぶんだけを重ねて書き戻す形にする。
+   $fing が空（または読めない）ときは、この楽器のぶんを消す。
+   ほかの楽器で付けた運指はそのまま残る。 */
+function score_fing_merge(string $stored, string $fing, string $inst): string {
+  $all = score_fing_all($stored);
+  $one = ($fing === '') ? null : json_decode($fing, true);
+  if (is_array($one)) { $all[$inst] = $one; } else { unset($all[$inst]); }
+  if (!$all) return '';
+  return (string)json_encode(['v' => 2, 'byInst' => $all], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+/* この楽器ぶんの運指を取り出す（無ければ null） */
+function score_fing_pick(string $stored, string $inst) {
+  $all = score_fing_all($stored);
+  return (isset($all[$inst]) && is_array($all[$inst])) ? $all[$inst] : null;
+}
+
 /* ログイン中のアカウントを見て、触れてよい行のキーを決める。
    通れば ['ok'=>true,'db'=>…,'code'=>…]。code は users.data_key。
    画面からは何も受け取らないので、他人の行を指すことができない。 */
@@ -98,10 +149,11 @@ function score_list(): array {
 /* 保存。$id を渡せばその1件を上書きし、渡さなければ新しく追加する。
    「同じ譜面っぽいものがあるか」の判定と、上書き / 新規追加の選択は画面側（src/uploads.js）で行う
    ＝サーバが黙って上書きすることはない。 */
-function score_save(string $name, int $notes, string $data, string $sig = '', string $fing = '', int $id = 0, string $sub = '', ?string $src = null): array {
+function score_save(string $name, int $notes, string $data, string $sig = '', string $fing = '', int $id = 0, string $sub = '', ?string $src = null, string $inst = ''): array {
   $g = score_open();
   if (!$g['ok']) return $g;
   $db = $g['db']; $code = $g['code'];
+  $inst = score_inst($inst);
 
   $name = trim(preg_replace('/[\x00-\x1f]+/', ' ', $name));
   if ($name === '') $name = 'score';
@@ -126,6 +178,16 @@ function score_save(string $name, int $notes, string $data, string $sig = '', st
   if (preg_match('/\A.{0,' . SCORE_SUB_MAX . '}/us', $sub, $ms)) { $sub = $ms[0]; }
   else { $sub = substr($sub, 0, SCORE_SUB_MAX); }
   $now = time();
+
+  /* 運指はこの楽器のぶんだけを差し替える（上書きのときは、いま入っている
+     ほかの楽器の運指を読んでから重ねる）。新規追加のときは重ねる相手がいない。 */
+  $stored = '';
+  if ($id > 0) {
+    $q = $db->prepare('SELECT fing FROM scores WHERE code = ? AND id = ?');
+    $q->execute([$code, $id]);
+    $stored = (string)($q->fetchColumn() ?: '');
+  }
+  $fing = score_fing_merge($stored, $fing, $inst);
 
   /* 上書き（画面で選ばれた1件だけ。自分のアカウントのものに限る） */
   if ($id > 0) {
@@ -152,22 +214,31 @@ function score_save(string $name, int $notes, string $data, string $sig = '', st
 
 /* 運指だけを更新する（譜面本体は触らない＝sig は変わらない）。
    アップロードした譜面を開いているあいだ、運指を直すたびに呼ばれる。 */
-function score_fing(int $id, string $fing): array {
+function score_fing(int $id, string $fing, string $inst = ''): array {
   $g = score_open();
   if (!$g['ok']) return $g;
   if (strlen($fing) > SCORE_MAX_BYTES) return ['ok' => false, 'error' => 'payload'];
+  $inst = score_inst($inst);
+
+  /* いま入っている中身を読んでから、この楽器のぶんだけを差し替える */
+  $q = $g['db']->prepare('SELECT fing FROM scores WHERE code = ? AND id = ?');
+  $q->execute([$g['code'], $id]);
+  $row = $q->fetch();
+  if (!$row) return ['ok' => false, 'error' => 'notfound'];
+  $merged = score_fing_merge((string)$row['fing'], $fing, $inst);
 
   $st = $g['db']->prepare('UPDATE scores SET fing = ?, updated_at = ? WHERE code = ? AND id = ?');
-  $st->execute([$fing, time(), $g['code'], $id]);
+  $st->execute([$merged, time(), $g['code'], $id]);
   if ($st->rowCount() < 1) return ['ok' => false, 'error' => 'notfound'];
 
   return ['ok' => true, 'id' => $id];
 }
 
 /* 1件取り出す（自分のアカウントのものだけ） */
-function score_load(int $id): array {
+function score_load(int $id, string $inst = ''): array {
   $g = score_open();
   if (!$g['ok']) return $g;
+  $inst = score_inst($inst);
 
   $st = $g['db']->prepare('SELECT id, name, notes, data, fing, src FROM scores WHERE code = ? AND id = ?');
   $st->execute([$g['code'], $id]);
@@ -179,8 +250,9 @@ function score_load(int $id): array {
     'id'   => (int)$row['id'],
     'name' => (string)$row['name'],
     'data' => json_decode($row['data'], true),
-    /* 運指は無いこともある（先の版で保存したもの・一度も直していないもの） */
-    'fing' => ($row['fing'] === '') ? null : json_decode($row['fing'], true),
+    /* 運指はこの楽器のぶんだけを返す。無いこともある
+       （先の版で保存したもの・一度も直していないもの・ほかの楽器でしか付けていないもの） */
+    'fing' => score_fing_pick((string)$row['fing'], $inst),
     /* 元のMIDI（base64）。MusicXML や大きすぎたものは null */
     'src'  => ($row['src'] === '') ? null : (string)$row['src'],
   ];

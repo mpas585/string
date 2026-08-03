@@ -3,13 +3,17 @@
   api/scores.php — アップロードした楽譜（アカウントに紐づく譜面）の JSON API。
 
     POST  action=list    csrf= lang=                                    … 一覧（新しい順・data は返さない）
-    POST  action=save    csrf= name= sub= notes= data= sig= fing= id= src= lang= … 1件保存
+    POST  action=save    csrf= name= sub= notes= data= sig= fing= id= src= lang= inst= … 1件保存
                           src（元のMIDIのbase64）は送らなければ既存のまま
                                                                           id を付けるとその1件を上書き、
                                                                           付けなければ新しく追加する
-    POST  action=fing    csrf= id= fing= lang=                          … 運指だけ更新（sig は変わらない）
-    POST  action=load    csrf= id=   lang=                              … 1件取り出す（運指も返す）
+    POST  action=fing    csrf= id= fing= lang= inst=                    … 運指だけ更新（sig は変わらない）
+    POST  action=load    csrf= id=   lang= inst=                        … 1件取り出す（運指も返す）
     POST  action=delete  csrf= id=   lang=                              … 1件消す
+
+  inst（楽器名）は運指の出し入れにだけ使う。運指は弦とポジションの番号なので楽器ごとに
+  分けて持つ必要があるため（実際の振り分けは includes/scores.php の score_fing_* が行う）。
+  譜面そのものは楽器で分けない＝一覧はどの楽器から見ても同じものが出る。
 
   誰の譜面かはログイン中のセッションから決める（画面から保存番号を受け取っていた旧版とは違う）。
   応答は {"ok":true,…} 形式。読み出しも含めて全て POST・同一オリジンからの fetch に限る。
@@ -51,6 +55,8 @@ $sub    = (string)($_POST['sub']    ?? '');
 /* src は「送られていない＝触らない」を区別するため null 許容で受ける */
 $src    = array_key_exists('src', $_POST) ? (string)$_POST['src'] : null;
 $fing   = (string)($_POST['fing']   ?? '');
+/* 運指を出し入れする楽器。一覧に無い値は既定楽器として扱う（includes/scores.php の score_inst） */
+$inst   = (string)($_POST['inst']   ?? '');
 
 try {
   acc_session_start();
@@ -67,19 +73,19 @@ try {
     }
 
     case 'save': {
-      $r = score_save($name, $notes, $data, $sig, $fing, $id, $sub, $src);
+      $r = score_save($name, $notes, $data, $sig, $fing, $id, $sub, $src, $inst);
       if (!$r['ok']) err($r['error'], SCORE_MAX_ITEMS);
       out(['ok' => true, 'id' => $r['id'], 'mode' => $r['mode']]);
     }
 
     case 'fing': {
-      $r = score_fing($id, $fing);
+      $r = score_fing($id, $fing, $inst);
       if (!$r['ok']) err($r['error']);
       out(['ok' => true, 'id' => $r['id']]);
     }
 
     case 'load': {
-      $r = score_load($id);
+      $r = score_load($id, $inst);
       if (!$r['ok']) err($r['error']);
       out(['ok' => true, 'id' => $r['id'], 'name' => $r['name'], 'data' => $r['data'], 'fing' => $r['fing'], 'src' => $r['src']]);
     }
