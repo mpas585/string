@@ -90,6 +90,7 @@ window.T = window.T || {
     "mode_game": "採点ゲーム",
     "mode_game_s": "課題曲を弾いて採点",
     "fab_aria": "再生 / 停止",
+    "cue_aria": "頭出し",
     "dk_tempo_aria": "テンポ設定",
     "dk_enjoy_aria": "伴奏 ON/OFF",
     "dk_enjoy": "伴奏",

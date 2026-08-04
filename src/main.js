@@ -9,7 +9,7 @@ import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
 import { applyZoom, centerBoardH, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
 import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop, markScaleDirty } from './modes.js';
-import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
+import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
@@ -35,6 +35,13 @@ on('fab','click', ()=>{
      genScale(false) がドロワーを閉じ、生成後に自動で再生まで行う。 */
   if(ST.scaleDirty && ST.mode==='scale'){ genScale(false); return; }
   startPlay();
+});
+/* 頭出し（▶ の上）。いま再生する範囲の先頭へ戻す。
+   ループ中はループの先頭、そうでなければ曲の先頭（playRange().sB）。
+   seekTo は再生中なら組み直し、止まっていれば次の ▶ の開始位置だけを動かす。 */
+on('cue','click', ()=>{
+  if(!ST.events.length) return;
+  seekTo(playRange().sB);
 });
 on('menu','click', openDrawer);
 on('drawerClose','click', closeDrawer);

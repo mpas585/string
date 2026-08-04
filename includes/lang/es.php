@@ -93,6 +93,7 @@ return [
     'mode_game_s'    => 'Toca una pieza y recibe tu puntuación',
 
     'fab_aria'       => 'Reproducir / Detener',
+    'cue_aria'       => 'Volver al inicio',
     'dk_tempo_aria'  => 'Ajustar el tempo',
     'dk_enjoy_aria'  => 'Acompañamiento ON/OFF',
     'dk_enjoy'       => 'Acomp.',

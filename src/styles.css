@@ -465,13 +465,13 @@
   .pk-b{display:flex; flex-direction:column; gap:3px; font-size:16px; font-weight:700; color:var(--ink); min-width:0}
   .pk-b small{font-size:11px; font-weight:400; color:var(--muted); line-height:1.5; white-space:normal}
   /* ---- 入口：ロゴ ---- */
-  .pk-logo{font-size:128px; line-height:1; margin-bottom:2px}
-  .pk-logo img{display:block; height:128px; width:auto; margin:0 auto}
+  /* 横長ロゴ（405x165）なので幅で決める。高さ基準のままだと横幅が画面をはみ出す */
+  .pk-logo{font-size:128px; line-height:1; margin:0 auto 2px; width:min(300px, 100%); text-align:center}
+  .pk-logo img{display:block; width:100%; height:auto; margin:0 auto}
   .pk-title{font-size:22px; font-weight:800; letter-spacing:.06em; color:var(--ink)}
   .pk-sub{font-size:12px; color:var(--muted); margin-bottom:14px; letter-spacing:.08em}
   .picker{overflow-y:auto; justify-content:flex-start; padding-top:24px}
   .pk-card{min-height:76px; padding:12px 14px}
-  .pk-card[data-mode="game"]{opacity:.62}
 
   /* ---- 設定：表示切替・音量 ---- */
   .seg2{display:flex; gap:4px; margin-bottom:9px; background:var(--panel2);
@@ -524,8 +524,8 @@
     body.force-landscape .toast{max-width:90vh}
     body.force-landscape .pk-card{max-width:520px}
     body.force-landscape .picker{flex-direction:column; gap:8px; padding-top:12px}
-    body.force-landscape .pk-logo{font-size:40px}
-    body.force-landscape .pk-logo img{height:40px}
+    body.force-landscape .pk-logo{font-size:40px; width:min(150px, 55%)}
+    body.force-landscape .pk-logo img{width:100%; height:auto}
     body.force-landscape .pk-card{min-height:58px; padding:9px 12px}
     body.force-landscape .pk-ic{flex:0 0 36px; height:36px; font-size:18px}
     body.force-landscape .pk-b{font-size:14px}
@@ -542,8 +542,8 @@
   body.landscape-layout.has-tp .fab{ bottom:calc(92px + env(safe-area-inset-bottom)) }
   body.landscape-layout.has-tp .sheet{ bottom:0 }
   body.landscape-layout .picker{flex-direction:column; gap:8px; padding-top:10px; justify-content:flex-start}
-  body.landscape-layout .pk-logo{font-size:38px}
-  body.landscape-layout .pk-logo img{height:38px}
+  body.landscape-layout .pk-logo{font-size:38px; width:min(140px, 55%)}
+  body.landscape-layout .pk-logo img{width:100%; height:auto}
   body.landscape-layout .pk-title{font-size:18px}
   body.landscape-layout .pk-sub{margin-bottom:8px}
   body.landscape-layout .pk-card{min-height:54px; padding:8px 12px; max-width:560px}
@@ -615,11 +615,40 @@
   /* 入口：ゲームのタイトル画面らしく */
   .picker{background:
       radial-gradient(760px 420px at 50% 0%, #2c2117 0%, transparent 62%), var(--bg);}
+  /* ===== 入口ロゴの演出 =====
+     以前の「ふわふわ」（上下＋回転＝@keyframes bob）は廃止した。
+     ロゴは白一色なので、白い光を重ねても見えない。そこで
+     「暖色の光がロゴの【後ろ】を通り抜ける」形にしてある。
+       (a) logoglow … 外周のゴールドがゆっくり明滅する
+       (b) logosweep … ぼかした光の帯が後ろを左から右へ横切る
+     ロゴ自体（#FFFFFF）には一切色を乗せないので、色は元のまま。
+     .pk-logo は filter を持つので独自の重なり文脈になり、
+     ::before の z-index:-1 は「img より後ろ・ページより前」に収まる。 */
   .pk-logo{
+    position:relative; z-index:0; isolation:isolate;
     filter:drop-shadow(0 6px 22px rgba(231,178,75,.45));
-    animation:bob 3.2s ease-in-out infinite;
+    animation:logoglow 3.6s ease-in-out infinite;
   }
-  @keyframes bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-7px) rotate(3deg)}}
+  @keyframes logoglow{
+    0%,100%{filter:drop-shadow(0 5px 18px rgba(231,178,75,.30))}
+    50%    {filter:drop-shadow(0 7px 30px rgba(231,178,75,.75))}
+  }
+  .pk-logo::before{
+    content:''; position:absolute; z-index:-1; pointer-events:none;
+    top:-30%; bottom:-30%; left:-20%; width:12%;
+    background:linear-gradient(90deg, transparent, rgba(255,213,139,.55) 50%, transparent);
+    filter:blur(17px); transform:skewX(-16deg);
+    animation:logosweep 5.2s ease-in-out infinite;
+  }
+  /* left を動かすのは、% がロゴの横幅そのものに対して効くため。
+     transform の % は「帯自身の幅」に対する割合になり、ロゴの幅が変わると
+     通り抜ける範囲がずれてしまう（横画面ではロゴが小さくなる）。 */
+  @keyframes logosweep{
+    0%,60%  {left:-20%; opacity:0}
+    66%     {left:-8%;  opacity:1}
+    92%     {left:104%; opacity:1}
+    100%    {left:118%; opacity:0}
+  }
   .pk-title{
     background:linear-gradient(180deg,#fff5e0,var(--accent));
     -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -1113,7 +1142,8 @@
   .hm-acc button{min-height:32px; padding:6px 12px; font-size:12px}
   .hm-head{text-align:center; margin-bottom:26px}
   .hm-logo{font-size:84px; line-height:1}
-  .hm-logo img{display:block; height:84px; width:auto; margin:0 auto}
+  /* 横長ロゴ（405x165）。入口（.pk-logo）と同じく幅で決める */
+  .hm-logo img{display:block; width:min(250px, 100%); height:auto; margin:0 auto}
   .hm-title{font-size:24px; font-weight:800; letter-spacing:.06em; margin:6px 0 4px; color:var(--ink)}
   .hm-sub{font-size:12px; color:var(--muted); letter-spacing:.06em; margin:0}
   .hm-h{font-size:11px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase;
@@ -1165,6 +1195,11 @@
   }
   .gp-row .v{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--accent)}
   .gp-row .cv{flex:0 0 auto; color:var(--faint); font-size:15px; line-height:1}
+  /* .gearpanel button{justify-content:center} のほうが詳細度が高く、.gp-row の
+     flex-start が効かない。値(.v)を持つ行は .v の margin-left:auto で左に寄って見えるが、
+     値の無い行（お問い合わせ）だけ中央寄せになってしまうため、見出し側にも auto を入れて
+     どの行も「文字＝左／› ＝右端」でそろえる。 */
+  .gp-row>span:first-child{margin-right:auto}
   /* サブメニューの見出し（‹ 戻る） */
   .gp-back{
     display:flex; align-items:center; gap:8px; margin:-2px -2px 10px;
@@ -1284,3 +1319,60 @@
   }
   .gck-note.in{color:var(--good); border-color:var(--good)}
   .gck-note.out{color:var(--danger); border-color:var(--danger)}
+
+  /* ======== 頭出し（▶ の上） ========
+     ▶（.fab）と同じ右下に、ひとまわり小さい丸ボタンとして重ねずに積む。
+     .fab のクラスは付けていない（.fab は「ゲームらしい見た目」で金色＋光る指定が
+      いくつも掛かっており、頭出しまで一緒に光ってしまうため）。
+     出し入れ・disabled は src/modes.js の updateChrome() が ▶ とそろえる。 */
+  .cue{
+    position:fixed; right:16px; z-index:6; bottom:calc(86px + env(safe-area-inset-bottom));
+    width:46px; height:46px; border-radius:50%; padding:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:17px; line-height:1; cursor:pointer;
+    background:linear-gradient(180deg,#3a2f1d,#241d14); color:var(--accent);
+    border:1px solid var(--line);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 3px 0 rgba(0,0,0,.35);
+  }
+  .cue:active{transform:translateY(2px); box-shadow:inset 0 2px 5px rgba(0,0,0,.45)}
+  .cue:disabled{opacity:.32; box-shadow:none; transform:none}
+  /* 下に運指リスト＋シークバー（.transport）が出ているぶんだけ持ち上げる。
+     ▶ が 128px のところなので、その上（128 + ▶の60 + 隙間10）に置く。 */
+  body.has-tp .cue{ bottom:calc(198px + env(safe-area-inset-bottom)) }
+  /* 横レイアウトは ▶ が 92px なので 92 + 60 + 10 */
+  body.landscape-layout.has-tp .cue{ bottom:calc(162px + env(safe-area-inset-bottom)) }
+
+  /* ======== ドロワーを開いているあいだの案内文 ========
+     「課題曲を選んでください」などの案内（.empty）は z-index:4 なので、
+     ドロワーの黒いスクリム（.scrim ＝ z-index:40）の下に潜って読めなかった。
+     ドロワーが開いているあいだだけ 41 に上げる。#drawer も 41 だが
+     DOM 上で #empty より後ろにあるので、ドロワー本体のほうが上に乗る
+     （＝案内文がドロワーの中身に被ることはない）。
+     クラスの付け外しは src/drawer.js の openDrawer() / closeDrawer()。 */
+  body.drawer-open .empty{z-index:41}
+
+  /* ======== 楽器選択トップのカード：入口（.pk-card）と同じ演出 ========
+     質感（斜めグラデ＋立体の影）と、たまに光が走る @keyframes shine をそろえる。
+     4枚が同時に光るとうるさいので、2枚目以降は少しずつ遅らせる。 */
+  .hm-card{
+    position:relative; overflow:hidden;
+    background:linear-gradient(135deg, #2b2318, #1d1811 62%);
+    border:1px solid #43371f;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 4px 0 rgba(0,0,0,.35);
+    border-radius:16px;
+  }
+  .hm-card::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 38%, rgba(255,255,255,.10) 48%, transparent 58%);
+    transform:translateX(-120%);
+    animation:shine 4.6s ease-in-out infinite;
+  }
+  .hm-card:nth-child(2)::after{animation-delay:.30s}
+  .hm-card:nth-child(3)::after{animation-delay:.60s}
+  .hm-card:nth-child(4)::after{animation-delay:.90s}
+  .hm-card:active{transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.35)}
+  .hm-card .ic{
+    background:linear-gradient(180deg,#3a2f1d,#241d14);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 0 16px rgba(231,178,75,.18);
+  }
+  .hm-card .b{font-weight:800; letter-spacing:.02em}

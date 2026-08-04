@@ -90,6 +90,7 @@ return [
     'mode_game_s'    => 'Play a piece and get scored',
 
     'fab_aria'       => 'Play / Stop',
+    'cue_aria'       => 'Back to start',
     'dk_tempo_aria'  => 'Tempo settings',
     'dk_enjoy_aria'  => 'Backing track ON/OFF',
     'dk_enjoy'       => 'Backing',

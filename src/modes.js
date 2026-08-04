@@ -548,6 +548,9 @@ export function updateChrome(){
   const fab=document.getElementById('fab');
   fab.style.display = playable ? 'inline-flex' : 'none';
   fab.disabled=!playable; fab.textContent=ST.playing?'■':'▶'; fab.classList.toggle('playing', ST.playing);
+  /* 頭出し（▶ の上）。▶ と同じ条件で出し入れする（▶ が無い画面に単独で残らないように） */
+  const cue=document.getElementById('cue');
+  if(cue){ cue.style.display = playable ? 'inline-flex' : 'none'; cue.disabled=!playable; }
   /* 設定変更が保留されている間だけ光らせる。ドロワー(z-index:41)を開いたままでも
      押せるよう、body 側のクラスで重なり順を上げる（CSS: body.scale-dirty .fab） */
   const dirty = ST.scaleDirty && ST.mode==='scale' && !ST.playing && playable;

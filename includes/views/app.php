@@ -281,7 +281,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 <!-- 入口：モード選択 ＋ 説明 -->
 <div id="picker" class="picker">
-  <div class="pk-logo"><img src="<?= h($BASE) ?>public/icons/logo-v2.png" alt="<?= h(APP_NAME) ?>" width="512" height="512" decoding="async"></div>
+  <div class="pk-logo"><img src="<?= h($BASE) ?>public/icons/logo-v3.svg" alt="<?= h(APP_NAME) ?>" width="406" height="165" decoding="async"></div>
   <h1 class="pk-title"><?= h(APP_NAME) ?></h1>
   <div class="pk-sub"><?php e('app_sub', $INST_NAME) ?></div>
   <button class="pk-card" data-mode="scale">
@@ -290,11 +290,11 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <button class="pk-card" data-mode="score">
     <span class="pk-ic">🎼</span><span class="pk-b"><?php e('ui.mode_score') ?><small><?php e('ui.mode_score_s') ?></small></span>
   </button>
-  <button class="pk-card" data-mode="tuner">
-    <span class="pk-ic">🎯</span><span class="pk-b"><?php e('ui.mode_tuner') ?><small><?php e('ui.mode_tuner_s') ?></small></span>
-  </button>
   <button class="pk-card" data-mode="game">
     <span class="pk-ic">🎮</span><span class="pk-b"><?php e('ui.mode_game') ?><small><?php e('ui.mode_game_s') ?></small></span>
+  </button>
+  <button class="pk-card" data-mode="tuner">
+    <span class="pk-ic">🎯</span><span class="pk-b"><?php e('ui.mode_tuner') ?><small><?php e('ui.mode_tuner_s') ?></small></span>
   </button>
 
   <!-- 説明（モード選択の下） -->
@@ -350,6 +350,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </section>
 </div>
 
+<!-- 頭出し（▶ の上）。先頭へ戻す。ループ中はループの先頭へ戻る（src/main.js） -->
+<button id="cue" class="cue" disabled aria-label="<?php e('ui.cue_aria') ?>">⏮</button>
 <button id="fab" class="fab" disabled aria-label="<?php e('ui.fab_aria') ?>">▶</button>
 
 <!-- 画面左下のドック：テンポ / 伴奏 / オクターブ / ループ（ドロワーから移動） -->
@@ -673,9 +675,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <span class="s-hi"><?php e('ui.tun_in_hi') ?></span>
     </div>
   </div>
-  <div class="gck-heard">
-    <span><?php e('ui.game_heard') ?></span><b id="gckNote" class="gck-note">–</b>
-  </div>
   <div class="row controls" style="margin-top:10px">
     <button id="gckGo" class="primary" style="flex:1; justify-content:center"><?php e('ui.game_ready_go') ?></button>
     <button id="gckCancel" class="ghost" style="flex:1; justify-content:center"><?php e('ui.game_ready_cancel') ?></button>
@@ -752,8 +751,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="seg" id="modeSeg" role="tablist">
       <button data-mode="scale"><?php e('ui.seg_scale') ?></button>
       <button data-mode="score"><?php e('ui.seg_score') ?></button>
-      <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
       <button data-mode="game"><?php e('ui.seg_game') ?></button>
+      <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
     </div>
   </div>
 

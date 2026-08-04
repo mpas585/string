@@ -90,6 +90,7 @@ return [
     'mode_game_s'    => '演奏课题曲并评分',
 
     'fab_aria'       => '播放 / 停止',
+    'cue_aria'       => '回到开头',
     'dk_tempo_aria'  => '速度设置',
     'dk_enjoy_aria'  => '伴奏 ON/OFF',
     'dk_enjoy'       => '伴奏',

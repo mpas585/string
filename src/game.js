@@ -240,19 +240,10 @@ export function updateCheck(rms, peak, f){
                     : (db < IN_MIN_DB+8) ? tt('msg.lvl_too_quiet') : tt('msg.lvl_louder');
     msg.className = hot ? 'hot' : (ok ? 'ok' : 'low');
   }
-  /* 聞こえている音。音域ゲートの外（メトロノームや物音）は「範囲外」として出す */
-  const nt=document.getElementById('gckNote');
-  if(nt){
-    if(!(f>0)){ nt.textContent='–'; nt.className='gck-note'; return; }
-    const midi=69 + 12*Math.log2(f/440);
-    const det=Math.round(midi);
-    const inRange=(midi>=GAME.midiMin && midi<=GAME.midiMax);
-    const cents=Math.round((midi-det)*100);
-    nt.textContent = inRange
-      ? `${midiName(det)} ${(cents>0?'+':'')}${cents}¢`
-      : tt('ui.game_out_of_range', midiName(det));
-    nt.className = 'gck-note' + (inRange ? ' in' : ' out');
-  }
+  /* 「聞こえている音」のピッチ表示は廃止した。
+     この画面で知りたいのはマイクの音量が適正かどうかで、音名は判断材料にならないため
+     （音名を見たいときはチューナーモードを使う）。
+     引数 f（検出した周波数）は checkLoop からそのまま渡ってくるが、ここでは使わない。 */
 }
 /* 準備をやめる（マイクを閉じて元へ戻す） */
 export function cancelGameCheck(){

@@ -246,7 +246,9 @@ export function resetFingering(){
   toast(tt('msg.fing_reset_done'));
 }
 
-export function openDrawer(){ document.getElementById('drawer').classList.add('open'); document.getElementById('scrim').classList.add('show'); }
+/* ドロワーを開く。body.drawer-open は、開いているあいだだけ案内文（.empty）を
+   黒いスクリムより上へ出すために使う（CSS: body.drawer-open .empty）。 */
+export function openDrawer(){ document.getElementById('drawer').classList.add('open'); document.getElementById('scrim').classList.add('show'); document.body.classList.add('drawer-open'); }
 export function openGear(){ openGearPage('main'); document.getElementById('gearPanel').classList.add('open'); document.getElementById('gearScrim').classList.add('open'); }
 /* ===== 歯車：サブメニュー（音量 / 指板ズーム） =====
    iPhoneの設定と同じで、表示するページは常に1枚だけ。開き直したら必ず一覧に戻す。
@@ -263,7 +265,7 @@ export function openGearPage(name, back){
 }
 export function closeGear(){ document.getElementById('gearPanel').classList.remove('open'); document.getElementById('gearScrim').classList.remove('open'); clearPlayAttn(); }
 export function toggleGear(){ document.getElementById('gearPanel').classList.contains('open') ? closeGear() : openGear(); }
-export function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); clearPlayAttn(); }
+export function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); document.body.classList.remove('drawer-open'); clearPlayAttn(); }
 /* ===== コピー練習モードの子タブ（曲を選ぶ / 譜面を読み込む / MIDIトラック選択） =====
    'tracks' はタブを持たない面で、MIDIを読み込んだときに songs.js から切り替える
    （「‹ 戻る」で 'load' に戻る）。main.js と songs.js の両方から呼ぶので drawer.js に置く。 */

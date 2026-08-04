@@ -8,9 +8,20 @@
 if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 /* 楽器カード。ready=false は「準備中」を出しつつリンクは張る（soon.php が受ける） */
+
+/* このトップページに並べる順番。config/app.php の 'instruments' は
+   アプリ全体の既定順（既定楽器や sitemap もこれを見る）なのでそちらは触らず、
+   見せ方だけをここで決める。一覧に無いものは後ろへ回すので、
+   config/app.php に楽器を足しただけでもカードは出る。 */
+$HOME_ORDER = ['violin', 'viola', 'cello', 'contrabass'];
+$ORDERED    = array_values(array_intersect($HOME_ORDER, APP_INSTRUMENTS));
+foreach (APP_INSTRUMENTS as $ins) {
+  if (!in_array($ins, $ORDERED, true)) { $ORDERED[] = $ins; }
+}
+
 $CARDS = [];
 $LOGO  = '';
-foreach (APP_INSTRUMENTS as $ins) {
+foreach ($ORDERED as $ins) {
   $c = require APP_ROOT . '/config/' . $ins . '.php';
   $CARDS[] = ['id' => $ins, 'emoji' => $c['emoji'], 'ready' => !empty($c['ready'])];
   if ($ins === APP_DEFAULT_INSTRUMENT) { $LOGO = $c['emoji']; }
@@ -77,7 +88,7 @@ foreach (APP_INSTRUMENTS as $ins) {
   </div>
 
   <header class="hm-head">
-    <div class="hm-logo"><img src="<?= h($BASE) ?>public/icons/logo-v2.png" alt="<?= h(APP_NAME) ?>" width="512" height="512" decoding="async"></div>
+    <div class="hm-logo"><img src="<?= h($BASE) ?>public/icons/logo-v3.svg" alt="<?= h(APP_NAME) ?>" width="406" height="165" decoding="async"></div>
     <h1 class="hm-title"><?= h(APP_NAME) ?></h1>
     <p class="hm-sub"><?php e('home.sub') ?></p>
   </header>
