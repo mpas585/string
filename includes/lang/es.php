@@ -178,6 +178,17 @@ return [
     'game_retry'     => 'Otra vez',
     'game_res_note'  => 'El sonido grabado se borra en cuanto se calcula la puntuación',
     'game_best_badge'=> ' / mejor %s',
+    /* Se muestra una sola vez, al abrir por primera vez el juego de puntuación (#mGameIntro) */
+    'm_game_intro'   => '🎮 Qué es el juego de puntuación',
+    'game_intro_body'=> 'Toca la pieza elegida siguiendo el metrónomo. La aplicación escucha por el micrófono y te puntúa sobre 100.',
+    'game_intro_steps'=> [
+      'Elige una pieza (la misma lista que “Practicar una pieza”)',
+      'Pulsa “Grabar y puntuar” y comprueba el nivel del micrófono',
+      'Tras la cuenta de entrada, toca siguiendo el metrónomo',
+      'Recibirás una puntuación y consejos según la afinación, el ritmo y las notas captadas',
+    ],
+    'game_intro_note'=> 'El sonido grabado se borra en cuanto se calcula la puntuación. Se recomienda usar auriculares.',
+    'game_intro_ok'  => '¡Entendido!',
 
     'score'          => 'Partitura',
     'file_open'      => '🎼 Abrir',

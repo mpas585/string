@@ -324,7 +324,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="pk-logo"><img src="<?= h($BASE) ?>public/icons/logo-v3.svg" alt="<?= h(APP_NAME) ?>" width="406" height="165" decoding="async"></div>
   <h1 class="pk-title"><?= h(APP_NAME) ?></h1>
   <div class="pk-sub"><?php e('app_sub', $INST_NAME) ?></div>
-  <button class="pk-card" data-mode="score">
+  <button class="pk-card pk-main" data-mode="score">
     <span class="pk-ic">🎼</span><span class="pk-b"><?php e('ui.mode_score') ?><small><?php e('ui.mode_score_s') ?></small></span>
   </button>
   <button class="pk-card" data-mode="game">
@@ -746,6 +746,27 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <button class="ghost" data-dkclose style="flex:1; justify-content:center"><?php e('ui.close') ?></button>
   </div>
   <div class="sub"><?php e('ui.game_res_note') ?></div>
+</div>
+
+<!-- 採点ゲーム：初めて開いたときの説明（1回だけ）。
+     出したことは端末に残す（src/game.js の maybeShowGameIntro）。
+     ✕・「分かった！」・「閉じる」はどれも data-dkclose ＝ 既存の closeDockModal で閉じる。 -->
+<div id="mGameIntro" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('ui.m_game_intro') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="sub sv-ask"><?php e('ui.game_intro_body') ?></div>
+  <ol class="pk-steps">
+<?php foreach (t('ui.game_intro_steps') as $s): ?>
+    <li><?= h($s) ?></li>
+<?php endforeach; ?>
+  </ol>
+  <div class="startrow" style="margin-top:12px">
+    <button id="gameIntroOk" class="primary" data-dkclose><?php e('ui.game_intro_ok') ?></button>
+    <button id="gameIntroClose" class="ghost" data-dkclose><?php e('ui.close') ?></button>
+  </div>
+  <div class="sub"><?php e('ui.game_intro_note') ?></div>
 </div>
 
 <!-- アップロードした楽譜：同じ譜面っぽいものがあるとき、上書きか新規追加かを尋ねる

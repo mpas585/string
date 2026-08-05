@@ -175,6 +175,17 @@ return [
     'game_retry'     => 'Try again',
     'game_res_note'  => 'The recorded sound is discarded as soon as the score is calculated',
     'game_best_badge'=> ' / best %s',
+    /* Shown once, the first time the scoring game is opened (#mGameIntro) */
+    'm_game_intro'   => '🎮 About the scoring game',
+    'game_intro_body'=> 'Play the chosen piece along with the metronome. The app listens through your microphone and scores you out of 100.',
+    'game_intro_steps'=> [
+      'Pick a piece (the same list as “Practise a piece”)',
+      'Press “Record and score” and check your microphone level',
+      'After the count-in, play along with the metronome',
+      'You get a score and advice based on pitch, timing and the notes picked up',
+    ],
+    'game_intro_note'=> 'The recorded sound is discarded as soon as the score is calculated. Earphones are recommended.',
+    'game_intro_ok'  => 'Got it!',
 
     'score'          => 'Score',
     'file_open'      => '🎼 Open',
