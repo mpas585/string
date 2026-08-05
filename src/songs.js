@@ -23,6 +23,8 @@ import { measureOfBeat, setSeekHead, setTempo, startPlay, stopPlay } from './aud
 import { render, scrollStripToActive, setScore, syncDock } from './modes.js';
 import { closeDrawer, openDrawer, setScoreSub } from './drawer.js';
 import { toast } from './dom.js';
+/* お気に入り（曲一覧の右端のハートと、お気に入りだけの絞り込みに使う） */
+import { isFav } from './favorites.js';
 /* 読み込んだ譜面を保存番号に紐づけて残す（保存番号が無ければ何もしない） */
 import { beginUpload, rememberUpload } from './uploads.js';
 
@@ -655,6 +657,11 @@ export function setSongPage(p){
   renderSongList();
 }
 export function songListPage(){ return songPage; }
+/* お気に入りだけに絞るかどうか。開くたびに解除する（＝端末には残さない）。
+   押されたときの見た目の切り替えは src/favorites.js の syncFavFilterBtn。 */
+let favOnly=false;
+export function favFilterOn(){ return favOnly; }
+export function setFavFilter(v){ favOnly=!!v; songPage=1; renderSongList(); }
 
 /* 画面に出す文字はすべてここを通す。共有された曲の名前は利用者が付けたものなので、
    そのまま流し込むと HTML として解釈されてしまう（src/uploads.js の esc と同じ作り）。 */
@@ -684,7 +691,9 @@ export function renderSongList(){
 
   const all=songEntries();
   const q=songQuery.trim().toLowerCase();
-  const list=q ? all.filter(e=> (e.title+' '+e.desc).toLowerCase().indexOf(q)>=0) : all;
+  let list=q ? all.filter(e=> (e.title+' '+e.desc).toLowerCase().indexOf(q)>=0) : all;
+  /* ❤お気に入りが押されているあいだは、印を付けた曲だけにする */
+  if(favOnly) list=list.filter(e=> isFav(e.key));
 
   const pages=Math.max(1, Math.ceil(list.length/SONGS_PER_PAGE));
   if(songPage>pages) songPage=pages;
@@ -692,27 +701,31 @@ export function renderSongList(){
   const view=list.slice((songPage-1)*SONGS_PER_PAGE, songPage*SONGS_PER_PAGE);
 
   if(!view.length){
-    /* 絞り込みで消えたのか、そもそも曲が無いのかを言い分ける */
-    box.innerHTML = q ? `<div class="upempty">${esc(tt('share.no_hit'))}</div>` : tt('msg.no_songs_html');
+    /* お気に入りで消えたのか、絞り込みで消えたのか、そもそも曲が無いのかを言い分ける */
+    box.innerHTML = favOnly ? `<div class="upempty">${esc(tt('ui.fav_none'))}</div>`
+                  : q       ? `<div class="upempty">${esc(tt('share.no_hit'))}</div>`
+                            : tt('msg.no_songs_html');
   }else{
     box.innerHTML=view.map(e=>{
+      /* お気に入りの印。付いている曲はボタンの右端にハートを出す（付け外しは指板の左上） */
+      const fav = isFav(e.key) ? `<span class="fav" aria-hidden="true">\u2764</span>` : '';
+      const fc  = isFav(e.key) ? ' hasfav' : '';
       if(!e.share){
         /* あらかじめ用意した曲（これまでどおり。難易度の★もこちらだけ） */
-        return `<button class="songbtn" data-song="${e.key}">🎵 ${e.title}`
-          + `<small>${levelStars(e.level)}${e.desc}</small></button>`;
+        return `<button class="songbtn${fc}" data-song="${e.key}">${e.title}`
+          + `<small>${levelStars(e.level)}${e.desc}</small>${fav}</button>`;
       }
       /* 共有された曲。難易度は持たないので★は出さない。
-         ボタンの入れ子にできないので、曲のボタンと削除依頼のボタンは横に並べる。 */
+         ボタンの入れ子にできないので、曲のボタンと［公開をやめる］は横に並べる。
+         削除依頼はお問い合わせフォーム（歯車 →お問い合わせ →種別で「削除依頼」）へ移した。 */
       const mine = e.mine
         ? `<button type="button" class="shbtn shun" data-unshare="${e.id}">${esc(tt('share.unshare'))}</button>`
         : '';
       return `<div class="shrow">`
-        + `<button class="songbtn" data-song="${e.key}">🎵 ${esc(e.title)}`
-        +   `<small><span class="shbadge" title="${esc(tt('share.badge_title'))}">${esc(tt('share.badge'))}</span>${esc(e.desc)}</small></button>`
-        + `<span class="shb">`
-        +   mine
-        +   `<button type="button" class="shbtn shrep" data-report="${e.id}">${esc(tt('share.report'))}</button>`
-        + `</span></div>`;
+        + `<button class="songbtn${fc}" data-song="${e.key}">${esc(e.title)}`
+        +   `<small><span class="shbadge" title="${esc(tt('share.badge_title'))}">${esc(tt('share.badge'))}</span>${esc(e.desc)}</small>${fav}</button>`
+        + (mine ? `<span class="shb">` + mine + `</span>` : '')
+        + `</div>`;
     }).join('');
   }
   renderSongPager(pages);

@@ -24,7 +24,9 @@ import { toast } from './dom.js';
 import { closeDrawer, openDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, setScoreSub, Store } from './drawer.js';
 import { loadSample, renderTracks, midiFile, setMidiFile } from './songs.js';
 /* 採点ゲーム。モードの出入りで課題曲一覧を作り直し、録音中に抜けたら止める */
-import { abortGame, renderGameSongs, syncStartBtn } from './game.js';
+import { abortGame, renderGameSongs, syncStartBtn, maybeShowGameIntro } from './game.js';
+/* お気に入り（指板の左上のハート）。曲が変わるたびに出し入れする */
+import { syncFavBtn } from './favorites.js';
 
 export function render(){
   const picker  = document.getElementById('picker');
@@ -133,6 +135,7 @@ export function setMode(mode, keepDrawer){
     if(!keepDrawer) openDrawer();
     render();
     toast(tt('msg.hint_game'));
+    maybeShowGameIntro();                   /* 初めて開いたときだけ説明を出す */
 
   } else if(mode==='tuner'){
     ST.enjoy=false;
@@ -408,6 +411,7 @@ export function setScore(parsed, scoreName, title){
   ST.scoreName=scoreName || '';
   ST.scoreTitle=title || '';
   renderScoreTitle();
+  syncFavBtn();                        /* 曲が変わったので、左上のハートを合わせる */
   ST.selected=0; ST.current=null; ST.lastScrollId=null; ST.playhead=0;
   applyOctave();
 

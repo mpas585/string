@@ -139,6 +139,17 @@ export function syncStartBtn(){
   const b=document.getElementById('gameStart');
   if(b) b.disabled = !(GAME.songId && ST.events.length && GAME.phase==='idle');
 }
+/* ===== 初めて採点ゲームを開いたときの説明 =====
+   出したことは端末に残す。'cf:' で始まるキーなので、ログインしていれば
+   src/account.js が設定といっしょにサーバへ預かる（＝別の端末でも二度目は出ない）。
+   呼ぶのは src/modes.js の setMode('game')。閉じるのは既存の closeDockModal。 */
+export const GAME_INTRO_KEY='cf:game:intro:v1';
+export function maybeShowGameIntro(){
+  if(Store.get(GAME_INTRO_KEY)) return;
+  Store.set(GAME_INTRO_KEY,'1');
+  openDockModal('mGameIntro');
+}
+
 /* 課題曲を選ぶ。譜面は「曲を練習する」と同じ経路で読み込む（quiet=true でドロワーは開いたまま）。
    'sh:' で始まるものは利用者が共有した曲（api/shares.php から取り出す）。
    自己ベストの記録キーもこの内部IDのままなので、あらかじめ用意した曲と混ざらない。 */

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 620" width="240" height="620" role="img" aria-hidden="true">
+<defs>
+<linearGradient id="w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c2833f"/><stop offset=".55" stop-color="#7d4d1e"/><stop offset="1" stop-color="#43260c"/></linearGradient>
+<linearGradient id="n" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a2410"/><stop offset=".5" stop-color="#5b3a1a"/><stop offset="1" stop-color="#2c1a0a"/></linearGradient>
+</defs>
+<rect x="108.6" y="70.0" width="22.8" height="242.0" rx="7.2" fill="url(#n)"/>
+<rect x="112.6" y="74.0" width="14.9" height="224.0" rx="4.8" fill="#241408"/>
+<path d="M 107.4 74.0 C 103.2 50.0 136.8 50.0 132.6 74.0 Z" fill="#3a2410"/>
+<circle cx="120.0" cy="52.0" r="12.6" fill="#4a2e14"/>
+<circle cx="120.0" cy="52.0" r="5.5" fill="#26160a"/>
+<ellipse cx="102.0" cy="60.0" rx="6.0" ry="3.1" fill="#6a4520"/>
+<ellipse cx="138.0" cy="60.0" rx="6.0" ry="3.1" fill="#6a4520"/>
+<ellipse cx="102.0" cy="70.0" rx="6.0" ry="3.1" fill="#6a4520"/>
+<ellipse cx="138.0" cy="70.0" rx="6.0" ry="3.1" fill="#6a4520"/>
+<path d="M 120.0 252.0 C 157.2 252.0 180.0 279.4 180.0 312.8 C 180.0 343.2 159.0 367.5 159.0 385.8 C 159.0 404.0 194.0 440.5 194.0 470.9 C 194.0 534.7 165.9 556.0 120.0 556.0 C 74.1 556.0 46.0 534.7 46.0 470.9 C 46.0 440.5 81.0 404.0 81.0 385.8 C 81.0 367.5 60.0 343.2 60.0 312.8 C 60.0 279.4 82.8 252.0 120.0 252.0 Z" fill="url(#w)" stroke="#3a2008" stroke-width="3"/>
+<path d="M 120.0 259.0 C 153.5 259.0 174.0 285.1 174.0 317.0 C 174.0 346.0 154.0 369.2 154.0 386.6 C 154.0 404.0 187.0 438.8 187.0 467.8 C 187.0 528.7 161.5 549.0 120.0 549.0 C 78.5 549.0 53.0 528.7 53.0 467.8 C 53.0 438.8 86.0 404.0 86.0 386.6 C 86.0 369.2 66.0 346.0 66.0 317.0 C 66.0 285.1 86.5 259.0 120.0 259.0 Z" fill="none" stroke="#5d3413" stroke-width="1.6" opacity=".7"/>
+<path d="M 95.8 376.6 c 5.8 3.9 -5.8 13.5 1.0 19.4" fill="none" stroke="#40260d" stroke-width="3.1" stroke-linecap="round" opacity=".85"/>
+<path d="M 144.2 376.6 c -5.8 3.9 5.8 13.5 -1.0 19.4" fill="none" stroke="#40260d" stroke-width="3.1" stroke-linecap="round" opacity=".85"/>
+<path d="M 99.7 422.2 L 140.3 422.2 L 133.3 408.6 L 106.7 408.6 Z" fill="#d8ab6a"/>
+<path d="M 108.3 428.3 L 131.7 428.3 L 126.6 528.6 L 113.4 528.6 Z" fill="#241408"/>
+<line x1="112.8" y1="64.0" x2="110.6" y2="428.3" stroke="#e8d7b4" stroke-width="1.5" opacity=".9"/>
+<line x1="117.6" y1="64.0" x2="116.9" y2="428.3" stroke="#e8d7b4" stroke-width="1.5" opacity=".9"/>
+<line x1="122.4" y1="64.0" x2="123.1" y2="428.3" stroke="#e8d7b4" stroke-width="1.5" opacity=".9"/>
+<line x1="127.2" y1="64.0" x2="129.4" y2="428.3" stroke="#e8d7b4" stroke-width="1.5" opacity=".9"/>
+</svg>

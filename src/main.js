@@ -12,7 +12,10 @@ import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave,
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub } from './drawer.js';
-import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage } from './songs.js';
+import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
+         renderSongList, setFavFilter, favFilterOn } from './songs.js';
+/* お気に入り（指板の左上のハート／曲一覧の絞り込み） */
+import { toggleFavCurrent, syncFavBtn, syncFavFilterBtn, reloadFavs } from './favorites.js';
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { tt } from './util.js';
@@ -20,11 +23,11 @@ import { initPractice } from './practice.js';
 import { initPracticeUI, openPractice, prevMonth, nextMonth } from './practice-ui.js';
 import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, showPasswd, showDelete, togglePassword, doLogin, doSignup,
          doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin, askLogin, askSkip,
-         setSaveApply, armSave } from './account.js';
-import { openContact, sendContact } from './contact.js';
+         setSaveApply, armSave, setSaveWatcher } from './account.js';
+import { openContact, sendContact, syncKind } from './contact.js';
 import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename } from './uploads.js';
 /* みんなの曲（利用者が共有した楽譜）。一覧に混ぜて出す／公開する／削除依頼／管理 */
-import { initShares, loadShared, openShare, doShare, reportShare, unshareSong,
+import { initShares, loadShared, openShare, doShare, unshareSong,
          openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
 import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
@@ -320,9 +323,8 @@ on('scoreSubSeg','click', e=>{
   setScoreSub(b.dataset.sub);
 });
 on('songBtns','click', e=>{
-  /* 共有された曲の行に並ぶボタンを先に見る（曲を開くより優先） */
-  const rep=e.target.closest('[data-report]');
-  if(rep){ reportShare(rep.dataset.report); return; }
+  /* 共有された曲の行に並ぶボタンを先に見る（曲を開くより優先）。
+     削除依頼はお問い合わせフォームへ移したので、ここに残るのは［公開をやめる］だけ。 */
   const un=e.target.closest('[data-unshare]');
   if(un){ unshareSong(un.dataset.unshare); return; }
 
@@ -336,6 +338,21 @@ on('songBtns','click', e=>{
 });
 /* 曲一覧の絞り込み。打つたびに並べ直す（通信はしない＝手元の一覧を絞るだけ） */
 on('songQ','input', e=> setSongQuery(e.target.value));
+/* ❤お気に入り。押すたびに、お気に入りだけ ⇄ 全部 を切り替える */
+on('favOnly','click', ()=>{
+  const next=!favFilterOn();
+  setFavFilter(next);
+  syncFavFilterBtn(next);
+});
+/* 指板の左上のハート。いま開いている曲を、お気に入りに入れる／外す。
+   曲一覧の右端の印も変わるので、一覧を並べ直す。 */
+on('favBtn','click', ()=>{
+  const on=toggleFavCurrent();
+  if(on===null) return;                 /* 一覧に無い譜面（読み込んだファイル等）は対象外 */
+  syncFavBtn();
+  renderSongList();
+  toast(tt(on ? 'msg.fav_on' : 'msg.fav_off'));
+});
 /* 曲一覧のページ送り（50件ごと） */
 on('songPager','click', e=>{
   const b=e.target.closest('.pgb'); if(!b || b.disabled) return;
@@ -464,6 +481,8 @@ on('acAskNo','click',  askSkip);
 /* ===== 歯車：お問い合わせ（いちばん下） ===== */
 on('contactBtn','click', openContact);
 on('ctSend','click', sendContact);
+/* 種別を「削除依頼」にしたら、曲名と理由の欄を出す */
+on('ctKind','change', syncKind);
 on('zoom','input', e=> setZoom((+e.target.value||100)/100));
 on('zoomIn','click',   ()=> setZoom(ST.zoom*1.25));
 on('zoomOut','click',  ()=> setZoom(ST.zoom/1.25));
@@ -546,6 +565,10 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
     syncLoopUI();
     render();
     applyZoom();
+    /* 降りてきた設定にはお気に入りも入っている。持っている中身を捨てて読み直す */
+    reloadFavs();
+    syncFavBtn();
+    renderSongList();
   });
   /* ここから先の設定変更だけを自動保存の対象にする（起動時の底上げ保存で尋ねないため） */
   armSave();
@@ -553,6 +576,18 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
   initUploads();
   /* みんなの曲（利用者が共有した楽譜）の一覧。曲一覧に混ぜて出す */
   initShares();
+  /* ログイン済みの人には入口（モード選択）を見せず、そのまま「曲を練習する」を開く。
+     左ドロワーを開く（＝曲を選ぶ一覧を出す）のは setMode('score') の側（src/modes.js）。
+     ログインしているかどうかが決まるのは initAccount() の通信が返ってからなので、
+     その知らせ（setSaveWatcher）で1回だけ動かす。
+     ・すでに自分でモードを選んでいるときは何もしない（ST.mode を見ている）
+     ・ログインしていない人にはこれまでどおり入口を出す */
+  let jumpedIn=false;
+  setSaveWatcher(who=>{
+    if(jumpedIn || !who || ST.mode) return;
+    jumpedIn=true;
+    setMode('score');
+  });
   /* ログイン状態は描画に関係しないので、初期描画の後で取りに行く */
   initAccount();
   /* 練習時間の計測。ST.playing を1秒ごとに見るだけなので、他の処理には触らない */
