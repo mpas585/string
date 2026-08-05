@@ -141,6 +141,11 @@ return [
     'songs'          => 'Pick a song',
     'songs_loading'  => '🎼 Loading…',
     'songs_note'     => 'Choosing a song loads its score',
+    /* Favourites (src/favorites.js): the heart on the fingerboard and the list filter */
+    'fav_only'       => 'Favourites',
+    'fav_add'        => 'Add to favourites',
+    'fav_del'        => 'Remove from favourites',
+    'fav_none'       => 'No favourites yet. Open a piece and tap the heart at the top left of the fingerboard',
     'level'          => 'Difficulty',
 
     /* Scoring game */
@@ -256,6 +261,9 @@ return [
 
   /* ===== JS 側の文言（src/*.js から tt('msg.xxx') で引く） ===== */
   'msg' => [
+    /* Favourites (the heart at the top left of the fingerboard) */
+    'fav_on'         => '❤ Added to favourites',
+    'fav_off'        => 'Removed from favourites',
     'loop_no_notes'        => 'No notes in that range of bars',
     'need_score'           => 'Load a score first',
     'fing_exported'        => 'Fingering exported',
@@ -380,36 +388,46 @@ return [
 
   'intro' => [
     'title' => 'About this app',
-    'lead'  => 'A web app that puts a %s fingerboard on your phone screen so you can check stopping positions, finger numbers and pitch while you practise. Nothing to install — it runs in the browser.',
+    'lead'  => 'A web app that puts a %s fingerboard on your phone screen so you can check stopping positions, finger numbers and pitch as you practise. Nothing to install — it runs in the browser.',
     'items' => [
-      ['🎵', 'Scale practice',  'Pick a key and a number of octaves and the scale is laid out on the fingerboard and the staff, with a backing track and metronome.'],
-      ['🎼', 'Practise a piece', 'Choose one of the bundled songs, or load MusicXML / MIDI, to get a score with fingering. Tap to change any fingering.'],
-      ['🎯', 'Tuner',            'Detects pitch through the microphone and shows where the note you are playing sits on the fingerboard.'],
+      ['🎼', 'Practise a piece', 'Choose one of the pieces provided, or load MusicXML / MIDI, and you get a score with fingerings. Tap a note to change its fingering.'],
+      ['🎮', 'Scoring game',     'Play along with the metronome and the app listens through your microphone, scores you out of 100 and tells you how your pitch and timing went.'],
+      ['🎵', 'Scale practice',   'Inside piece practice, choose a key and a number of octaves and the scale is laid out on the fingerboard and the stave, with backing and metronome.'],
+      ['🎯', 'Tuner',            'Reads the pitch from your microphone and shows where the sounding note sits on the fingerboard.'],
     ],
     'feat_title' => 'What it does',
     'feats' => [
-      'Stopping positions are calculated from the string-length ratio. Position names (open, low, mid, high) and finger numbers are shown as a guide.',
-      'Pick a key and a number of octaves and the scale is laid out on both the fingerboard and the staff, with a backing track (drums, bass, chords) and a metronome.',
-      'Scores can be loaded from MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid). For MIDI, the track closest to the instrument range is selected automatically.',
-      'Tap any note to change its fingering. Edits are saved on your device automatically, and can be exported to move to another device.',
-      'The tempo can be changed, with an optional four-beat count-in and loop playback over a chosen range of bars.',
-      'The tuner detects pitch through the microphone and shows the deviation in cents along with the input level.',
-      'You can switch between fingerboard and staff view, show fret lines, zoom the fingerboard, and use a landscape layout.',
+      'Stopping positions are worked out from string-length ratios. Position names (open, low, middle, high) and finger numbers are offered as a guide.',
+      'Scales appear on both the fingerboard and the stave once you pick a key and octave count, with backing (drums, bass, chords) and a metronome.',
+      'Scores can be loaded from MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid). For MIDI the closest-sounding track is chosen automatically, and you can switch tracks afterwards.',
+      'Fingerings can be changed by tapping a note, and changes are saved automatically. You can also export them and carry them to another device.',
+      'Tempo changes, a one-bar count-in and looped playback over a chosen bar range are all supported.',
+      'In the scoring game your playing is picked up by the microphone and scored out of 100, and your best score for each piece is kept.',
+      'Pieces you like can be starred with the heart at the top left of the fingerboard, and the list can be filtered down to favourites.',
+      'A score you have loaded can be published as one of “Everyone’s pieces”, and pieces published by others appear in the same list. You can withdraw yours at any time.',
+      'Practice time is recorded on a calendar, with a monthly total and the number of days practised.',
+      'The tuner reads pitch from the microphone and shows the deviation in cents along with the input level.',
+      'You can switch between fingerboard and stave, show fret lines, zoom the fingerboard in and out, and use landscape.',
+      'Sign in with an email address or a Google account and your settings, fingerings, favourites and practice record carry over to another device.',
+      'Japanese, English, Spanish and Chinese are supported. Add it to your home screen and it opens like an app.',
     ],
     'use_title' => 'How to use it',
     'steps' => [
-      'Choose a practice mode from the buttons above.',
-      'For scales, pick a key and a number of octaves; for pieces, pick a song or load a score file.',
-      'Press play — you will hear the notes and see where each one sits on the fingerboard.',
+      'Pick how you want to practise from the buttons above. Once you are signed in, the piece list opens straight away next time.',
+      'For piece practice choose a piece or a score file; for the scoring game choose a set piece. Scale practice lives inside piece practice, where you pick a key and octave count.',
+      'Press play and the notes sound, with the position of the current note shown on the fingerboard.',
     ],
     'faq_title' => 'Questions',
     'faqs' => [
-      ['Do I need to install anything?', 'No. It runs in the browser. Scores you load and fingerings you edit are stored on your device and are never sent anywhere.'],
-      ['The microphone does not work', 'The microphone only works over https:// or localhost. It will not work from a file:// URL, or if the browser has not been given permission.'],
+      ['Do I need to install anything?', 'No. Just open it in a browser. Adding it to your home screen makes it open like an app.'],
+      ['Do I have to sign in?', 'No. The fingerboard, piece practice, the scoring game and the tuner all work without an account. Signing in carries your settings, fingerings, favourites and practice record over to another device.'],
+      ['The microphone does not respond', 'Microphone input only works over https:// or on localhost. It will not work if the file was opened directly with file://, or if the browser has not been given permission.'],
       ['Which score files can I use?', 'MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid).'],
-      ['Can I change the fingering myself?', 'Tap a note and the alternatives appear. Your choice is saved automatically, and can be exported and imported.'],
+      ['Can I change the fingerings myself?', 'Tap a note and the alternatives appear. Your choice is saved automatically, and fingerings can be exported and imported.'],
+      ['Is the scoring game recording kept?', 'No. The microphone signal is used only for scoring and is discarded as soon as the score is calculated.'],
+      ['Can I withdraw a piece I published?', 'Yes — use [Stop publishing] on your own piece in the list. Rights holders can request removal from the gear menu under Contact: choose “Takedown request” and send the title and the reason.'],
     ],
-    'note'  => 'Everything runs on your device. No data is sent anywhere.',
+    'note'  => 'Showing the fingerboard, loading scores and editing fingerings all happen on your device. Only when you are signed in are your settings, fingerings, favourites, practice record and published pieces kept on the server. Microphone audio from the scoring game and the tuner never leaves your device.',
   ],
 
   /* ===== Practice troubleshooting guide (entry point for the GEO/SEO articles) =====
@@ -464,8 +482,11 @@ return [
     'sub'       => 'Practice app for string instruments',
     'choose'    => 'Choose an instrument',
     'card_note' => 'Start practising',
+    'swipe'     => 'Swipe left or right to choose an instrument',
+    'prev'      => 'Previous instrument',
+    'next'      => 'Next instrument',
     'about_t'   => 'About GEN strings',
-    'about'     => 'Turns your phone screen into a fingerboard so you can check stopping positions, finger numbers and pitch while you practise. Includes scale practice, score loading (MusicXML / MIDI) and a tuner. No install needed; it runs in the browser.',
+    'about'     => 'Turns your phone screen into a fingerboard so you can check stopping positions, finger numbers and pitch while you practise. It includes piece practice (MusicXML / MIDI), scale practice, a scoring game that listens through the microphone, a tuner and a practice calendar. Sign in and your settings, fingerings, favourites and practice record carry over to another device. No install needed; it runs in the browser.',
   ],
 
   /* ===== Accounts (email + password / Google sign-in).
@@ -597,6 +618,22 @@ return [
     'sending' => 'Sending...',
     'note'    => 'Messages go to a forwarding-only address. Add your email if you would like a reply.',
     'ok'      => 'Sent. Thank you!',
+    /* Kind of enquiry. A takedown needs only the title and the reason, and the piece
+       is unpublished automatically the moment the form is sent. */
+    'kind'          => 'Type of enquiry',
+    'kind_normal'   => 'General enquiry',
+    'kind_takedown' => 'Takedown request',
+    'song'          => 'Title of the piece',
+    'song_ph'       => 'Exactly as it appears in “Everyone’s pieces”',
+    'reason'        => 'Reason for removal',
+    'reason_ph'     => 'For example, that you hold the rights',
+    'takedown_note' => 'Please give the title and the reason. The moment this is sent, that title stops being published. Your name and message are optional.',
+    'ok_takedown'   => 'Your takedown request has been received. The piece is no longer published.',
+    'mail_subject_takedown' => 'Takedown request (%s)',
+    'mail_kind'     => 'Type',
+    'mail_song'     => 'Title',
+    'mail_reason'   => 'Reason',
+    'mail_hidden'   => 'Unpublished automatically',
     'mail_subject' => 'Contact form (%s)',
     'mail_name'  => 'Name',
     'mail_email' => 'Email',
@@ -604,6 +641,7 @@ return [
     'mail_page'  => 'Page',
     'err' => [
       'empty'   => 'Enter your name and a message',
+      'takedown' => 'Please give the title of the piece and the reason for removal',
       'email'   => 'That email address does not look valid',
       'long'    => 'That is too long',
       'toofast' => 'You just sent a message. Please wait a moment',

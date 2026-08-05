@@ -94,15 +94,27 @@ foreach ($ORDERED as $ins) {
   </header>
 
   <h2 class="hm-h"><?php e('home.choose') ?></h2>
-  <nav class="hm-list">
+  <!-- 楽器選択。指で左右に払うと回り、正面のものを押すとその楽器のページへ進む。
+       回すのは src/home-gallery.js。JS が動かないときは .hm-stage に .on が付かないので、
+       これまでどおり縦に並んだリンク一覧として見える（中身は同じ <a>）。
+       画像は public/instruments/*.svg（仮）。 -->
+  <div id="hmStage" class="hm-stage">
+    <nav id="hmRing" class="hm-list">
 <?php foreach ($CARDS as $c): ?>
-    <a class="hm-card<?= $c['ready'] ? '' : ' soon' ?>" href="<?= h($rootPath . '/' . $LANG . '/' . $c['id'] . '/') ?>">
-      <span class="ic"><?= h($c['emoji']) ?></span>
-      <span class="b"><?= h(t('instrument.' . $c['id'])) ?><small><?php if ($c['ready']): ?><?php e('home.card_note') ?><?php else: ?><?php e('ui.inst_soon') ?><?php endif; ?></small></span>
-      <span class="cv">›</span>
-    </a>
+      <a class="hm-card<?= $c['ready'] ? '' : ' soon' ?>" href="<?= h($rootPath . '/' . $LANG . '/' . $c['id'] . '/') ?>">
+        <span class="ic"><img src="<?= h($BASE) ?>public/instruments/<?= h($c['id']) ?>.svg" alt="" width="240" height="620" loading="lazy" decoding="async"></span>
+        <span class="b"><?= h(t('instrument.' . $c['id'])) ?><small><?php if ($c['ready']): ?><?php e('home.card_note') ?><?php else: ?><?php e('ui.inst_soon') ?><?php endif; ?></small></span>
+        <span class="cv">›</span>
+      </a>
 <?php endforeach; ?>
-  </nav>
+    </nav>
+  </div>
+  <div class="hm-nav">
+    <button type="button" id="hmPrev" class="hm-arrow" aria-label="<?php e('home.prev') ?>">‹</button>
+    <div id="hmDots" class="hm-dots" hidden></div>
+    <button type="button" id="hmNext" class="hm-arrow" aria-label="<?php e('home.next') ?>">›</button>
+  </div>
+  <p class="hm-hint"><?php e('home.swipe') ?></p>
 
   <section class="hm-about">
     <h2><?php e('home.about_t') ?></h2>
@@ -303,5 +315,7 @@ foreach ($ORDERED as $ins) {
 <div id="toast"></div>
 
 <script type="module" src="<?= h($BASE) ?>src/home.js"></script>
+<!-- 楽器選択を回すのはこちら。読めなくても選択そのものは <a> のまま動く -->
+<script type="module" src="<?= h($BASE) ?>src/home-gallery.js"></script>
 </body>
 </html>

@@ -73,6 +73,9 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 <!-- 全画面 指板 -->
 <div class="board-full">
+  <!-- お気に入り。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js の syncFavBtn）。
+       .fab と同じく位置は画面に対して固定なので、指板を動かしても左上に残る。 -->
+  <button id="favBtn" class="favbtn" hidden aria-pressed="false" aria-label="<?php e('ui.fav_add') ?>">♡</button>
   <div id="fbsvg" class="fbsvg"></div>
   <div id="staffview" class="staffview"></div>
 </div>
@@ -261,6 +264,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
       <span class="t"><?php e('ui.m_contact') ?></span>
     </div>
+    <!-- 種別。「削除依頼」を選ぶと下の #ctTakedown が出る（切り替えは src/contact.js） -->
+    <div class="fmrow">
+      <label for="ctKind"><?php e('contact.kind') ?></label>
+      <select id="ctKind">
+        <option value="normal"><?php e('contact.kind_normal') ?></option>
+        <option value="takedown"><?php e('contact.kind_takedown') ?></option>
+      </select>
+    </div>
     <div class="fmrow">
       <label for="ctName"><?php e('contact.name') ?></label>
       <input id="ctName" type="text" maxlength="60" autocomplete="name" placeholder="<?php e('contact.name_ph') ?>">
@@ -268,6 +279,19 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="fmrow">
       <label for="ctMail"><?php e('contact.email') ?></label>
       <input id="ctMail" type="email" maxlength="120" autocomplete="email" placeholder="you@example.com">
+    </div>
+    <!-- 削除依頼のときだけ出す。ここに入れてもらえば十分（お名前と内容は任意）。
+         送信されると api/contact.php が曲名の合うものを自動で非公開にする。 -->
+    <div id="ctTakedown" hidden>
+      <div class="sub"><?php e('contact.takedown_note') ?></div>
+      <div class="fmrow">
+        <label for="ctSong"><?php e('contact.song') ?></label>
+        <input id="ctSong" type="text" maxlength="120" placeholder="<?php e('contact.song_ph') ?>">
+      </div>
+      <div class="fmrow">
+        <label for="ctReason"><?php e('contact.reason') ?></label>
+        <textarea id="ctReason" rows="3" maxlength="1000" placeholder="<?php e('contact.reason_ph') ?>"></textarea>
+      </div>
     </div>
     <div class="fmrow">
       <label for="ctBody"><?php e('contact.body') ?></label>
@@ -861,7 +885,11 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
          利用者が共有した曲（api/shares.php）も並ぶ。絞り込みと50件ごとのページ送りは
          src/songs.js の renderSongList() が両方まとめて行う。 -->
     <div class="subpanel" data-sub="songs">
-      <div class="seclbl"><?php e('ui.songs') ?></div>
+      <!-- 見出しの右端に絞り込み。押すとお気に入りだけになる（一覧を作るのは src/songs.js） -->
+      <div class="seclbl seclbl-row">
+        <span><?php e('ui.songs') ?></span>
+        <button type="button" id="favOnly" class="favfilter" aria-pressed="false">❤ <?php e('ui.fav_only') ?></button>
+      </div>
       <div class="songfind">
         <input id="songQ" type="search" maxlength="60" autocomplete="off" placeholder="<?php e('share.find_ph') ?>">
       </div>

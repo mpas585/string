@@ -238,6 +238,34 @@ function share_report(array $u, int $id): array {
   return ['ok' => true, 'id' => $id];
 }
 
+/* ===== お問い合わせフォームからの削除依頼 =====
+   お問い合わせフォーム（api/contact.php）で「削除依頼」として送られた曲名を、
+   公開中の曲名とそのまま突き合わせて非公開にする。
+
+   ・突き合わせは完全一致（前後の空白だけ落とす）。部分一致にすると、
+     短い曲名を入れられたときに関係のない曲まで巻き込むため。
+   ・同じ名前で公開されているものが複数あれば、まとめて非公開にする。
+   ・すでに 'deleted' のものは触らない。
+
+   戻り値は非公開にした件数。 */
+function share_hide_by_name(string $name): int {
+  $name = trim($name);
+  if ($name === '') return 0;
+
+  $db = acc_db();
+  share_table($db);
+
+  $st = $db->prepare("SELECT id FROM shares WHERE status = 'public' AND name = ?");
+  $st->execute([$name]);
+  $ids = $st->fetchAll(PDO::FETCH_COLUMN, 0);
+  if (!$ids) return 0;
+
+  $up  = $db->prepare("UPDATE shares SET status = 'hidden', reports = reports + 1, updated_at = ? WHERE id = ?");
+  $now = time();
+  foreach ($ids as $id) { $up->execute([$now, (int)$id]); }
+  return count($ids);
+}
+
 /* ===== 管理（config/app.php の admin_email だけ） ===== */
 
 /* 全件（非公開のものも含む）。絞り込みとページ送りは公開一覧と同じ */
