@@ -29,6 +29,9 @@ if (!defined('APP_NAME')) {
   define('APP_DEFAULT_LANG',       $APP_CFG['default_lang']);
   define('APP_DEFAULT_INSTRUMENT', $APP_CFG['default_instrument']);
   define('APP_CONTACT_TO',         $APP_CFG['contact_to']);
+  /* 管理者（マスターアカウント）。共有曲の管理メニューを出す判定に使う。
+     突き合わせは小文字にそろえてから行う（users.email は小文字で持っている） */
+  define('APP_ADMIN_EMAIL',        strtolower(trim((string)($APP_CFG['admin_email'] ?? ''))));
   define('APP_GA_ID',              $APP_CFG['ga_id'] ?? '');
   define('APP_DB_PATH',            $APP_CFG['db_path']);
   /* アカウント（includes/account.php / api/account.php / oauth/google.php で使う） */

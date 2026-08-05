@@ -85,7 +85,7 @@ $ARTICLES = t('guide.articles');
       <a<?= $l === $LANG ? ' class="on"' : '' ?> href="<?= h($LANG_URLS[$l]) ?>" hreflang="<?= h($l) ?>"><?= h($ln['name']) ?></a>
 <?php endforeach; ?>
     </div>
-    <small><a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/privacy/"><?php e('legal.link') ?></a> &middot; &copy; <?= date('Y') ?> <?= h(APP_NAME) ?></small>
+    <small><a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/privacy/"><?php e('legal.link') ?></a> &middot; <a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/terms/"><?php e('terms.link') ?></a> &middot; &copy; <?= date('Y') ?> <?= h(APP_NAME) ?></small>
   </footer>
 </main>
 </body>

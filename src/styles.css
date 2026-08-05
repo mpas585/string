@@ -319,6 +319,39 @@
   .songbtn .lv{font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:1px; margin-right:6px}
   .songbtn:disabled{opacity:.42; text-decoration:none}
 
+  /* ---- 曲一覧の絞り込みとページ送り ---- */
+  .songfind{margin-bottom:8px}
+  .songfind input{
+    width:100%; box-sizing:border-box; min-height:38px; padding:0 12px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:9px;
+    color:var(--ink); font-family:var(--jp); font-size:13px;
+  }
+  .songfind input::placeholder{color:var(--faint)}
+  .pager{display:flex; align-items:center; justify-content:center; gap:10px; margin:2px 0 10px}
+  .pager .pgb{
+    min-height:32px; padding:0 12px; border-radius:8px; font-size:12px; box-shadow:none;
+    background:var(--panel2); border:1px solid var(--line); color:var(--muted);
+  }
+  .pager .pgb:disabled{opacity:.35}
+  .pager .pgi{font-family:var(--mono); font-size:11px; color:var(--faint)}
+
+  /* ---- 共有された曲（みんなの曲） ----
+     曲のボタンの中にボタンは置けないので、削除依頼などは横に並べる。
+     共有された曲は難易度を持たないので★は出ない（描き分けは src/songs.js）。 */
+  .shrow{display:flex; align-items:stretch; gap:6px}
+  .shrow .songbtn{flex:1; min-width:0}
+  .shrow .shb{display:flex; flex-direction:column; justify-content:center; gap:4px; flex:0 0 auto}
+  .shbtn{
+    min-height:0; padding:5px 8px; font-size:11px; border-radius:7px; box-shadow:none;
+    background:transparent; border:1px solid var(--line); color:var(--muted); white-space:nowrap;
+  }
+  .shbtn:active{transform:none; opacity:.6}
+  .shbadge{
+    display:inline-block; margin-right:6px; padding:0 5px; border-radius:4px;
+    font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.5px;
+    background:#4a3a1c; color:var(--accent); vertical-align:1px;
+  }
+
   /* ---- アップロードした楽譜（保存番号に紐づく。上限99件） ---- */
   .uplist{display:flex; flex-direction:column; gap:5px; margin-bottom:6px}
   .uprow{
@@ -336,6 +369,25 @@
   .uprow .ut{color:var(--accent); border-color:#4a3a1c}
   .uprow .ud:active, .uprow .ut:active{transform:none; opacity:.6}
   .upempty{font-size:11px; color:var(--faint); line-height:1.6; padding:2px 0}
+  /* 操作は行の下段にまとめる（名前・トラック・シェア・削除の4つが並ぶため）。
+     MIDIトラック一覧（.trow .tb）と同じ作りにそろえてある。 */
+  .uprow{flex-wrap:wrap}
+  .uprow .ub{flex:0 0 100%; display:flex; gap:6px}
+  .uprow .ubtn{
+    flex:1; justify-content:center; min-height:30px; min-width:0; padding:0 6px;
+    font-size:11px; border-radius:7px; box-shadow:none; white-space:nowrap;
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+  }
+  .uprow .ubtn.ut{color:var(--accent); border-color:#4a3a1c}
+  .uprow .ubtn:active{transform:none; opacity:.6}
+
+  /* ---- 楽譜を共有する画面（#mShare） ---- */
+  .shwarn{
+    margin:2px 0 10px; padding:9px 11px; border-radius:9px; line-height:1.7; font-size:11px;
+    background:#2a1f12; border:1px solid #4a3a1c; color:var(--muted);
+  }
+  .agree{display:flex; align-items:flex-start; gap:9px; margin:0 0 8px; font-size:12px; line-height:1.6; cursor:pointer}
+  .agree input{flex:0 0 auto; width:18px; height:18px; margin:1px 0 0; accent-color:var(--accent)}
 
   /* ---- 歯車パネル（指板の表示設定） ---- */
   /* 右上の歯車パネルの暗幕。左ドロワーの .scrim と同じ濃さ・同じ出方にそろえてある

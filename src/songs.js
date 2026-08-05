@@ -20,7 +20,7 @@ import { midiName, NOTE_NAMES, OPEN, tt, pickText, localFile, localUrl } from '.
 import { recommend, scrollBoardToActive, FB } from './fingerboard.js';
 import { scrollStaffToActive } from './notation.js';
 import { buildScaleEvents, SCALE_LABEL } from './scale.js';
-import { measureOfBeat, setSeekHead, setTempo, startPlay, updateTransport } from './audio/scheduler.js';
+import { measureOfBeat, setSeekHead, setTempo, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
 import { render, scrollStripToActive, setScore, syncDock, syncLoopUI } from './modes.js';
 import { closeDrawer, openDrawer, setScoreSub } from './drawer.js';
 import { toast } from './dom.js';
@@ -377,6 +377,9 @@ export function renderTracks(){
 }
 export function selectTrack(i, play){
   if(!midiFile || !midiFile.tracks[i]) return;
+  /* 再生中に別のトラックを選んだ＝いま鳴っているものは止めてから差し替える
+     （下で play が指定されていれば、そのあと最初の音から鳴らし直す） */
+  if(ST.playing) stopPlay();
   midiFile.sel=i;
   const t=midiFile.tracks[i];
   const parsed=midiTrackToEvents(t, midiFile.division, midiFile.tsNum, midiFile.tsDen);
@@ -628,21 +631,98 @@ export function levelStars(level){
   const lv=Math.min(3, n);
   return `<span class="lv" title="${tt('ui.level')}">${'★'.repeat(lv)}${'☆'.repeat(3-lv)}</span>`;
 }
-/* 曲ボタンを manifest から作り直す */
+/* ===== 共有された曲（利用者が公開した楽譜） =====
+   中身を取りに行くのは src/shares.js。ここは受け取って一覧に混ぜるだけ。
+   1件は {id, name, sub, notes, mine}。あらかじめ用意した曲と違って
+   難易度（level）も伴奏コードも持たない＝★も伴奏も出ない。 */
+export let SHARED=[];
+export function setShared(list){ SHARED = Array.isArray(list) ? list : []; }
+
+/* 絞り込みの語と、いま見せているページ（1始まり）。どちらも画面の操作で変わる */
+export const SONGS_PER_PAGE=50;          /* サーバ側 SHARE_PAGE と合わせる */
+let songQuery='';
+let songPage=1;
+export function setSongQuery(q){ songQuery=String(q||''); songPage=1; renderSongList(); }
+export function setSongPage(p){
+  const n=parseInt(p,10);
+  songPage=(isFinite(n) && n>0) ? n : 1;
+  renderSongList();
+}
+export function songListPage(){ return songPage; }
+
+/* 画面に出す文字はすべてここを通す。共有された曲の名前は利用者が付けたものなので、
+   そのまま流し込むと HTML として解釈されてしまう（src/uploads.js の esc と同じ作り）。 */
+function esc(s){
+  return String(s==null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* あらかじめ用意した曲 ＋ 共有された曲を、1本の並びにする。
+   key はボタンに載せる内部ID。共有された曲は 'sh:' を頭に付けて見分ける。 */
+function songEntries(){
+  const out=[];
+  Object.keys(SONGS).forEach(id=>{
+    const s=SONGS[id];
+    out.push({key:id, share:false, title:pickText(s.title)||id, desc:pickText(s.desc)||'', level:s.level});
+  });
+  SHARED.forEach(it=>{
+    out.push({key:'sh:'+it.id, share:true, id:it.id, title:it.name||'', desc:it.sub||'', mine:!!it.mine});
+  });
+  return out;
+}
+
+/* 曲ボタンを作り直す（絞り込み・50件ごとのページ送りつき） */
 export function renderSongList(){
   const box=document.getElementById('songBtns');
   if(!box) return;
-  const ids=Object.keys(SONGS);
-  if(!ids.length){
-    box.innerHTML=tt('msg.no_songs_html');
-    return;
+
+  const all=songEntries();
+  const q=songQuery.trim().toLowerCase();
+  const list=q ? all.filter(e=> (e.title+' '+e.desc).toLowerCase().indexOf(q)>=0) : all;
+
+  const pages=Math.max(1, Math.ceil(list.length/SONGS_PER_PAGE));
+  if(songPage>pages) songPage=pages;
+  if(songPage<1)     songPage=1;
+  const view=list.slice((songPage-1)*SONGS_PER_PAGE, songPage*SONGS_PER_PAGE);
+
+  if(!view.length){
+    /* 絞り込みで消えたのか、そもそも曲が無いのかを言い分ける */
+    box.innerHTML = q ? `<div class="upempty">${esc(tt('share.no_hit'))}</div>` : tt('msg.no_songs_html');
+  }else{
+    box.innerHTML=view.map(e=>{
+      if(!e.share){
+        /* あらかじめ用意した曲（これまでどおり。難易度の★もこちらだけ） */
+        return `<button class="songbtn" data-song="${e.key}">🎵 ${e.title}`
+          + `<small>${levelStars(e.level)}${e.desc}</small></button>`;
+      }
+      /* 共有された曲。難易度は持たないので★は出さない。
+         ボタンの入れ子にできないので、曲のボタンと削除依頼のボタンは横に並べる。 */
+      const mine = e.mine
+        ? `<button type="button" class="shbtn shun" data-unshare="${e.id}">${esc(tt('share.unshare'))}</button>`
+        : '';
+      return `<div class="shrow">`
+        + `<button class="songbtn" data-song="${e.key}">🎵 ${esc(e.title)}`
+        +   `<small><span class="shbadge" title="${esc(tt('share.badge_title'))}">${esc(tt('share.badge'))}</span>${esc(e.desc)}</small></button>`
+        + `<span class="shb">`
+        +   mine
+        +   `<button type="button" class="shbtn shrep" data-report="${e.id}">${esc(tt('share.report'))}</button>`
+        + `</span></div>`;
+    }).join('');
   }
-  box.innerHTML=ids.map(id=>{
-    const s=SONGS[id];
-    return `<button class="songbtn" data-song="${id}">🎵 ${pickText(s.title)||id}`
-      + `<small>${levelStars(s.level)}${pickText(s.desc)}</small></button>`;
-  }).join('');
+  renderSongPager(pages);
 }
+
+/* ページ送り。1ページに収まっているあいだは出さない */
+function renderSongPager(pages){
+  const el=document.getElementById('songPager');
+  if(!el) return;
+  if(pages<=1){ el.hidden=true; el.innerHTML=''; return; }
+  el.hidden=false;
+  el.innerHTML=`<button type="button" class="pgb" data-pg="prev"${songPage<=1?' disabled':''}>${esc(tt('share.prev'))}</button>`
+    + `<span class="pgi">${esc(tt('share.page', songPage, pages))}</span>`
+    + `<button type="button" class="pgb" data-pg="next"${songPage>=pages?' disabled':''}>${esc(tt('share.next'))}</button>`;
+}
+
 export async function loadSongManifest(){
   try{
     /* 曲一覧も同一サーバのファイルからしか読まない（src/util.js の localFile） */
@@ -708,6 +788,8 @@ export function buildSongFromData(data){
 export async function loadSong(id, quiet){
   const s=SONGS[id];
   if(!s){ toast(tt('msg.soon')); return; }
+  /* 再生中に別の曲を選んだ＝いま鳴っている曲は止めてから読み込む */
+  if(ST.playing) stopPlay();
   try{
     midiFile=null; renderTracks();
     /* manifest.json の "file" は public/songs/ 直下のファイル名だけを受け付ける。

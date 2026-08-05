@@ -1,17 +1,18 @@
 <?php
 /*
-  views/legal.php — プライバシーポリシー。/{言語}/privacy/
-  呼び出し元: includes/legal.php
+  views/terms.php — 利用規約。/{言語}/terms/
+  呼び出し元: includes/terms.php
   使う変数: $T $BASE $LANG $LANG_URLS $HOME_URL $rootPath $origin
 
-  中身は includes/lang/*.php の 'legal' だけを見ている。
-  節は legal.sections の配列そのままで、1件は次の形:
+  中身は includes/lang/*.php の 'terms' だけを見ている。
+  条は terms.sections の配列そのままで、1件は次の形:
       [見出し, [段落, 段落, …], アンカーid（省略可）]
-  アンカーidを付けた節は /{言語}/privacy/#（id） で直接開ける。
+  アンカーidを付けた条は /{言語}/terms/#（id） で直接開ける。
+  楽譜の投稿（共有）についての条には post を付けてある。
 */
 if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
-$SECS = t('legal.sections');
+$SECS = t('terms.sections');
 ?>
 <!doctype html>
 <html lang="<?= h($T['html_lang']) ?>" class="home">
@@ -19,8 +20,8 @@ $SECS = t('legal.sections');
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#15110c">
-  <title><?php e('legal.page_title') ?></title>
-  <meta name="description" content="<?= h(t('legal.page_desc')) ?>">
+  <title><?php e('terms.page_title') ?></title>
+  <meta name="description" content="<?= h(t('terms.page_desc')) ?>">
   <link rel="canonical" href="<?= h($origin . $LANG_URLS[$LANG]) ?>">
 <?php foreach (APP_LANGS as $l): ?>
   <link rel="alternate" hreflang="<?= h($l) ?>" href="<?= h($origin . $LANG_URLS[$l]) ?>">
@@ -28,8 +29,8 @@ $SECS = t('legal.sections');
 
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="<?= h(APP_NAME) ?>">
-  <meta property="og:title" content="<?= h(t('legal.page_h1')) ?>">
-  <meta property="og:description" content="<?= h(t('legal.page_desc')) ?>">
+  <meta property="og:title" content="<?= h(t('terms.page_h1')) ?>">
+  <meta property="og:description" content="<?= h(t('terms.page_desc')) ?>">
   <meta property="og:url" content="<?= h($origin . $LANG_URLS[$LANG]) ?>">
   <meta property="og:image" content="<?= h($origin . $rootPath) ?>/public/icons/icon-512.png">
 
@@ -39,11 +40,11 @@ $SECS = t('legal.sections');
 </head>
 <body class="home">
 <main class="hm gd">
-  <p class="gd-back"><a href="<?= h($HOME_URL) ?>"><?php e('legal.back') ?></a></p>
+  <p class="gd-back"><a href="<?= h($HOME_URL) ?>"><?php e('terms.back') ?></a></p>
 
   <header class="hm-head">
-    <h1 class="hm-title"><?php e('legal.page_h1') ?></h1>
-    <p class="hm-sub"><?php e('legal.lead') ?></p>
+    <h1 class="hm-title"><?php e('terms.page_h1') ?></h1>
+    <p class="hm-sub"><?php e('terms.lead') ?></p>
   </header>
 
 <?php foreach ($SECS as $i => $s):
@@ -56,7 +57,7 @@ $SECS = t('legal.sections');
   </section>
 <?php endforeach; ?>
 
-  <p class="gd-note"><?php e('legal.updated') ?></p>
+  <p class="gd-note"><?php e('terms.updated') ?></p>
 
   <footer class="hm-foot">
     <div class="hm-lang">
@@ -65,7 +66,7 @@ $SECS = t('legal.sections');
       <a<?= $l === $LANG ? ' class="on"' : '' ?> href="<?= h($LANG_URLS[$l]) ?>" hreflang="<?= h($l) ?>"><?= h($ln['name']) ?></a>
 <?php endforeach; ?>
     </div>
-    <small><a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/terms/"><?php e('terms.link') ?></a> &middot; &copy; <?= date('Y') ?> <?= h(APP_NAME) ?></small>
+    <small><a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/privacy/"><?php e('legal.link') ?></a> &middot; &copy; <?= date('Y') ?> <?= h(APP_NAME) ?></small>
   </footer>
 </main>
 </body>

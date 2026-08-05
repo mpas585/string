@@ -43,7 +43,9 @@ let asked    = false;   /* この訪問で「保存しますか？」を出し�
 let busy     = false;
 let timer    = 0;
 let onApplied = null;   /* 復元後に画面を作り直す処理（アプリ本体だけが登録する） */
-let onCode   = null;    /* ログイン状態が変わったときの通知先（src/uploads.js が登録する） */
+/* ログイン状態が変わったときの通知先。ログイン状態に紐づく画面がいくつかあるので
+   （src/uploads.js のアップロード一覧・src/shares.js の共有曲の一覧）、複数を登録できる。 */
+let onCode   = [];
 
 /* ===== localStorage（使えない環境では設定の持ち回りだけ止める） ===== */
 const LS = (() => {
@@ -176,9 +178,13 @@ function syncUI() {
   /* パスワードを持たない人の退会では確認用パスワードを出さない */
   const dlPass = $('acDelPassRow');
   if (dlPass) dlPass.hidden = !(USER && USER.hasPass);
-  /* ログイン状態に紐づく画面（アップロードした楽譜の一覧）へ知らせる。
+  /* 共有曲の管理は管理者にだけ出す（config/app.php の admin_email）。
+     見えるかどうかとは別に、サーバ側（api/shares.php）でも必ず管理者か確かめている。 */
+  const adm = $('admRow');
+  if (adm) adm.hidden = !(USER && USER.admin);
+  /* ログイン状態に紐づく画面（アップロードした楽譜の一覧・共有曲の一覧）へ知らせる。
      ログイン・ログアウト・起動時の復元はすべてここを通るので、配線はこの1か所でよい */
-  if (onCode) { try { onCode(USER ? USER.email : null); } catch (e) {} }
+  onCode.forEach(fn => { try { fn(USER ? USER.email : null); } catch (e) {} });
 }
 
 /* ログイン中かどうか。譜面の保存（src/uploads.js）で使う */
@@ -187,8 +193,10 @@ export function isSignedIn() { return !!USER; }
 export function getSaveCode() { return USER ? USER.email : null; }
 /* api/scores.php へ渡すトークン */
 export function getCsrf() { return CSRF; }
-/* ログイン状態が変わったときの通知先を登録する（登録できるのは1つだけ） */
-export function setSaveWatcher(fn) { onCode = fn; }
+/* いま入っている人が管理者か（src/shares.js が管理メニューの中身を出すときに見る） */
+export function isAdminUser() { return !!(USER && USER.admin); }
+/* ログイン状態が変わったときの通知先を足す（複数登録できる） */
+export function setSaveWatcher(fn) { if (typeof fn === 'function') onCode.push(fn); }
 
 function setMsg(text, isErr) {
   const el = $('acMsg');

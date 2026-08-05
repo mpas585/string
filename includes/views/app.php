@@ -140,6 +140,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <span><?php e('ui.lang_label') ?></span><span class="v" id="langRowV"></span><span class="cv">›</span>
     </button>
 
+    <!-- ===== 共有曲の管理（マスターアカウントだけ）=====
+         既定では隠しておき、管理者でログインしたときだけ src/account.js が出す。
+         中身（一覧の描画・公開/非公開・削除）は src/shares.js。
+         ※ 見えるかどうかとは別に、サーバ側（api/shares.php）でも必ず管理者か確かめている。 -->
+    <button class="gp-row" id="admRow" data-gpopen="admin" hidden>
+      <span><?php e('share.admin') ?></span><span class="cv">›</span>
+    </button>
+
     <!-- ===== お問い合わせ（いちばん下）=====
          こちらもサブメニュー。開くのは src/contact.js の openContact()
          （入力欄の初期化と焦点合わせがあるので data-gpopen ではなく ID で配線する） -->
@@ -255,6 +263,21 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <div id="ctMsg" class="fmmsg" role="status"></div>
     <div class="sub"><?php e('contact.note') ?></div>
+  </div>
+
+  <!-- ===== サブ：共有曲の管理（マスターアカウントだけ）=====
+       一覧・絞り込み・ページ送りの中身は src/shares.js が入れる。PHP 側では枠だけ出す。 -->
+  <div class="gp-page" data-gp="admin">
+    <div class="gp-back">
+      <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
+      <span class="t"><?php e('share.admin') ?></span>
+    </div>
+    <div class="songfind">
+      <input id="admQ" type="search" maxlength="60" autocomplete="off" placeholder="<?php e('share.find_ph') ?>">
+    </div>
+    <div id="admList" class="uplist"></div>
+    <div id="admPager" class="pager" hidden></div>
+    <div class="sub"><?php e('share.admin_note') ?></div>
   </div>
 </div>
 
@@ -726,6 +749,48 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="sub"><?php e('ui.up_dup_note') ?></div>
 </div>
 
+<!-- アップロードした楽譜：一覧に出す名前を変える（一覧の「名前」から開く。処理は src/uploads.js） -->
+<div id="mUpName" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('share.m_rename') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="fmrow">
+    <label for="upName"><?php e('share.rename_label') ?></label>
+    <input id="upName" type="text" maxlength="120" autocomplete="off">
+  </div>
+  <div class="row controls">
+    <button id="upNameGo" class="primary" style="flex:1; justify-content:center"><?php e('share.rename_do') ?></button>
+  </div>
+</div>
+
+<!-- 読み込んだ楽譜を「みんなの曲」として公開する（一覧の「シェア」から開く。処理は src/shares.js）。
+     利用規約への同意（#shAgree）が入っていないと公開できない。
+     チェックは画面とサーバ（api/shares.php の agree）の両方で見ている。 -->
+<div id="mShare" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('share.m_share') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div class="fmrow">
+    <label for="shName"><?php e('share.name') ?></label>
+    <input id="shName" type="text" maxlength="120" autocomplete="off" placeholder="<?php e('share.name_ph') ?>">
+  </div>
+  <div class="shwarn"><?php e('share.warn') ?></div>
+  <label class="agree" for="shAgree">
+    <input id="shAgree" type="checkbox">
+    <span><?php e('share.agree') ?></span>
+  </label>
+  <div class="sub">
+    <a href="<?= h($rootPath . '/' . $LANG . '/terms/') ?>" target="_blank" rel="noopener"><?php e('share.terms_link') ?></a>
+  </div>
+  <div class="row controls">
+    <button id="shGo" class="primary" style="flex:1; justify-content:center"><?php e('share.go') ?></button>
+  </div>
+  <div id="shMsg" class="fmmsg" role="status"></div>
+  <div class="sub"><?php e('share.note') ?></div>
+</div>
+
 <!-- 曲を練習：入口から入った時の案内（押すとドロワーが横から出る） -->
 <div id="mScoreStart" class="dkmodal" role="dialog" aria-modal="true">
   <div class="dk-head">
@@ -803,12 +868,19 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <button data-sub="load"><?php e('ui.sub_load') ?></button>
     </div>
 
-    <!-- 子タブ内容：曲を選ぶ -->
+    <!-- 子タブ内容：曲を選ぶ
+         一覧には、あらかじめ用意した曲（public/songs/manifest.json）に加えて、
+         利用者が共有した曲（api/shares.php）も並ぶ。絞り込みと50件ごとのページ送りは
+         src/songs.js の renderSongList() が両方まとめて行う。 -->
     <div class="subpanel" data-sub="songs">
       <div class="seclbl"><?php e('ui.songs') ?></div>
+      <div class="songfind">
+        <input id="songQ" type="search" maxlength="60" autocomplete="off" placeholder="<?php e('share.find_ph') ?>">
+      </div>
       <div id="songBtns" class="songlist">
         <button class="songbtn" disabled><?php e('ui.songs_loading') ?><small>public/songs/manifest.json</small></button>
       </div>
+      <div id="songPager" class="pager" hidden></div>
       <div class="sub"><?php e('ui.songs_note') ?></div>
     </div>
 

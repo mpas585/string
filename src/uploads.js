@@ -34,7 +34,7 @@ import { tt, midiName, INSTRUMENT_ID } from './util.js';
 import { toast, openDockModal, closeDockModal } from './dom.js';
 import { isSignedIn, getCsrf, setSaveWatcher } from './account.js';
 import { setScore } from './modes.js';
-import { setTempo } from './audio/scheduler.js';
+import { setTempo, stopPlay } from './audio/scheduler.js';
 import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher, setScoreSub } from './drawer.js';
 import { recommend } from './fingerboard.js';
 import { setMidiFile, renderTracks, parseMidi, base64ToBytes } from './songs.js';
@@ -133,12 +133,19 @@ export function renderUploads() {
       const sub = tt('msg.track_count', it.notes) + (it.sub ? ' · ' + it.sub : '');
       /* 元のMIDIを預かっている行だけ、トラックを選び直せる */
       const trk = it.hassrc
-        ? '<button type="button" class="ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
+        ? '<button type="button" class="ubtn ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
         : '';
+      /* 操作は行の下段にまとめる（名前・トラック・シェア・削除の4つが並ぶため、
+         細い画面でも譜面の名前を押しつぶさないようにする＝MIDIトラック一覧と同じ作り）。
+         data-name は、押したときに名前を出し直すために持たせている（配線は main.js）。 */
       return '<div class="uprow' + on + '" data-id="' + it.id + '">'
         + '<span class="un">' + esc(it.name) + '<small>' + esc(sub) + '</small></span>'
-        + trk
-        + '<button type="button" class="ud" data-id="' + it.id + '">' + esc(tt('ui.uploads_delete')) + '</button>'
+        + '<span class="ub">'
+        +   '<button type="button" class="ubtn ur" data-id="' + it.id + '" data-name="' + esc(it.name) + '">' + esc(tt('share.rename')) + '</button>'
+        +   trk
+        +   '<button type="button" class="ubtn us" data-id="' + it.id + '" data-name="' + esc(it.name) + '">' + esc(tt('share.btn')) + '</button>'
+        +   '<button type="button" class="ubtn ud" data-id="' + it.id + '">' + esc(tt('ui.uploads_delete')) + '</button>'
+        + '</span>'
         + '</div>';
     }).join('');
   }
@@ -265,6 +272,8 @@ export function upDupCancel() { pending = null; }
 export async function openUpload(id, showTracks) {
   if (busy || !isSignedIn() || !id) return;
   busy = true;
+  /* 再生中に別の譜面を選んだ＝いま鳴っている曲は止めてから読み込む */
+  if (ST.playing) stopPlay();
   try {
     const r = await call('load', { id: id });
     if (!r || !r.ok) { toast(tt('msg.up_err', (r && r.message) || '')); return; }
@@ -306,6 +315,42 @@ export async function openUpload(id, showTracks) {
     else { closeDrawer(); }
     renderUploads();                            /* 選択中の行に印を付け直す */
     toast(tt('msg.up_loaded', r.name));
+  } catch (e) {
+    toast(tt('msg.up_err', e.message));
+  } finally {
+    busy = false;
+  }
+}
+
+/* ===== 一覧に出す名前を変える（#mUpName） =====
+   譜面本体・運指・元のMIDIは触らない＝sig（内容の指紋）も変わらない。
+   開くのは一覧の「名前」ボタン（配線は main.js）。 */
+let renameId = 0;
+export function openRename(id, name) {
+  if (!isSignedIn() || !id) return;
+  renameId = Number(id) || 0;
+  const el = document.getElementById('upName');
+  if (el) el.value = String(name || '');
+  openDockModal('mUpName');
+  /* スマホで勝手に拡大されないよう少し待ってから入力欄へ寄せる（account.js と同じ作法） */
+  if (el) setTimeout(() => { try { el.focus(); el.select(); } catch (e) {} }, 60);
+}
+export async function doRename() {
+  if (busy || !isSignedIn() || !renameId) return;
+  const el = document.getElementById('upName');
+  const nm = el ? el.value.trim() : '';
+  if (nm === '') return;
+  busy = true;
+  try {
+    const r = await call('rename', { id: renameId, name: nm });
+    if (!r || !r.ok) { toast(tt('msg.up_err', (r && r.message) || '')); return; }
+    /* いま進行中の読み込み操作が同じ1件なら、そちらの名前も合わせておく
+       （合わせないと、次にトラックを選び直したときに別の1件として扱われる） */
+    if (session.id === renameId) session.name = r.name;
+    renameId = 0;
+    closeDockModal();
+    await refreshUploads();
+    toast(tt('share.renamed'));
   } catch (e) {
     toast(tt('msg.up_err', e.message));
   } finally {

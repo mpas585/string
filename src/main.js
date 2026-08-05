@@ -12,7 +12,7 @@ import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, 
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub } from './drawer.js';
-import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile } from './songs.js';
+import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage } from './songs.js';
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { tt } from './util.js';
@@ -22,7 +22,10 @@ import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, s
          doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin, askLogin, askSkip,
          setSaveApply, armSave } from './account.js';
 import { openContact, sendContact } from './contact.js';
-import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel } from './uploads.js';
+import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename } from './uploads.js';
+/* みんなの曲（利用者が共有した楽譜）。一覧に混ぜて出す／公開する／削除依頼／管理 */
+import { initShares, loadShared, openShare, doShare, reportShare, unshareSong,
+         openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
 import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
@@ -327,10 +330,26 @@ on('mScoreStart','click', e=>{
   openDrawer();
 });
 on('songBtns','click', e=>{
+  /* 共有された曲の行に並ぶボタンを先に見る（曲を開くより優先） */
+  const rep=e.target.closest('[data-report]');
+  if(rep){ reportShare(rep.dataset.report); return; }
+  const un=e.target.closest('[data-unshare]');
+  if(un){ unshareSong(un.dataset.unshare); return; }
+
   const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;
   const id=b.dataset.song;
   if(!id){ toast(tt('msg.soon')); return; }
+  /* 'sh:' で始まるものは利用者が共有した曲（api/shares.php から取り出す）。
+     それ以外は public/songs/ のあらかじめ用意した曲。 */
+  if(id.indexOf('sh:')===0){ loadShared(id.slice(3), false); return; }
   loadSong(id, false);
+});
+/* 曲一覧の絞り込み。打つたびに並べ直す（通信はしない＝手元の一覧を絞るだけ） */
+on('songQ','input', e=> setSongQuery(e.target.value));
+/* 曲一覧のページ送り（50件ごと） */
+on('songPager','click', e=>{
+  const b=e.target.closest('.pgb'); if(!b || b.disabled) return;
+  setSongPage(songListPage() + (b.dataset.pg==='next' ? 1 : -1));
 });
 
 /* ===== スケール練習 ===== */
@@ -484,10 +503,30 @@ on('trackBack','click', ()=> setScoreSub('load'));
 on('upList','click', e=>{
   const del=e.target.closest('.ud');
   if(del){ deleteUpload(del.dataset.id); return; }     /* 削除が先（行のタップより優先） */
+  const ren=e.target.closest('.ur');
+  if(ren){ openRename(ren.dataset.id, ren.dataset.name); return; }   /* 一覧に出す名前を変える */
+  const shr=e.target.closest('.us');
+  if(shr){ openShare(shr.dataset.id, shr.dataset.name); return; }    /* みんなの曲として公開する */
   const trk=e.target.closest('.ut');
   if(trk){ openUpload(trk.dataset.id, true); return; } /* 開いてトラック選択の面を出す */
   const row=e.target.closest('.uprow');
   if(row) openUpload(row.dataset.id);
+});
+/* 名前の変更（#mUpName）と、みんなの曲として公開（#mShare） */
+on('upNameGo','click', doRename);
+on('upName','keydown', e=>{ if(e.key==='Enter') doRename(); });
+on('shGo','click', doShare);
+
+/* ===== 共有曲の管理（歯車の中。管理者にだけ行が出る） ===== */
+on('admRow','click', openAdmin);
+on('admQ','input', e=> setAdminQuery(e.target.value));
+on('admList','click', e=>{
+  const b=e.target.closest('[data-adm]'); if(!b) return;
+  adminAction(b.dataset.id, b.dataset.adm);
+});
+on('admPager','click', e=>{
+  const b=e.target.closest('.pgb'); if(!b || b.disabled) return;
+  setAdminPage(adminListPage() + (b.dataset.admpg==='next' ? 1 : -1));
 });
 /* 同じ譜面っぽいものがあったとき：上書き / 新規で追加 */
 on('upDupOver','click', upDupOverwrite);
@@ -528,6 +567,8 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
   armSave();
   /* アップロードした楽譜の一覧。ログイン状態が決まった時点で account.js から知らせが来る */
   initUploads();
+  /* みんなの曲（利用者が共有した楽譜）の一覧。曲一覧に混ぜて出す */
+  initShares();
   /* ログイン状態は描画に関係しないので、初期描画の後で取りに行く */
   initAccount();
   /* 練習時間の計測。ST.playing を1秒ごとに見るだけなので、他の処理には触らない */

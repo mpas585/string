@@ -258,6 +258,24 @@ function score_load(int $id, string $inst = ''): array {
   ];
 }
 
+/* 一覧に出す名前だけを変える（譜面本体・運指・元のMIDIは触らない）。
+   sig（内容の指紋）も変えない＝「同じ譜面か」の判定は名前を変えても揺れない。 */
+function score_rename(int $id, string $name): array {
+  $g = score_open();
+  if (!$g['ok']) return $g;
+
+  $name = trim(preg_replace('/[\x00-\x1f]+/', ' ', $name));
+  if ($name === '') return ['ok' => false, 'error' => 'payload'];
+  if (preg_match('/\A.{0,' . SCORE_NAME_MAX . '}/us', $name, $m)) { $name = $m[0]; }
+  else { $name = substr($name, 0, SCORE_NAME_MAX); }
+
+  $st = $g['db']->prepare('UPDATE scores SET name = ?, updated_at = ? WHERE code = ? AND id = ?');
+  $st->execute([$name, time(), $g['code'], $id]);
+  if ($st->rowCount() < 1) return ['ok' => false, 'error' => 'notfound'];
+
+  return ['ok' => true, 'id' => $id, 'name' => $name];
+}
+
 function score_delete(int $id): array {
   $g = score_open();
   if (!$g['ok']) return $g;

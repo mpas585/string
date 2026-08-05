@@ -9,6 +9,7 @@
                                                                           付けなければ新しく追加する
     POST  action=fing    csrf= id= fing= lang= inst=                    … 運指だけ更新（sig は変わらない）
     POST  action=load    csrf= id=   lang= inst=                        … 1件取り出す（運指も返す）
+    POST  action=rename  csrf= id= name= lang=                          … 一覧に出す名前だけを変える
     POST  action=delete  csrf= id=   lang=                              … 1件消す
 
   inst（楽器名）は運指の出し入れにだけ使う。運指は弦とポジションの番号なので楽器ごとに
@@ -88,6 +89,12 @@ try {
       $r = score_load($id, $inst);
       if (!$r['ok']) err($r['error']);
       out(['ok' => true, 'id' => $r['id'], 'name' => $r['name'], 'data' => $r['data'], 'fing' => $r['fing'], 'src' => $r['src']]);
+    }
+
+    case 'rename': {
+      $r = score_rename($id, $name);
+      if (!$r['ok']) err($r['error']);
+      out(['ok' => true, 'id' => $r['id'], 'name' => $r['name']]);
     }
 
     case 'delete': {

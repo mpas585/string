@@ -497,6 +497,13 @@ function acc_delete(array $u): array {
   } catch (PDOException $ex) {
     /* まだ scores テーブルが無い場合は何もしない */
   }
+  try {
+    /* 公開していた楽譜（shares）も同じ data_key で紐づいている（includes/shares.php）。
+       退会した人の投稿を残さないため、ここで一緒に消す。 */
+    $db->prepare('DELETE FROM shares WHERE owner = ?')->execute([$u['data_key']]);
+  } catch (PDOException $ex) {
+    /* まだ shares テーブルが無い場合は何もしない */
+  }
   $db->prepare('DELETE FROM user_tokens WHERE user_id = ?')->execute([$uid]);
   $db->prepare('DELETE FROM user_oauth  WHERE user_id = ?')->execute([$uid]);
   $db->prepare('DELETE FROM users       WHERE id = ?')->execute([$uid]);
@@ -559,12 +566,15 @@ function acc_payload_put(array $u, string $payload): array {
   return ['ok' => true];
 }
 
-/* 画面へ返す「いまのアカウント」。パスワードや内部キーは出さない */
+/* 画面へ返す「いまのアカウント」。パスワードや内部キーは出さない。
+   admin は config/app.php の admin_email と一致する人だけ true になる
+   ＝この人の画面にだけ、歯車の中に「共有曲の管理」が出る（判定はサーバ側でも必ず行う）。 */
 function acc_public(?array $u): ?array {
   if (!$u) return null;
   return [
     'email'    => $u['email'],
     'hasPass'  => $u['pass_hash'] !== '',
     'verified' => $u['status'] === 'active',
+    'admin'    => (APP_ADMIN_EMAIL !== '' && strtolower((string)$u['email']) === APP_ADMIN_EMAIL),
   ];
 }
