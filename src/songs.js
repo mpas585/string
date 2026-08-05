@@ -22,7 +22,7 @@ import { scrollStaffToActive } from './notation.js';
 import { measureOfBeat, setSeekHead, setTempo, startPlay, stopPlay } from './audio/scheduler.js';
 import { render, scrollStripToActive, setScore, syncDock } from './modes.js';
 import { closeDrawer, openDrawer, setScoreSub } from './drawer.js';
-import { toast } from './dom.js';
+import { toast, setFabLed } from './dom.js';
 /* お気に入り（曲一覧の右端のハートと、お気に入りだけの絞り込みに使う） */
 import { isFav } from './favorites.js';
 /* 読み込んだ譜面を保存番号に紐づけて残す（保存番号が無ければ何もしない） */
@@ -824,6 +824,7 @@ export async function loadSong(id, quiet){
     setScore(parsed, 'song:'+id, title);
     ST.songChords=buildChords(data.chords);   /* setScore が消すので、その後に入れる */
     syncDock();
-    if(!quiet){ closeDrawer(); toast(tt('msg.song_loaded', title)); }
+    /* ドロワーが閉じて指板だけになるので、次に押す ▶ を光らせて示す */
+    if(!quiet){ closeDrawer(); setFabLed(); toast(tt('msg.song_loaded', title)); }
   }catch(e){ toast(tt('msg.song_err', e.message)); }
 }

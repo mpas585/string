@@ -771,11 +771,11 @@
   .pk-main{
     border-color:#f0913f;
     background:linear-gradient(135deg,#f0842f,#d2611c 72%);
-    color:#2a1405;
+    color:#fff;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.24), 0 5px 0 #8f3f0f;
   }
-  .pk-main .pk-b{font-size:18px; color:#2a1405}
-  .pk-main .pk-b small{color:#6b3208}
+  .pk-main .pk-b{font-size:18px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.28)}
+  .pk-main .pk-b small{color:rgba(255,255,255,.86)}
   .pk-main .pk-ic{
     background:rgba(255,255,255,.20);
     border-color:rgba(255,255,255,.34);
@@ -1293,7 +1293,7 @@
     gap:6px; padding:12px 8px; text-align:center;
     background:linear-gradient(180deg,#241d14,#171209);
     -webkit-user-drag:none; user-select:none; -webkit-user-select:none;
-    will-change:transform, opacity;
+    will-change:transform, opacity, filter;
   }
   .hm-stage.on .hm-card.front{border-color:var(--accent-dim)}
   .hm-stage.on .hm-card .ic{
@@ -1399,6 +1399,23 @@
      冒頭カウント(70) より下なので、カウントダウン中に前へ出ることはない。 */
   body.save-attn .fab{z-index:62}
   body.save-attn .fab:not(:disabled):not(.playing){animation:fabattn 1.1s ease-in-out infinite}
+  /* ======== 曲を読み込んだ直後の ▶：LED風に点灯 ========
+     ドロワーが閉じて指板だけが残る場面で、次に押すのが ▶ だと分かるようにする。
+     付けるのは src/dom.js の setFabLed()、外すのは clearFabLed()（再生開始時）。
+     再生中（.playing）と押せないとき（:disabled）は光らせない。 */
+  .fab.led:not(:disabled):not(.playing){animation:fabled 1.4s ease-in-out infinite}
+  @keyframes fabled{
+    0%,100%{
+      box-shadow:0 6px 0 #7d5d1c, 0 8px 26px rgba(231,178,75,.45), inset 0 2px 0 rgba(255,255,255,.5);
+      filter:brightness(1);
+    }
+    45%{
+      box-shadow:0 6px 0 #7d5d1c, 0 0 0 12px rgba(231,178,75,.14),
+                 0 0 30px 6px rgba(255,214,120,.85), inset 0 2px 0 rgba(255,255,255,.7);
+      filter:brightness(1.35);
+    }
+  }
+
   @keyframes fabattn{
     0%,100%{box-shadow:0 6px 0 #7d5d1c, 0 8px 26px rgba(231,178,75,.45), inset 0 2px 0 rgba(255,255,255,.5)}
     50%    {box-shadow:0 6px 0 #7d5d1c, 0 0 0 9px rgba(231,178,75,.20), 0 8px 34px rgba(231,178,75,.85), inset 0 2px 0 rgba(255,255,255,.5)}
@@ -1491,7 +1508,10 @@
       いくつも掛かっており、頭出しまで一緒に光ってしまうため）。
      出し入れ・disabled は src/modes.js の updateChrome() が ▶ とそろえる。 */
   .cue{
-    position:fixed; right:16px; z-index:6; bottom:calc(86px + env(safe-area-inset-bottom));
+    /* ▶（.fab＝60px, right:16px）の真上に中心をそろえる。
+       頭出しは 46px なので、内側へ (60-46)/2 = 7px ずらして right:23px。 */
+    position:fixed; z-index:6; right:calc(23px + env(safe-area-inset-right));
+    bottom:calc(86px + env(safe-area-inset-bottom));
     width:46px; height:46px; border-radius:50%; padding:0;
     display:inline-flex; align-items:center; justify-content:center;
     font-size:17px; line-height:1; cursor:pointer;

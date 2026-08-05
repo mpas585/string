@@ -18,6 +18,7 @@ import { playNote, bassNote, drHat, drKick, drSnare, metroClick, padChord } from
 import { audio, makeBuses, NOISEBUF } from './context.js';
 import { paintNotes, pluckEvent, scrollBoardToActive } from '../fingerboard.js';
 import { updateStaffActive, scrollStaffToActive } from '../notation.js';
+import { clearFabLed } from '../dom.js';
 import { progressionFor } from '../scale.js';
 import { toast } from '../dom.js';
 import { render, renderNow, updateChrome, renderStrip, updateStripActive, scrollStripToActive, mq, syncDock } from '../modes.js';
@@ -367,6 +368,7 @@ document.addEventListener('visibilitychange', ()=>{
 
 export function startPlay(fromBeat, noCount){
   if(!ST.events.length) return;
+  clearFabLed();          /* 押してもらえたので、▶ の点滅はここで消す */
   const wasPlaying=ST.playing;
   stopPlay();
 

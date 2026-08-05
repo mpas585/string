@@ -35,11 +35,11 @@ if (stage && ring && N > 1 && CAN_3D) init();
 
 function init() {
   /* 見た目の調整はこの4つ。触るとしたらここ。 */
-  const NEAR   = 0.62;   /* 中央から隣までの距離（札の幅に対する割合） */
-  const FAR    = 0.34;   /* 2つめから先の間隔（同上）。狭くすると奥で重なる */
-  const TILT   = 48;     /* 中央以外の傾き（度） */
-  const DEPTH  = 90;     /* 中央以外を奥へ下げる量（px） */
-  const DRIFT  = 0.28;   /* 端に来たとき、群れ全体を中央へ寄せ戻す量（札の幅に対する割合） */
+  const STEP   = 34;     /* 楽器1つあたりの回転角（度） */
+  const RAD    = 1.11;   /* 回転の半径（札の幅に対する割合）。大きいほど奥行きが出る */
+  const FACE   = 0.70;   /* 札の向き。1 なら円筒どおり真横まで向く。下げるほど正面を向く */
+  const BLUR   = 1.7;    /* 奥へ行くほどぼかす量（px）。遠近をはっきりさせる */
+  const DRIFT  = 0.24;   /* 端に来たとき、群れ全体を中央へ寄せ戻す量（札の幅に対する割合） */
 
   const SLOW = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -60,7 +60,9 @@ function init() {
     dragging = true; moved = 0; lastDX = 0;
     startX = lastX = e.clientX;
     startCur = cur;
-    try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    /* ここでは まだ setPointerCapture しない。
+       捕まえたままにすると、そのあとの click が <a> ではなく捕まえた側へ飛ぶ browser があり、
+       PC でカードを押してもページへ進めなくなる。実際に動かし始めてから捕まえる。 */
   });
 
   stage.addEventListener('pointermove', e => {
@@ -68,7 +70,11 @@ function init() {
     const dx = e.clientX - startX;
     lastDX = e.clientX - lastX;
     lastX  = e.clientX;
+    const wasDrag = moved > 8;
     moved  = Math.max(moved, Math.abs(dx));
+    /* 8px を越えて はじめて「回している」とみなし、そこで初めて捕まえる。
+       ただ押しただけのときは捕まえないので、click がそのまま <a> に届く（PCのクリック対策）。 */
+    if (!wasDrag && moved > 8) { try { stage.setPointerCapture(e.pointerId); } catch (err) {} }
     /* 指の動きに追いてまわす。端では引っぱっても少ししか動かないようにする */
     cur = clampSoft(startCur - dx / stepPx());
     layout(false);
@@ -134,21 +140,30 @@ function init() {
     /* 一周しないので、端では札が片側に寄る（先頭なら右へ3枚）。
        そのままだと群れが画面の片側に寄って端で切れるため、全体を中央へ寄せ戻す。
        真ん中にいるときは 0 になるので、ふだんの見え方は変わらない。 */
+    const R = w * RAD;
     const shift = (cur - (N - 1) / 2) * w * DRIFT;
     cards.forEach((c, i) => {
       const o = i - cur;                       /* 中央からの隔たり（小数もあり） */
       const s = o < 0 ? -1 : 1;
       const a = Math.abs(o);
 
-      /* 中央から1つめまでは NEAR、そこから先は FAR ずつ離す */
-      const x  = s * w * (a < 1 ? NEAR * a : NEAR + (a - 1) * FAR) - shift;
-      const z  = -(a < 1 ? DEPTH * a : DEPTH + (a - 1) * 40);
-      const ry = -s * TILT * Math.min(a, 1);
-      const sc = 1 - Math.min(a, 3) * 0.09;
-      const op = 1 - Math.min(a, 3) * 0.20;
+      /* 回転台に載っているものとして、円周上の位置を出す。
+         横へ滑らせるのではなく、中央から離れるほど奥へ回り込んでいく。
+           x … 円周を横から見たときの左右の位置（半径 × sin）
+           z … 同じく奥行き（半径 × cos。中央を 0 に合わせるため半径を引く）
+         向きは STEP そのままだと真横まで向いて見えなくなるので、FACE で控えめにする。 */
+      const th = a * STEP * Math.PI / 180;
+      const x  = s * R * Math.sin(th) + shift;
+      const z  = R * (Math.cos(th) - 1);
+      const ry = -s * a * STEP * FACE;
+      /* 奥は遠近で小さくなるので、倍率は控えめ。代わりにぼかしで距離を出す */
+      const sc = 1 - Math.min(a, 3) * 0.06;
+      const op = 1 - Math.min(a, 3) * 0.18;
+      const bl = Math.min(a, 3) * BLUR;
 
       c.style.transition = (animate && !SLOW)
-        ? 'transform .38s cubic-bezier(.22,.61,.36,1), opacity .38s' : 'none';
+        ? 'transform .42s cubic-bezier(.22,.61,.36,1), opacity .42s, filter .42s' : 'none';
+      c.style.filter = bl > 0.05 ? 'blur(' + bl.toFixed(2) + 'px)' : 'none';
       /* left:50% で左端を中央に置いてあるので、まず自分の幅の半分だけ左へ戻して中央に合わせる。
          これを CSS の margin でやると、画面幅によってずれて札が切れる。 */
       c.style.transform = 'translateX(-50%) '

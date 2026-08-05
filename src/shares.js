@@ -25,7 +25,7 @@
 */
 import { ST } from './state.js';
 import { tt } from './util.js';
-import { toast, openDockModal, closeDockModal } from './dom.js';
+import { toast, openDockModal, closeDockModal, setFabLed } from './dom.js';
 import { isSignedIn, isAdminUser, getCsrf, setSaveWatcher } from './account.js';
 import { unpackScore } from './uploads.js';
 import { setScore, syncDock } from './modes.js';
@@ -114,7 +114,8 @@ export async function loadShared(id, quiet) {
     setScore(parsed, 'share:' + r.id, r.name);
     /* 伴奏コードは預かっていないので入れ直さない＝伴奏ボタンは syncDock が隠す */
     syncDock();
-    if (!quiet) { closeDrawer(); toast(tt('share.loaded', r.name)); }
+    /* ドロワーが閉じて指板だけになるので、次に押す ▶ を光らせて示す */
+    if (!quiet) { closeDrawer(); setFabLed(); toast(tt('share.loaded', r.name)); }
   } catch (e) {
     toast(tt('share.err', e.message));
   } finally {

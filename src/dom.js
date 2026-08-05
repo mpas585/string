@@ -60,6 +60,20 @@ export function raisePlayAttn(){
      updateChrome() が fab.style.display を触っているのと同じやり方。 */
   fab.style.zIndex='62';
 }
+/* ===== 曲を読み込んだ直後、▶ をLED風に点ける =====
+   曲を選ぶとドロワーが閉じて指板だけが残るので、次に押すのが ▶ だと分かるように
+   点滅させて視線を誘導する。点けるのは src/songs.js の loadSong と
+   src/shares.js の loadShared（どちらもドロワーを閉じた直後）。
+   消すのは再生が始まったとき（src/audio/scheduler.js の startPlay）。 */
+export function setFabLed(){
+  const fab=document.getElementById('fab');
+  if(fab && !fab.disabled) fab.classList.add('led');
+}
+export function clearFabLed(){
+  const fab=document.getElementById('fab');
+  if(fab) fab.classList.remove('led');
+}
+
 export function clearPlayAttn(){
   document.body.classList.remove('save-attn');
   const fab=document.getElementById('fab');
