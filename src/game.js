@@ -18,7 +18,8 @@
   取り込むのは「その瞬間のピッチと音量」だけで、音声そのものは録らない。
   採点が終わった時点で取り込んだ列（GAME.samples）も捨てるので、演奏は残らない。
 
-  依存: state(ST), util(midiName/tt/INSTRUMENT_ID/pickText), songs(SONGS/loadSong/levelStars),
+  依存: state(ST), util(midiName/tt/INSTRUMENT_ID/pickText),
+        songs(SONGS/SHARED/loadSong/levelStars), shares(loadShared),
         drawer(Store/closeDrawer), dom(toast/openDockModal/closeDockModal),
         tuner(detectPitch/FFT_SIZE), audio/synth(metroClick),
         audio/scheduler(showCount/hideCount/acquireWake/releaseWake/stopPlay),
@@ -29,7 +30,9 @@
 */
 import { ST } from './state.js';
 import { midiName, tt, INSTRUMENT_ID, pickText, OPEN } from './util.js';
-import { SONGS, loadSong, levelStars } from './songs.js';
+import { SONGS, SHARED, loadSong, levelStars } from './songs.js';
+/* 共有された曲（利用者が公開した楽譜）も課題曲として選べる。中身を取りに行くのは shares.js */
+import { loadShared } from './shares.js';
 import { Store, closeDrawer } from './drawer.js';
 import { toast, openDockModal, closeDockModal } from './dom.js';
 import { detectPitch, FFT_SIZE, inputPct, IN_MIN_DB, IN_REC_LO, IN_REC_HI } from './tuner.js';
@@ -99,21 +102,36 @@ export function writeRec(id, rec){
   try{ Store.set(gameKey(id), JSON.stringify(rec)); }catch(e){}
 }
 
+/* 画面に出す文字はすべてここを通す。共有された曲の名前は利用者が付けたものなので、
+   そのまま流し込むと HTML として解釈されてしまう（src/songs.js の esc と同じ作り）。 */
+function esc(s){
+  return String(s==null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 /* ===== 課題曲の一覧 =====
-   「曲を練習する」と同じ SONGS から作る（manifest.json を増やせば両方に出る）。 */
+   「曲を練習する」と同じ SONGS ＋ 共有された曲（SHARED）から作る
+   （manifest.json を増やしても、誰かが曲を公開しても、両方の一覧に出る）。
+   共有された曲は難易度（level）を持たないので★は出ない。内部IDは 'sh:' を頭に付けて見分ける。 */
 export function renderGameSongs(){
   const box=document.getElementById('gameSongs');
   if(!box) return;
-  const ids=Object.keys(SONGS);
-  if(!ids.length){ box.innerHTML=tt('msg.no_songs_html'); return; }
-  box.innerHTML=ids.map(id=>{
+  const rows=[];
+  Object.keys(SONGS).forEach(id=>{
     const s=SONGS[id];
-    const rec=readRec(id);
+    rows.push({key:id, title:pickText(s.title)||id, sub:levelStars(s.level)+esc(pickText(s.desc)||'')});
+  });
+  SHARED.forEach(it=>{
+    rows.push({key:'sh:'+it.id, title:esc(it.name||''),
+               sub:`<span class="shbadge" title="${esc(tt('share.badge_title'))}">${esc(tt('share.badge'))}</span>${esc(it.sub||'')}`});
+  });
+  if(!rows.length){ box.innerHTML=tt('msg.no_songs_html'); return; }
+  box.innerHTML=rows.map(r=>{
+    const rec=readRec(r.key);
     const best = (rec && typeof rec.best==='number')
       ? `<span class="gbest">${tt('ui.game_best_badge', rec.best.toFixed(1))}</span>` : '';
-    const on = (id===GAME.songId) ? ' on' : '';
-    return `<button class="songbtn${on}" data-game="${id}">🎮 ${pickText(s.title)||id}`
-      + `<small>${levelStars(s.level)}${pickText(s.desc)}${best}</small></button>`;
+    const on = (r.key===GAME.songId) ? ' on' : '';
+    return `<button class="songbtn${on}" data-game="${r.key}">🎮 ${r.title}`
+      + `<small>${r.sub}${best}</small></button>`;
   }).join('');
   syncStartBtn();
 }
@@ -121,12 +139,16 @@ export function syncStartBtn(){
   const b=document.getElementById('gameStart');
   if(b) b.disabled = !(GAME.songId && ST.events.length && GAME.phase==='idle');
 }
-/* 課題曲を選ぶ。譜面は「曲を練習する」と同じ経路で読み込む（quiet=true でドロワーは開いたまま） */
+/* 課題曲を選ぶ。譜面は「曲を練習する」と同じ経路で読み込む（quiet=true でドロワーは開いたまま）。
+   'sh:' で始まるものは利用者が共有した曲（api/shares.php から取り出す）。
+   自己ベストの記録キーもこの内部IDのままなので、あらかじめ用意した曲と混ざらない。 */
 export async function pickGameSong(id){
   if(GAME.phase!=='idle'){ toast(tt('msg.game_busy')); return; }
-  if(!SONGS[id]){ toast(tt('msg.soon')); return; }
+  const shared = (String(id).indexOf('sh:')===0);
+  if(!shared && !SONGS[id]){ toast(tt('msg.soon')); return; }
   GAME.songId=id;
-  await loadSong(id, true);
+  if(shared) await loadShared(String(id).slice(3), true);
+  else       await loadSong(id, true);
   renderGameSongs();
   toast(tt('msg.game_picked', ST.scoreTitle || id));
 }

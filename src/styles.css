@@ -522,7 +522,7 @@
   .pk-logo img{display:block; width:100%; height:auto; margin:0 auto}
   .pk-title{font-size:22px; font-weight:800; letter-spacing:.06em; color:var(--ink)}
   .pk-sub{font-size:12px; color:var(--muted); margin-bottom:14px; letter-spacing:.08em}
-  .picker{overflow-y:auto; justify-content:flex-start; padding-top:24px}
+  .picker{overflow-y:auto; justify-content:flex-start; padding-top:44px}
   .pk-card{min-height:76px; padding:12px 14px}
 
   /* ---- 設定：表示切替・音量 ---- */
@@ -1005,13 +1005,9 @@
   }
   .mflash.show{opacity:1; transition:opacity .06s ease}
 
-  /* ======== 曲を練習：入口から入った時の案内モーダル ======== */
-  /* dkmodal は本来ドック用に左下固定。入口からの案内は画面中央に置く（#mInst と同じ扱い） */
-  #mScoreStart{
-    left:50%; right:auto; top:50%; bottom:auto;
-    transform:translate(-50%,-50%);
-    width:min(320px, calc(100vw - 48px));
-  }
+  /* ======== モーダルの縦並びボタン ========
+     「曲を練習する」の案内モーダル（#mScoreStart）は廃止したが、.startrow は
+     ほかのモーダル（#mAccAsk・#mUpDup など）でも使っているので残す。 */
   .startrow{display:flex; flex-direction:column; gap:8px}
   .startrow button{width:100%; justify-content:center; min-height:52px; font-size:14px; border-radius:11px}
 
@@ -1270,7 +1266,6 @@
 
   /* ======== 設定を変えたら ▶ で反映（スケール練習） ======== */
   /* ドロワー(z-index:41)を開いたまま押せるように、光っている間だけ前面へ出す */
-  body.scale-dirty .fab{z-index:42}
   .fab.attn{animation:fabattn 1.1s ease-in-out infinite}
 
   /* ======== 「✓ 保存しました」が出たら ▶ を前面へ ========

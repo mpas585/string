@@ -183,6 +183,33 @@ function share_create(array $u, int $scoreId, string $name, bool $agree): array 
   return ['ok' => true, 'id' => (int)$db->lastInsertId()];
 }
 
+/* ===== 公開元の曲名が変わったとき =====
+   アップロードした楽譜（scores）の名前を変えたら、そこから公開した「みんなの曲」の
+   名前も合わせる。写すのは名前だけで、譜面本体（data）には触らない。
+   各利用者が付けた運指・オクターブ・テンポは、公開された1件の id を鍵にして
+   それぞれの端末側で持っている（画面の内部IDは 'share:{id}' で固定）ので、
+   曲名が変わってもそのまま保たれる。
+   どの1件から公開したものかは、公開したときに写した sig（内容の指紋）で見分ける。
+   sig を持たない古い行は対象外＝これまでどおり名前は変わらない。 */
+function share_rename_by_score(array $u, int $scoreId, string $name): int {
+  $db = acc_db();
+  share_table($db);
+  score_table($db);
+
+  $st = $db->prepare('SELECT sig FROM scores WHERE code = ? AND id = ?');
+  $st->execute([(string)$u['data_key'], $scoreId]);
+  $sig = substr(preg_replace('/[^A-Za-z0-9]/', '', (string)$st->fetchColumn()), 0, 32);
+  if ($sig === '') return 0;
+
+  $name = share_clean($name, SHARE_NAME_MAX);
+  if ($name === '') return 0;
+
+  $up = $db->prepare("UPDATE shares SET name = ?, updated_at = ?
+                      WHERE owner = ? AND sig = ? AND status <> 'deleted'");
+  $up->execute([$name, time(), (string)$u['data_key'], $sig]);
+  return $up->rowCount();
+}
+
 /* 公開をやめる（投稿者本人）。行は残さず消す */
 function share_remove(array $u, int $id): array {
   $db = acc_db();

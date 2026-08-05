@@ -8,7 +8,7 @@
 import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
 import { applyZoom, centerBoardH, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
-import { applyMode, genScale, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop, markScaleDirty } from './modes.js';
+import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop } from './modes.js';
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub } from './drawer.js';
@@ -34,9 +34,6 @@ import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」�
 on('file','change', e=>{ if(e.target.files[0]) loadScoreFile(e.target.files[0]); e.target.value=''; });
 on('fab','click', ()=>{
   if(ST.playing){ stopPlay(); return; }
-  /* ドロワーでスケール設定を変えた直後は、▶ が「反映して再生」を兼ねる。
-     genScale(false) がドロワーを閉じ、生成後に自動で再生まで行う。 */
-  if(ST.scaleDirty && ST.mode==='scale'){ genScale(false); return; }
   startPlay();
 });
 /* 頭出し（▶ の上）。いま再生する範囲の先頭へ戻す。
@@ -254,7 +251,7 @@ on('volReset','click', ()=>{
   const key=volProfileKey();
   Object.assign(ST.volProfiles[key], DEFAULT_VOL[key]);
   syncSettingsUI(); applyVolumes(); saveSettings();
-  toast(tt('msg.vol_reset_done', tt(key==='scale'?'ui.mode_scale':'ui.mode_score')));
+  toast(tt('msg.vol_reset_done', tt('ui.mode_score')));
 });
 on('countSw','click', ()=>{
   ST.countIn=!ST.countIn;
@@ -322,13 +319,6 @@ on('scoreSubSeg','click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   setScoreSub(b.dataset.sub);
 });
-/* 入口から「曲を練習する」に入った時の案内モーダル → 押した子タブでドロワーを横から出す */
-on('mScoreStart','click', e=>{
-  const b=e.target.closest('[data-sub]'); if(!b) return;
-  closeDockModal();
-  setScoreSub(b.dataset.sub);
-  openDrawer();
-});
 on('songBtns','click', e=>{
   /* 共有された曲の行に並ぶボタンを先に見る（曲を開くより優先） */
   const rep=e.target.closest('[data-report]');
@@ -351,12 +341,6 @@ on('songPager','click', e=>{
   const b=e.target.closest('.pgb'); if(!b || b.disabled) return;
   setSongPage(songListPage() + (b.dataset.pg==='next' ? 1 : -1));
 });
-
-/* ===== スケール練習 ===== */
-on('scaleRoot','change', e=>{ ST.keyRoot=parseInt(e.target.value,10)||0; saveSettings(); markScaleDirty(); });
-on('scaleType','change', e=>{ ST.scaleType=e.target.value; saveSettings(); markScaleDirty(); });
-on('scaleOct','change', e=>{ ST.scaleOct=parseInt(e.target.value,10)||2; saveSettings(); markScaleDirty(); });
-on('scaleGen','click', ()=> genScale(false));
 
 on('loopSw','click', ()=>{
   ST.loop.on=!ST.loop.on;
@@ -506,7 +490,7 @@ on('upList','click', e=>{
   const ren=e.target.closest('.ur');
   if(ren){ openRename(ren.dataset.id, ren.dataset.name); return; }   /* 一覧に出す名前を変える */
   const shr=e.target.closest('.us');
-  if(shr){ openShare(shr.dataset.id, shr.dataset.name); return; }    /* みんなの曲として公開する */
+  if(shr){ openShare(shr.dataset.id); return; }                      /* みんなの曲として公開する */
   const trk=e.target.closest('.ut');
   if(trk){ openUpload(trk.dataset.id, true); return; } /* 開いてトラック選択の面を出す */
   const row=e.target.closest('.uprow');
@@ -541,7 +525,7 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
 /* 初期描画
    スケール定義（public/scales/scales.json）と曲一覧（public/songs/manifest.json）は
    外部読み込みのため、loadSettings() より先に await する
-   （保存済みの scaleType を SCALES と照合するため／scaleType の <option> が必要なため）。 */
+   （scales.json は伴奏の4コード生成 progressionFor() が参照する）。 */
 (async ()=>{
   await Promise.all([ loadScales(), loadSongManifest() ]);
   renderGameSongs();                 /* 採点ゲームの課題曲一覧も同じ manifest から作る */

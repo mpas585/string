@@ -107,9 +107,6 @@ export function syncSettingsUI(){
   document.querySelectorAll('.pref').forEach(b=> b.classList.toggle('on', b.dataset.pref===ST.pref));
   document.querySelectorAll('.oct').forEach(b=> b.classList.toggle('on', String(b.dataset.oct)===String(ST.octave)));
   document.getElementById('enjoySw').classList.toggle('on', ST.enjoy);
-  document.getElementById('scaleRoot').value=String(ST.keyRoot);
-  document.getElementById('scaleType').value=ST.scaleType;
-  document.getElementById('scaleOct').value=String(ST.scaleOct);
   document.getElementById('tempo').value=ST.tempo;
   const tnum=document.getElementById('tempoNum');
   if(tnum) tnum.value=ST.tempo;
@@ -279,5 +276,5 @@ export function setScoreSub(sub){
    これまでどおり drawer.js から import できるよう、そのまま再輸出する。 */
 import { openDockModal, closeDockModal } from './dom.js';
 export { openDockModal, closeDockModal };
-/* 曲を練習：入口（モード選択）から入った時に出す案内モーダル（曲を選ぶ / 譜面を読み込む） */
-export function openScoreStart(){ openDockModal('mScoreStart'); }
+/* 曲を練習：入口（モード選択）から入った時に出していた案内モーダル（#mScoreStart）は廃止した。
+   いまは modes.js の setMode() が openDrawer() で左ドロワーを直接開く。 */

@@ -37,12 +37,22 @@ const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
 
 let deferred = null;
 
-function showBox(on) { const b = $('pwaBox');  if (b) b.hidden = !on; }
+/* 歯車（設定）では、ボタンと案内文はサブメニュー（.gp-page[data-gp="pwa"]）の中にある。
+   一覧に出す行（#pwaRow）は、中に見せるものがある時だけ出す。
+   楽器選択トップ（/{言語}/）には行が無いので、そちらでは何もしない。 */
+function syncRow() {
+  const r = $('pwaRow');
+  if (!r) return;
+  const b = $('pwaBox'), n = $('pwaNote');
+  r.hidden = !((b && !b.hidden) || (n && !n.hidden));
+}
+function showBox(on) { const b = $('pwaBox');  if (b) b.hidden = !on; syncRow(); }
 function showNote(text) {
   const n = $('pwaNote');
   if (!n) return;
   if (text) n.textContent = text;
   n.hidden = false;
+  syncRow();
 }
 
 window.addEventListener('beforeinstallprompt', (ev) => {
@@ -57,6 +67,7 @@ window.addEventListener('appinstalled', () => {
   deferred = null;
   showBox(false);
   const n = $('pwaNote'); if (n) n.hidden = true;
+  syncRow();
 });
 
 if ($('pwaInstall')) {

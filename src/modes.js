@@ -6,7 +6,7 @@
     stripSignature/updateStripActive/renderStrip/scrollStripToActive（運指ストリップ） … L1690–1732
     selectEvent/setLead/setStringForSelected/setFinger/setPref（音符選択・運指編集） … L1827–1867
     playableCount/autoShift/shiftOK/applyOctave/setOctave/setScore（オクターブ・譜面セット） … L2750–2829
-    genScale（スケール生成統括）                … L3067–3084
+    ※ genScale（スケール生成統括）はスケール練習の廃止にともない削除した
     syncLoopUI/setLoopRange（ループUI）          … L3402–3427
     setZoom                                    … L3448–3454
     updateChrome（FAB/gear/保存表示）            … L3481–3490
@@ -14,15 +14,14 @@
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey } from './state.js';
-import { fracOf, midiName, zoneOf, fingerHint, strFingerText, NOTE_NAMES, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
+import { fracOf, midiName, zoneOf, fingerHint, strFingerText, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
 import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
 import { renderStaff } from './notation.js';
-import { buildScaleEvents, SCALE_LABEL } from './scale.js';
 import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
 import { paintTunerDots, startTuner, stopTuner, TUN } from './tuner.js';
 import { warmAudio } from './audio/context.js';
 import { toast } from './dom.js';
-import { closeDrawer, openDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, openScoreStart, Store } from './drawer.js';
+import { closeDrawer, openDrawer, saveSettings, saveFingering, loadFingering, syncSettingsUI, setScoreSub, Store } from './drawer.js';
 import { loadSample, renderTracks, midiFile, setMidiFile } from './songs.js';
 /* 採点ゲーム。モードの出入りで課題曲一覧を作り直し、録音中に抜けたら止める */
 import { abortGame, renderGameSongs, syncStartBtn } from './game.js';
@@ -54,15 +53,10 @@ export function render(){
 
   if(!ST.events.length){
     emptyEl.style.display='flex';
-    emptyEl.innerHTML = (ST.mode==='score')
-      ? tt('msg.empty_score_html')
-      : (ST.mode==='game') ? tt('msg.empty_game_html')
-      : tt('msg.empty_scale_html');
+    emptyEl.innerHTML = (ST.mode==='game') ? tt('msg.empty_game_html') : tt('msg.empty_score_html');
     renderBoard(null);
     document.getElementById('nowline').textContent =
-      (ST.mode==='score') ? tt('ui.nowline')
-      : (ST.mode==='game') ? tt('msg.nowline_game')
-      : tt('msg.nowline_scale');
+      (ST.mode==='game') ? tt('msg.nowline_game') : tt('ui.nowline');
     document.getElementById('edit').innerHTML=tt('msg.edit_empty_html');
     renderLegend(); updateTransport(); updateChrome();
     return;
@@ -109,7 +103,6 @@ export function setMode(mode, keepDrawer){
   if(ST.mode==='game' && mode!=='game') abortGame(true);
 
   ST.mode=mode;
-  ST.scaleDirty=false;                 /* モードが変われば保留は無効 */
   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
   ST.lastScrollId=null; ST.scoreName=''; ST.scoreTitle='';
   renderScoreTitle();
@@ -119,19 +112,15 @@ export function setMode(mode, keepDrawer){
   syncSettingsUI();
   syncSheet();
 
-  if(mode==='scale'){
-    genScale(true);
-    if(!keepDrawer) closeDrawer();
-    toast(tt('msg.hint_scale'));
-
-  } else if(mode==='score'){
+  if(mode==='score'){
     /* 曲を練習は伴奏コードを持つ曲だけ伴奏可。モードに入った時点では毎回OFFから始める */
     ST.enjoy=false;
     document.getElementById('enjoySw').classList.remove('on');
     loadSample(true);                       /* プリセット：G線上のアリア */
-    /* 入口（モード選択）から入った時は、曲の選び方を案内するモーダルを出す。
-       ドロワー内のタブ切替（keepDrawer）は、そのままドロワーに選択肢が出ているので不要。 */
-    if(!keepDrawer){ closeDrawer(); openScoreStart(); }
+    /* 入口（モード選択）から入った時は、案内モーダルを挟まずに左ドロワーを開く。
+       曲の選び方（曲を選ぶ / 譜面を読み込む）はドロワーの子タブにそのまま並んでいる。
+       ドロワー内のタブ切替（keepDrawer）は、すでに開いているので何もしない。 */
+    if(!keepDrawer){ setScoreSub('songs'); openDrawer(); }
     toast(tt('msg.hint_swan'));
 
   } else if(mode==='game'){
@@ -341,8 +330,6 @@ export function setPref(p){
   ST.pref=p;
   document.querySelectorAll('.pref').forEach(b=>b.classList.toggle('on', b.dataset.pref===p));
   saveSettings();
-  /* スケール練習は開始音（オクターブ）がポジションで変わるので作り直す */
-  if(ST.mode==='scale' && ST.events.length){ genScale(true); return; }
   ST.events.forEach(ev=>{ if(ev.fing && !ev.fing.manual) ev.fing=recommend(ev.pitches[ev.leadIdx].midi); });
   saveFingering();
   render();
@@ -370,9 +357,7 @@ export function shiftOK(sh){
 }
 export function applyOctave(){
   if(!ST.parsed) return;
-  /* スケール練習は移調しない（コピー練習の設定を持ち込まない） */
-  const sh = (ST.mode==='scale') ? 0
-           : (ST.octave==='auto') ? autoShift() : (parseInt(ST.octave,10)||0);
+  const sh = (ST.octave==='auto') ? autoShift() : (parseInt(ST.octave,10)||0);
   ST.octShift=sh;
   ST.events = ST.parsed.events.map((e,i)=>{
     const pitches=e.pitches.map(p=>({midi:p.midi+12*sh, name:midiName(p.midi+12*sh)}));
@@ -431,7 +416,7 @@ export function setScore(parsed, scoreName, title){
   const mCount=ST.measures.length || 1;
   /* 読み込み直後は全体（1〜最終小節）。前の曲で指定した範囲を持ち越さない
      ＝28小節の曲を開いたのに前回の 1〜8 が残っている、という状態を作らない。
-     ON/OFF は利用者に任せる（genScale() と同じ扱い） */
+     ON/OFF は利用者に任せる */
   ST.loop.from=1;
   ST.loop.to  =mCount;
   syncLoopUI();
@@ -441,37 +426,9 @@ export function setScore(parsed, scoreName, title){
   scrollBoardToActive();               /* ハイポジション始まりでも最初の音が画面に入るように */
   return restored;
 }
-/* ドロワーでスケール設定を変えた ＝ まだ画面の譜面に反映されていない状態。
-   ▶ を光らせて「押せば反映される」ことを伝える（作り直しは押した時に行う）。 */
-export function markScaleDirty(){
-  if(ST.mode!=='scale') return;
-  ST.scaleDirty=true;
-  updateChrome();
-}
-export function clearScaleDirty(){
-  if(!ST.scaleDirty) return;
-  ST.scaleDirty=false;
-  updateChrome();
-}
-export function genScale(quiet){
-  try{
-    ST.scaleDirty=false;            /* 作り直した＝保留はなくなる */
-    setMidiFile(null); renderTracks();
-    const parsed=buildScaleEvents(ST.keyRoot, ST.scaleType, ST.scaleOct);
-    const label=`${NOTE_NAMES[ST.keyRoot]} ${SCALE_LABEL[ST.scaleType]} ${ST.scaleOct}oct`;
-    setScore(parsed, 'scale:'+label, label);
-    /* ループ範囲はスケール全体（ON/OFFは利用者に任せる） */
-    ST.loop.from=1;
-    ST.loop.to=parsed.measures.length || 1;
-    syncLoopUI();
-    updateTransport();
-    if(!quiet){
-      closeDrawer();
-      toast(tt('msg.scale_built', label, parsed.events.length, parsed.measures.length));
-      setTimeout(()=>{ if(ST.mode==='scale' && ST.events.length) startPlay(0); }, 260);  /* 生成したら自動再生 */
-    }
-  }catch(e){ toast(tt('msg.gen_failed', e.message)); }
-}
+/* スケール練習（markScaleDirty / clearScaleDirty / genScale）は廃止した。
+   同じ内容は「曲を練習する」の課題曲『Cメジャースケール』
+   （public/songs/c_major_scale.json）で弾ける。 */
 /* 画面左下ドックの表示（テンポ値・オクターブ値・ループON）を状態に合わせる */
 export function syncDock(){
   const t=document.getElementById('dkTempoV');
@@ -483,11 +440,11 @@ export function syncDock(){
   }
   const l=document.getElementById('dkLoop');
   if(l) l.classList.toggle('on', ST.loop.on);
-  /* 伴奏ボタン：スケール練習は常に。曲を練習は伴奏コードを持つ譜面のときだけ出す */
+  /* 伴奏ボタン：曲を練習は伴奏コードを持つ譜面のときだけ出す */
   const ej=document.getElementById('enjoySw');
   if(ej){
     const hasChords = Array.isArray(ST.songChords) && ST.songChords.length>0;
-    ej.classList.toggle('m-hide', !(ST.mode==='scale' || (ST.mode==='score' && hasChords)));
+    ej.classList.toggle('m-hide', !(ST.mode==='score' && hasChords));
   }
 }
 export function syncLoopUI(){
@@ -506,11 +463,7 @@ export function syncLoopUI(){
   });
   document.querySelector('#mLoop .field2')?.classList.toggle('off', !ST.loop.on);
   const info=document.getElementById('loopInfo');
-  if(ST.mode==='scale'){
-    info.textContent = mCount ? tt('msg.loop_scale_all', mCount) : tt('msg.loop_need_scale');
-  } else {
-    info.textContent = mCount ? tt('msg.loop_range', mCount, ST.loop.from, ST.loop.to) : tt('msg.loop_need_score');
-  }
+  info.textContent = mCount ? tt('msg.loop_range', mCount, ST.loop.from, ST.loop.to) : tt('msg.loop_need_score');
   syncDock();
 }
 export function setLoopRange(){
@@ -544,18 +497,13 @@ export function setZoom(z){
   scrollBoardToActive();
 }
 export function updateChrome(){
-  const playable = (ST.mode==='scale' || ST.mode==='score') && ST.events.length>0;
+  const playable = (ST.mode==='score') && ST.events.length>0;
   const fab=document.getElementById('fab');
   fab.style.display = playable ? 'inline-flex' : 'none';
   fab.disabled=!playable; fab.textContent=ST.playing?'■':'▶'; fab.classList.toggle('playing', ST.playing);
   /* 頭出し（▶ の上）。▶ と同じ条件で出し入れする（▶ が無い画面に単独で残らないように） */
   const cue=document.getElementById('cue');
   if(cue){ cue.style.display = playable ? 'inline-flex' : 'none'; cue.disabled=!playable; }
-  /* 設定変更が保留されている間だけ光らせる。ドロワー(z-index:41)を開いたままでも
-     押せるよう、body 側のクラスで重なり順を上げる（CSS: body.scale-dirty .fab） */
-  const dirty = ST.scaleDirty && ST.mode==='scale' && !ST.playing && playable;
-  fab.classList.toggle('attn', dirty);
-  document.body.classList.toggle('scale-dirty', dirty);
   document.getElementById('gear').style.display = ST.mode ? 'inline-flex' : 'none';
   /* 「運指の保存」欄は廃止したので無いのが普通（戻したときだけ書き換わる） */
   const si=document.getElementById('storeInfo');

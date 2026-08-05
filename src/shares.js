@@ -4,6 +4,9 @@
   サーバは api/shares.php（実処理は includes/shares.php・保存は SQLite の shares テーブル）。
 
     公開する         … 「譜面を読み込む」の一覧の［シェア］→ openShare() → #mShare → doShare()
+                       曲名はアップロードした楽譜の名前をそのまま使う（#mShare に入力欄は無い）。
+                       あとから一覧の「名前」で変えると、公開ぶんの曲名も一緒に変わる
+                       （サーバ側 includes/shares.php の share_rename_by_score）。
     一覧に出す       … refreshShares()（起動時とログイン状態が変わるたび）
                        中身を並べるのは src/songs.js の renderSongList()。
                        あらかじめ用意した曲と同じ一覧に混ざって出る。
@@ -29,6 +32,8 @@ import { setScore, syncDock } from './modes.js';
 import { setTempo, stopPlay } from './audio/scheduler.js';
 import { closeDrawer } from './drawer.js';
 import { setMidiFile, renderTracks, setShared, renderSongList, SONGS_PER_PAGE } from './songs.js';
+/* 採点ゲームの課題曲一覧にも共有された曲を並べるので、取り直したら作り直す */
+import { renderGameSongs } from './game.js';
 
 const API  = new URL('../api/shares.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
@@ -87,6 +92,7 @@ export async function refreshShares() {
   } catch (e) { all = []; }
   setShared(all);
   renderSongList();
+  renderGameSongs();      /* 採点ゲームの課題曲一覧にも同じものを並べる */
 }
 
 /* ===== 一覧から開く ===== */
@@ -123,12 +129,12 @@ function setMsg(text, isErr) {
   el.textContent = text || '';
   el.classList.toggle('err', !!isErr);
 }
-export function openShare(id, name) {
+/* 公開するときの曲名は、アップロードした楽譜に付いている名前をそのまま使う
+   （#mShare の名前入力欄は廃止した。付け替えたいときは一覧の「名前」から変える）。 */
+export function openShare(id) {
   if (!id) return;
   if (!isSignedIn()) { toast(tt('share.need_login')); return; }
   shareId = Number(id) || 0;
-  const el = document.getElementById('shName');
-  if (el) el.value = String(name || '');
   const ag = document.getElementById('shAgree');
   if (ag) ag.checked = false;            /* 同意は開くたびに入れ直してもらう */
   setMsg('');
@@ -137,14 +143,13 @@ export function openShare(id, name) {
 export async function doShare() {
   if (busy || !shareId) return;
   if (!isSignedIn()) { setMsg(tt('share.need_login'), true); return; }
-  const el = document.getElementById('shName');
   const ag = document.getElementById('shAgree');
-  const nm = el ? el.value.trim() : '';
   /* 同意が入っていなければ送らない（サーバ側でも agree を見ている＝二重に確かめる） */
   if (!ag || !ag.checked) { setMsg(tt('acc.err.agree'), true); return; }
   busy = true; setMsg('');
   try {
-    const r = await post('share', { id: shareId, name: nm, agree: '1' });
+    /* 曲名は送らない＝サーバ側がアップロードした楽譜の名前をそのまま使う */
+    const r = await post('share', { id: shareId, agree: '1' });
     if (!r || !r.ok) { setMsg((r && r.message) || tt('acc.err.server'), true); return; }
     shareId = 0;
     closeDockModal();

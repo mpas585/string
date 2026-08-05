@@ -9,19 +9,18 @@
     SONGS/loadSong（元 L3088–3124）は public/songs/ の外部JSON読み込みに変更
       （loadSongManifest → renderSongList → loadSong で個別JSONを fetch）
   依存: state(ST), util(midiName), fingerboard(recommend/scrollBoardToActive),
-        notation(scrollStaffToActive), scale(buildScaleEvents),
-        scheduler(measureOfBeat/setSeekHead/setTempo/startPlay/updateTransport),
-        modes(render/scrollStripToActive/setScore/syncLoopUI), drawer(closeDrawer/openDrawer/setScoreSub),
+        notation(scrollStaffToActive),
+        scheduler(measureOfBeat/setSeekHead/setTempo/startPlay),
+        modes(render/scrollStripToActive/setScore), drawer(closeDrawer/openDrawer/setScoreSub),
         dom(toast), uploads(beginUpload/rememberUpload)。JSZip は基幹PHPでグローバル読み込み。
   ※ PDFの参照表示・読み取り（OMR）は廃止した（.pdf は受け付けない）。
 */
 import { ST } from './state.js';
-import { midiName, NOTE_NAMES, OPEN, tt, pickText, localFile, localUrl } from './util.js';
+import { midiName, OPEN, tt, pickText, localFile, localUrl } from './util.js';
 import { recommend, scrollBoardToActive, FB } from './fingerboard.js';
 import { scrollStaffToActive } from './notation.js';
-import { buildScaleEvents, SCALE_LABEL } from './scale.js';
-import { measureOfBeat, setSeekHead, setTempo, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
-import { render, scrollStripToActive, setScore, syncDock, syncLoopUI } from './modes.js';
+import { measureOfBeat, setSeekHead, setTempo, startPlay, stopPlay } from './audio/scheduler.js';
+import { render, scrollStripToActive, setScore, syncDock } from './modes.js';
 import { closeDrawer, openDrawer, setScoreSub } from './drawer.js';
 import { toast } from './dom.js';
 /* 読み込んだ譜面を保存番号に紐づけて残す（保存番号が無ければ何もしない） */
@@ -45,6 +44,14 @@ export function parseMusicXML(text){
   }
   const part = doc.querySelector('score-partwise > part');
   if(!part) throw new Error(tt('msg.no_part'));
+
+  /* 譜面が持っている曲名。<work-title> → <movement-title> → <credit-words> の順で拾う。
+     読み込んだ譜面に付ける名前として使う（無ければ呼び出し側がファイル名を使う）。 */
+  let title = '';
+  const wtEl = doc.querySelector('work > work-title');
+  if(wtEl) title = wtEl.textContent.trim();
+  if(!title){ const mtEl = doc.querySelector('movement-title'); if(mtEl) title = mtEl.textContent.trim(); }
+  if(!title){ const cwEl = doc.querySelector('credit > credit-words'); if(cwEl) title = cwEl.textContent.trim(); }
 
   /* テンポ */
   let tempo = ST.tempo;
@@ -120,7 +127,7 @@ export function parseMusicXML(text){
   evs.forEach(e=>{ e.fing = recommend(e.pitches[e.leadIdx].midi); });
 
   if(!evs.length) throw new Error(tt('msg.no_notes'));
-  return {events:evs, tempo, measures:mList, beatsPerMeasure, beatUnit};
+  return {events:evs, tempo, measures:mList, beatsPerMeasure, beatUnit, title};
 }
 
 /* MIDI のテキスト（トラック名など）には文字コードの指定が無い。
@@ -168,6 +175,10 @@ export function parseMidi(buf){
   if(division & 0x8000) throw new Error(tt('msg.smpte_unsupported'));
 
   let tempo=120, tempoSet=false, tsNum=4, tsDen=4, tsSet=false;
+  /* 曲名。SMF では先頭トラックのシーケンス名（メタ0x03）がそれにあたる
+     （フォーマット1では最初の「指揮トラック」、フォーマット0では唯一のトラック）。
+     読み込んだ譜面に付ける名前として使う（無ければ呼び出し側がファイル名を使う）。 */
+  let title='';
   const tracks=[];
 
   for(let t=0; t<ntrk && p+8<=dv.byteLength; t++){
@@ -238,6 +249,7 @@ export function parseMidi(buf){
       }
     }
     p=end;
+    if(t===0 && name) title=name;
     if(notes.length){
       /* チャンネルごとに分割（Format 0 や複数パートが1トラックに入る場合に対応） */
       const byCh=new Map();
@@ -264,7 +276,7 @@ export function parseMidi(buf){
     }
   }
   if(!tracks.length) throw new Error(tt('msg.no_track_with_notes'));
-  return {tracks, tempo, tsNum, tsDen, division};
+  return {tracks, tempo, tsNum, tsDen, division, title};
 }
 
 /* 主旋律らしいトラックを既定選択にする
@@ -428,21 +440,28 @@ export function skipToStart(){
   toast(tt('msg.skip_to_first', m, ST.events[0].pitches[0].name));
 }
 
+/* 読み込んだ譜面に付ける名前。データが曲名を持っていればそれを使い、
+   持っていなければファイル名を使う（この名前がそのまま一覧・上部バー・公開時の曲名になる）。 */
+function scoreNameOf(dataTitle, file){
+  const t=String(dataTitle||'').trim();
+  return t || file.name;
+}
 export async function loadScoreFile(file){
   const name=file.name.toLowerCase();
-  /* この読み込み操作で作る／書き換えるアップロード1件を決める（MIDIのトラック選び直しも同じ1件） */
-  beginUpload(file.name);
 
   try{
     /* ---- MIDI ---- */
     if(name.endsWith('.mid') || name.endsWith('.midi')){
       const buf=await file.arrayBuffer();
       const m=parseMidi(buf);
+      const title=scoreNameOf(m.title, file);
+      /* この読み込み操作で作る／書き換えるアップロード1件を決める（MIDIのトラック選び直しも同じ1件） */
+      beginUpload(title);
       const sel=bestTrackIndex(m.tracks);
       /* 元のMIDIも保存番号に預ける（一覧から開き直したあとトラックを選び直せるようにするため）。
          大きすぎるものは預けない＝そのときはトラック選択のリンクが出ないだけ。 */
       midiFile={tracks:m.tracks, tempo:m.tempo, tsNum:m.tsNum, tsDen:m.tsDen, division:m.division,
-                name:file.name, sel, src:bytesToBase64(new Uint8Array(buf))};
+                name:title, sel, src:bytesToBase64(new Uint8Array(buf))};
       selectTrack(sel);        /* 保存は selectTrack 側で行う（トラックを選び直したぶんも同じ1件を更新） */
       setScoreSub('tracks');   /* 読み込んだ直後はトラックを選ぶ面を出す */
       openDrawer();
@@ -461,9 +480,11 @@ export async function loadScoreFile(file){
       if(text.trimStart()[0] !== '<'){ text=await unMxl(file); } // zip実体だった場合
     }
     const parsed=parseMusicXML(text);
+    const title=scoreNameOf(parsed.title, file);
+    beginUpload(title);
     setTempo(Math.round(parsed.tempo));
-    const restored=setScore(parsed, file.name, file.name);
-    rememberUpload(file.name, parsed, parsed.tempo, null);
+    const restored=setScore(parsed, title, title);
+    rememberUpload(title, parsed, parsed.tempo, null);
     closeDrawer();
     toast(tt('msg.score_loaded', parsed.events.length) + (restored ? tt('msg.fing_restored_suffix') : ''));
   }catch(err){
@@ -595,25 +616,10 @@ export function loadSample(quiet){
   }catch(e){ toast(tt('msg.preset_err', e.message)); }
 }
 
-/* ===== スケール生成（スケール練習モード） ===== */
-export function genScale(quiet){
-  try{
-    midiFile=null; renderTracks();
-    const parsed=buildScaleEvents(ST.keyRoot, ST.scaleType, ST.scaleOct);
-    const label=`${NOTE_NAMES[ST.keyRoot]} ${SCALE_LABEL[ST.scaleType]} ${ST.scaleOct}oct`;
-    setScore(parsed, 'scale:'+label);
-    /* ループ範囲はスケール全体（ON/OFFは利用者に任せる） */
-    ST.loop.from=1;
-    ST.loop.to=parsed.measures.length || 1;
-    syncLoopUI();
-    updateTransport();
-    if(!quiet){
-      closeDrawer();
-      toast(tt('msg.scale_built', label, parsed.events.length, parsed.measures.length));
-      setTimeout(()=>{ if(ST.mode==='scale' && ST.events.length) startPlay(0); }, 260);  /* 生成したら自動再生 */
-    }
-  }catch(e){ toast(tt('msg.gen_failed', e.message)); }
-}
+/* ===== スケール練習は廃止した =====
+   ここにあったスケール生成（genScale）は使われていない写しだった。
+   同じ内容は「曲を練習する」の課題曲『Cメジャースケール』
+   （public/songs/c_major_scale.json）で弾ける。 */
 
 /* ===== プリセット曲（public/songs/ から外部読み込み） ===== */
 /* manifest.json＝曲一覧（起動時に先読み）。個別JSONは曲を選んだ時に fetch する。

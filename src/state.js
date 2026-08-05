@@ -19,7 +19,7 @@ export function volProfileKey(){ return (ST.mode==='scale') ? 'scale' : 'score';
 
 /* ===== 状態 ===== */
 export const ST = {
-  mode: null,            // null | 'scale' | 'score'
+  mode: null,            // null | 'score' | 'game' | 'tuner'
   events: [],
   measures: [],          // [{num, start, end}] 単位=4分音符
   beatsPerMeasure: 4,    // 4分音符=1 換算の1小節の長さ（MusicXML も beats*(4/beat-type) で正規化）
@@ -87,7 +87,4 @@ export const ST = {
   /* 表示 */
   lastScrollId: null,
   holding: false,
-  /* ドロワーでスケール設定を変えたが、まだ画面の譜面に反映していない状態。
-     true の間は ▶ が光り、押すと genScale() で作り直してから再生する */
-  scaleDirty: false,
 };

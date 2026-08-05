@@ -10,6 +10,9 @@
     POST  action=fing    csrf= id= fing= lang= inst=                    … 運指だけ更新（sig は変わらない）
     POST  action=load    csrf= id=   lang= inst=                        … 1件取り出す（運指も返す）
     POST  action=rename  csrf= id= name= lang=                          … 一覧に出す名前だけを変える
+                                                                          （その譜面を「みんなの曲」として
+                                                                            公開していれば、公開ぶんの曲名も
+                                                                            一緒に変わる）
     POST  action=delete  csrf= id=   lang=                              … 1件消す
 
   inst（楽器名）は運指の出し入れにだけ使う。運指は弦とポジションの番号なので楽器ごとに
@@ -28,6 +31,8 @@ $URL_DEPTH = 1;
 require APP_ROOT . '/includes/bootstrap.php';
 require APP_ROOT . '/includes/account.php';
 require APP_ROOT . '/includes/scores.php';
+/* 名前を変えたときに、公開ぶん（みんなの曲）の曲名もそろえるために読み込む */
+require APP_ROOT . '/includes/shares.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store');
@@ -63,7 +68,8 @@ try {
   acc_session_start();
   /* セッションのトークンと突き合わせる（api/account.php の action=state で受け取ったもの） */
   if (!acc_csrf_ok((string)($_POST['csrf'] ?? ''))) { http_response_code(403); err('method'); }
-  if (!acc_current())                               { http_response_code(401); err('needlogin'); }
+  $me = acc_current();
+  if (!$me)                                         { http_response_code(401); err('needlogin'); }
 
   switch ($action) {
 
@@ -94,7 +100,10 @@ try {
     case 'rename': {
       $r = score_rename($id, $name);
       if (!$r['ok']) err($r['error']);
-      out(['ok' => true, 'id' => $r['id'], 'name' => $r['name']]);
+      /* この譜面を「みんなの曲」として公開していれば、公開ぶんの曲名も合わせる。
+         公開していなければ 0 件が更新されるだけで、何も起きない。 */
+      $shared = share_rename_by_score($me, $id, $r['name']);
+      out(['ok' => true, 'id' => $r['id'], 'name' => $r['name'], 'shared' => $shared]);
     }
 
     case 'delete': {

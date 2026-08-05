@@ -125,12 +125,15 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div id="liteSw" class="sw"><span><?php e('ui.lite') ?></span><span class="knob"></span></div>
     <div class="sub" style="margin:-3px 0 8px"><?php e('ui.lite_note') ?></div>
 
-    <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）===== -->
+    <!-- ===== ホーム画面に追加（対応ブラウザでのみ出る）=====
+         ほかの項目（表示・開始カウント・音量・言語）と同じく、行を押して
+         サブメニューへ差し替える。行の出し入れは src/pwa.js の syncRow() -->
     <hr class="sep">
-    <div id="pwaBox" class="row controls" hidden>
-      <button id="pwaInstall" class="ghost" style="flex:1; justify-content:center"><?php e('ui.install') ?></button>
+    <div id="pwaRow" hidden>
+      <button class="gp-row" data-gpopen="pwa">
+        <span><?php e('ui.install') ?></span><span class="cv">›</span>
+      </button>
     </div>
-    <div id="pwaNote" class="sub" hidden><?php e('ui.install_note') ?></div>
 
     <!-- ===== 言語（いちばん下）=====
          行数のある項目は行にして、押したらサブメニューへ差し替える（表示・音量と同じ作法）。
@@ -221,6 +224,20 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
   </div>
 
+  <!-- ===== サブ：ホーム画面に追加 =====
+       もとは一覧に直接置いていたボタンと案内文を、そのままこの面へ移した。
+       id は変えていないので src/pwa.js の処理はこれまでどおり。 -->
+  <div class="gp-page" data-gp="pwa">
+    <div class="gp-back">
+      <button type="button" data-gpback>‹ <?php e('ui.back') ?></button>
+      <span class="t"><?php e('ui.install') ?></span>
+    </div>
+    <div id="pwaBox" class="row controls" hidden>
+      <button id="pwaInstall" class="ghost" style="flex:1; justify-content:center"><?php e('ui.install') ?></button>
+    </div>
+    <div id="pwaNote" class="sub" hidden><?php e('ui.install_note') ?></div>
+  </div>
+
   <!-- ===== サブ：言語 ===== -->
   <div class="gp-page" data-gp="lang">
     <div class="gp-back">
@@ -307,9 +324,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="pk-logo"><img src="<?= h($BASE) ?>public/icons/logo-v3.svg" alt="<?= h(APP_NAME) ?>" width="406" height="165" decoding="async"></div>
   <h1 class="pk-title"><?= h(APP_NAME) ?></h1>
   <div class="pk-sub"><?php e('app_sub', $INST_NAME) ?></div>
-  <button class="pk-card" data-mode="scale">
-    <span class="pk-ic">🎵</span><span class="pk-b"><?php e('ui.mode_scale') ?><small><?php e('ui.mode_scale_s') ?></small></span>
-  </button>
   <button class="pk-card" data-mode="score">
     <span class="pk-ic">🎼</span><span class="pk-b"><?php e('ui.mode_score') ?><small><?php e('ui.mode_score_s') ?></small></span>
   </button>
@@ -378,9 +392,9 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <button id="fab" class="fab" disabled aria-label="<?php e('ui.fab_aria') ?>">▶</button>
 
 <!-- 画面左下のドック：テンポ / 伴奏 / オクターブ / ループ（ドロワーから移動） -->
-<div id="dock" class="dock" data-m="scale score">
+<div id="dock" class="dock" data-m="score">
   <button id="dkTempo" class="dockbtn" aria-label="<?php e('ui.dk_tempo_aria') ?>"><i>BPM</i><small id="dkTempoV">80</small></button>
-  <button id="enjoySw" class="dockbtn" data-m="scale score" aria-label="<?php e('ui.dk_enjoy_aria') ?>"><i>🥁</i><small><?php e('ui.dk_enjoy') ?></small></button>
+  <button id="enjoySw" class="dockbtn" data-m="score" aria-label="<?php e('ui.dk_enjoy_aria') ?>"><i>🥁</i><small><?php e('ui.dk_enjoy') ?></small></button>
   <button id="dkOct" class="dockbtn" data-m="score" aria-label="<?php e('ui.dk_oct_aria') ?>"><i>OCT</i><small id="dkOctV"><?php e('ui.dk_oct_auto') ?></small></button>
   <button id="dkLoop" class="dockbtn" aria-label="<?php e('ui.dk_loop_aria') ?>"><i>🔁</i><small><?php e('ui.dk_loop') ?></small></button>
 </div>
@@ -772,10 +786,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <span class="dk-tt"><?php e('share.m_share') ?></span>
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
-  <div class="fmrow">
-    <label for="shName"><?php e('share.name') ?></label>
-    <input id="shName" type="text" maxlength="120" autocomplete="off" placeholder="<?php e('share.name_ph') ?>">
-  </div>
   <div class="shwarn"><?php e('share.warn') ?></div>
   <label class="agree" for="shAgree">
     <input id="shAgree" type="checkbox">
@@ -791,18 +801,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="sub"><?php e('share.note') ?></div>
 </div>
 
-<!-- 曲を練習：入口から入った時の案内（押すとドロワーが横から出る） -->
-<div id="mScoreStart" class="dkmodal" role="dialog" aria-modal="true">
-  <div class="dk-head">
-    <span class="dk-tt"><?php e('ui.m_score_start') ?></span>
-    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
-  </div>
-  <div class="startrow">
-    <button data-sub="songs"><?php e('ui.sub_songs') ?></button>
-    <button data-sub="load"><?php e('ui.sub_load') ?></button>
-  </div>
-  <div class="sub"><?php e('ui.score_start_note') ?></div>
-</div>
+<!-- 「曲を練習する」に入った時は案内モーダルを出さず、左ドロワーを直接開く
+     （src/modes.js の setMode → openDrawer）。旧 #mScoreStart は廃止した。 -->
 
 <!-- ハンバーガードロワー（操作パネル） -->
 <div id="scrim" class="scrim"></div>
@@ -814,7 +814,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <button id="drawerClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
     </div>
     <div class="seg" id="modeSeg" role="tablist">
-      <button data-mode="scale"><?php e('ui.seg_scale') ?></button>
       <button data-mode="score"><?php e('ui.seg_score') ?></button>
       <button data-mode="game"><?php e('ui.seg_game') ?></button>
       <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
@@ -826,38 +825,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="seclbl"><?php e('ui.mic') ?></div>
     <div id="micSw" class="sw"><span><?php e('ui.mic_sw') ?></span><span class="knob"></span></div>
     <div class="sub"><?php e('ui.mic_note1') ?><br><?php e('ui.mic_note2') ?></div>
-  </div>
-
-  <!-- ========== スケール練習モード ========== -->
-  <div data-m="scale">
-    <div class="seclbl"><?php e('ui.scale_set') ?></div>
-    <div class="field2">
-      <div>
-        <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px"><?php e('ui.key') ?></div>
-        <select id="scaleRoot">
-<?php foreach ([[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11]] as [$pc, $i]):
-        /* キー名は音名テーブルから生成（言語で音名を変えた場合も追従する） */
-        $lbl = $NOTE_NAMES[$pc];
-        if (in_array($pc, [1,3,6,8,10], true)) $lbl .= '/' . $NOTE_NAMES[($pc + 1) % 12] . '♭'; ?>
-          <option value="<?= $pc ?>"><?= h($lbl) ?></option>
-<?php endforeach; ?>
-        </select>
-      </div>
-      <div>
-        <div class="k" style="font-size:12px;color:var(--muted);margin-bottom:4px"><?php e('ui.octave') ?></div>
-        <select id="scaleOct">
-          <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
-        </select>
-      </div>
-    </div>
-    <div class="field">
-      <div class="k"><?php e('ui.scale') ?></div>
-      <div class="v">
-        <select id="scaleType">
-          <option value="pop"><?php e('ui.scale_pop') ?></option>
-        </select>
-      </div>
-    </div>
   </div>
 
   <!-- ========== コピー練習モード ========== -->
@@ -944,14 +911,6 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
        （src/drawer.js の saveFingering → src/uploads.js の updateUploadFingering）。
        exportFingering / importFingering / resetFingering は drawer.js に残してあるので、
        戻すときはこのブロックの HTML と main.js の配線をいっしょに戻すこと。 -->
-
-  <!-- ========== スケール練習モード：生成（一番下） ========== -->
-  <div data-m="scale">
-    <hr class="sep">
-    <div class="row controls">
-      <button id="scaleGen" class="primary" style="flex:1; justify-content:center; min-height:46px"><?php e('ui.scale_gen') ?></button>
-    </div>
-  </div>
 
   <div class="drawer-note">
     <?php er('ui.drawer_note_html') ?>
