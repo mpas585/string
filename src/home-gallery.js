@@ -1,17 +1,19 @@
 /*
   home-gallery.js — 言語別トップ（/{言語}/）の楽器選択。
 
-  参考にした動き（cssscript の Interactive 3D Rotating Gallery）と同じ「カバーフロー」型。
-  箱をぐるりと回す形だと、正面の1つしか見えず「ほかにも選べる」ことが伝わらないため、
-  ・中央の楽器を大きく正面に
-  ・その左右に、内側を向いて傾いた楽器を、奥へ小さく並べる
-  という並べ方にして、4種すべてが同時に見えるようにしている。
+  回転台（ターンテーブル）に楽器を等間隔で載せて回す。4種なら 12時・3時・6時・9時。
+  ・12時（手前）がいま選んでいる楽器
+  ・3時・9時は左右に、内側を向いて傾いた状態で見える
+  ・6時は 12時の真後ろ。いちばん奥なのでぼかして薄くする
+  横へ滑らせるのではなく円周に沿って回り込むので、動きが回転として読める。
+  奥ほど「小さく・薄く・ぼける」ようにして遠近を出している。
 
   ・指で左右に払う（マウスならドラッグ）と、指に追いてまわり、離すと近い位置で止まる。
   ・中央の楽器を押すとその楽器のページへ。中央でないものを押したときは、
     進まずにその楽器を中央へ持ってくる（押し間違いを進行にしないため）。
   ・‹ › のボタン、下の丸、キーボードの ← → でも動く。
-  ・端まで来たら止まる（一周しない）。いま何番目かが分かるようにするため。
+  ・一周する。端で止まらないので、同じ向きに回し続けられる。
+    いま何番目かは下の丸で分かる。
 
   並んでいるのは includes/views/home.php が出した <a class="hm-card"> そのもの。
   JS が動かない環境では .hm-stage に .on が付かないので、これまでどおり
@@ -35,11 +37,11 @@ if (stage && ring && N > 1 && CAN_3D) init();
 
 function init() {
   /* 見た目の調整はこの4つ。触るとしたらここ。 */
-  const STEP   = 34;     /* 楽器1つあたりの回転角（度） */
-  const RAD    = 1.11;   /* 回転の半径（札の幅に対する割合）。大きいほど奥行きが出る */
-  const FACE   = 0.70;   /* 札の向き。1 なら円筒どおり真横まで向く。下げるほど正面を向く */
-  const BLUR   = 1.7;    /* 奥へ行くほどぼかす量（px）。遠近をはっきりさせる */
-  const DRIFT  = 0.24;   /* 端に来たとき、群れ全体を中央へ寄せ戻す量（札の幅に対する割合） */
+  const STEP   = 360 / N; /* 楽器1つあたりの回転角。4つなら 90 度 ＝ 12時・3時・6時・9時 */
+  const RAD    = 0.95;    /* 回転の半径（札の幅に対する割合）。大きいほど奥行きが出る */
+  const FACE   = 0.45;    /* 札の向き。1 なら円筒どおり真横（＝見えない）まで向く。
+                             0.45 だと 3時・9時で 40 度ほどの傾きになり、正面が見える */
+  const BLUR   = 4.0;     /* いちばん奥（6時）でのぼかし量（px） */
 
   const SLOW = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -75,8 +77,8 @@ function init() {
     /* 8px を越えて はじめて「回している」とみなし、そこで初めて捕まえる。
        ただ押しただけのときは捕まえないので、click がそのまま <a> に届く（PCのクリック対策）。 */
     if (!wasDrag && moved > 8) { try { stage.setPointerCapture(e.pointerId); } catch (err) {} }
-    /* 指の動きに追いてまわす。端では引っぱっても少ししか動かないようにする */
-    cur = clampSoft(startCur - dx / stepPx());
+    /* 指の動きに追いてまわす */
+    cur = startCur - dx / stepPx();      /* 一周するので、どこまで回しても止めない */
     layout(false);
     if (moved > 8) e.preventDefault();      /* 横に振っている間は縦スクロールを止める */
   });
@@ -98,7 +100,7 @@ function init() {
     if (!a) return;
     if (moved > 8) { e.preventDefault(); moved = 0; return; }   /* 動かしただけ */
     const i = cards.indexOf(a);
-    if (i !== Math.round(cur)) { e.preventDefault(); go(i); }   /* 中央でなければ、まず中央へ */
+    if (i !== front()) { e.preventDefault(); go(nearest(i)); }  /* 中央でなければ、まず中央へ */
   });
 
   /* ---- ボタンとキーボード ---- */
@@ -113,7 +115,7 @@ function init() {
     const a = e.target.closest('.hm-card');
     if (!a) return;
     const i = cards.indexOf(a);
-    if (i !== Math.round(cur)) go(i);
+    if (i !== front()) go(nearest(i));
   });
 
   /* ---- ここから下は組み立て ---- */
@@ -123,43 +125,48 @@ function init() {
   /* 隣へ送るのに要る指の移動量 */
   function stepPx() { return Math.max(60, cardW() * 0.62); }
 
-  /* 端を越えたぶんは 1/4 しか動かさない（引っぱっている感じを出しつつ、行き過ぎない） */
-  function clampSoft(v) {
-    if (v < 0)     return v / 4;
-    if (v > N - 1) return (N - 1) + (v - (N - 1)) / 4;
-    return v;
+  /* いま中央にある番号（0〜N-1）。
+     cur は一周しても止めず増減し続けるので、割った余りで見る（-1 も N-1 として扱う）。 */
+  function front() { return ((Math.round(cur) % N) + N) % N; }
+
+  /* i 番を中央に持ってくるための cur。遠回りしないよう、近いほうへ回す。 */
+  function nearest(i) {
+    let d = (i - front()) % N;
+    if (d >  N / 2) d -= N;
+    if (d < -N / 2) d += N;
+    return Math.round(cur) + d;
   }
 
   function go(n) {
-    cur = Math.max(0, Math.min(N - 1, n));
+    cur = n;                 /* 端で止めない＝一周してそのまま先へ回り続ける */
     layout(true);
   }
 
   function layout(animate) {
     const w = cardW();
-    /* 一周しないので、端では札が片側に寄る（先頭なら右へ3枚）。
-       そのままだと群れが画面の片側に寄って端で切れるため、全体を中央へ寄せ戻す。
-       真ん中にいるときは 0 になるので、ふだんの見え方は変わらない。 */
     const R = w * RAD;
-    const shift = (cur - (N - 1) / 2) * w * DRIFT;
     cards.forEach((c, i) => {
       const o = i - cur;                       /* 中央からの隔たり（小数もあり） */
-      const s = o < 0 ? -1 : 1;
-      const a = Math.abs(o);
 
-      /* 回転台に載っているものとして、円周上の位置を出す。
-         横へ滑らせるのではなく、中央から離れるほど奥へ回り込んでいく。
+      /* 回転台に等間隔で載せる。4つなら 12時・3時・6時・9時。
+         角度は -180〜180 に畳んでから使う（9時は +270 度ではなく -90 度として扱う）。
            x … 円周を横から見たときの左右の位置（半径 × sin）
-           z … 同じく奥行き（半径 × cos。中央を 0 に合わせるため半径を引く）
-         向きは STEP そのままだと真横まで向いて見えなくなるので、FACE で控えめにする。 */
-      const th = a * STEP * Math.PI / 180;
-      const x  = s * R * Math.sin(th) + shift;
-      const z  = R * (Math.cos(th) - 1);
-      const ry = -s * a * STEP * FACE;
-      /* 奥は遠近で小さくなるので、倍率は控えめ。代わりにぼかしで距離を出す */
-      const sc = 1 - Math.min(a, 3) * 0.06;
-      const op = 1 - Math.min(a, 3) * 0.18;
-      const bl = Math.min(a, 3) * BLUR;
+           z … 同じく奥行き（半径 × cos。手前の1つを 0 に合わせるため半径を引く）
+         向きは角度そのままだと 3時・9時で真横になって見えなくなるので、FACE で控えめにする。 */
+      let ph = o * STEP;
+      ph = ((ph + 180) % 360 + 360) % 360 - 180;
+      const rd = ph * Math.PI / 180;
+      const x  = R * Math.sin(rd);
+      const z  = R * (Math.cos(rd) - 1);
+      const ry = ph * FACE;
+
+      /* 濃さ・ぼかし・大きさは「どれだけ奥にあるか」だけで決める。
+         0 ＝ 手前（12時）、0.5 ＝ 横（3時・9時）、1 ＝ いちばん奥（6時）。
+         左右を同じ扱いにできるので、3時と9時がそろって見える。 */
+      const d  = -z / (2 * R);
+      const sc = 1 - d * 0.12;
+      const op = 1 - d * 0.80;
+      const bl = d * BLUR;
 
       c.style.transition = (animate && !SLOW)
         ? 'transform .42s cubic-bezier(.22,.61,.36,1), opacity .42s, filter .42s' : 'none';
@@ -170,15 +177,14 @@ function init() {
                         + 'translateX(' + x.toFixed(1) + 'px) translateZ(' + z.toFixed(1) + 'px) '
                         + 'rotateY(' + ry.toFixed(1) + 'deg) scale(' + sc.toFixed(3) + ')';
       c.style.opacity = op.toFixed(2);
-      c.style.zIndex  = String(Math.round(100 - a * 10));
-      c.classList.toggle('front', Math.round(cur) === i);
-      c.setAttribute('aria-selected', Math.round(cur) === i ? 'true' : 'false');
+      c.style.zIndex  = String(Math.round(100 - d * 50));
+      c.classList.toggle('front', front() === i);
+      c.setAttribute('aria-selected', front() === i ? 'true' : 'false');
     });
 
-    const f = Math.round(cur);
+    const f = front();
     if (dots) Array.from(dots.children).forEach((d, i) => d.classList.toggle('on', i === f));
-    if (prevB) prevB.disabled = (f <= 0);
-    if (nextB) nextB.disabled = (f >= N - 1);
+    /* 一周するので ‹ › は常に押せる（端という概念が無い） */
   }
 
   function buildDots() {
@@ -192,7 +198,7 @@ function init() {
       /* 読み上げには楽器名を渡す（札の見出しをそのまま使う） */
       const name = c.querySelector('.b');
       b.setAttribute('aria-label', name ? name.childNodes[0].textContent.trim() : String(i + 1));
-      b.addEventListener('click', () => go(i));
+      b.addEventListener('click', () => go(nearest(i)));
       dots.appendChild(b);
     });
   }

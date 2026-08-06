@@ -1040,8 +1040,17 @@
   /* ======== 歯車だけ少し大きく（☰ や ✕ は従来どおり40px） ======== */
   .topbar #gear{width:46px; height:46px; font-size:22px; border-radius:11px}
 
+  /* ======== 入口：ロゴ下の社名 ========
+     トップ（.hm-title）と同じ扱い。ロゴの画像に社名が入っているので画面には出さないが、
+     <h1> は検索エンジンにとって重要な手がかりなので DOM からは消さない。
+     ロゴの alt も同じ "GEN strings" なので、見えているものと食い違わない。
+     ここは .pk-title の指定（金のグラデ文字）より後ろに置いて上書きする。 */
+  h1.pk-title{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
+  }
+
   /* ======== 入口の説明：機能・使い方・FAQ ======== */
-  h1.pk-title{margin:0}
   .pk-desc h2:not(:first-child){margin-top:20px; padding-top:14px; border-top:1px solid var(--line)}
   .pk-feat, .pk-steps{margin:0; padding-left:1.15em}
   .pk-feat li, .pk-steps li{font-size:11px; color:var(--muted); line-height:1.75; margin-bottom:7px}
@@ -1254,8 +1263,21 @@
   .hm-logo img{display:block; width:min(250px, 100%); height:auto; margin:0 auto}
   .hm-title{font-size:24px; font-weight:800; letter-spacing:.06em; margin:6px 0 4px; color:var(--ink)}
   .hm-sub{font-size:12px; color:var(--muted); letter-spacing:.06em; margin:0}
+  /* ロゴの真下に社名が来る画面（トップ）だけ、見出しを画面に出さない。
+     .hm-title 自体は お悩み集・プライバシーポリシー・利用規約 でも
+     ページの見出しとして使っているので、そちらまで消さないよう専用のクラスで分ける。
+
+     DOM からは消さない。<h1> は検索エンジンにとって重要な手がかりで、
+     ロゴの alt も同じ "GEN strings" なので、見えているものと食い違わない
+     （＝隠して別の言葉を仕込む「クローキング」にはあたらない）。 */
+  .hm-title-logo{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
+  }
+  /* 見出しが流し込みから外れるぶん、ロゴとの間を空け直す */
+  .hm-title-logo + .hm-sub{margin-top:8px}
   .hm-h{font-size:11px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase;
-    margin:0 0 10px; font-weight:600}
+    margin:0 0 10px; font-weight:600; text-align:center}
   .hm-list{display:flex; flex-direction:column; gap:9px}
   .hm-card{
     display:flex; align-items:center; gap:14px; padding:14px 16px;
@@ -1404,16 +1426,12 @@
      付けるのは src/dom.js の setFabLed()、外すのは clearFabLed()（再生開始時）。
      再生中（.playing）と押せないとき（:disabled）は光らせない。 */
   .fab.led:not(:disabled):not(.playing){animation:fabled 1.4s ease-in-out infinite}
+  /* 光らせるのは ▶ の字だけ。ボタンの地の色・影・大きさは動かさない
+     （▶ は #fab の文字そのものなので、color と text-shadow だけを動かせば字だけが光る）。 */
   @keyframes fabled{
-    0%,100%{
-      box-shadow:0 6px 0 #7d5d1c, 0 8px 26px rgba(231,178,75,.45), inset 0 2px 0 rgba(255,255,255,.5);
-      filter:brightness(1);
-    }
-    45%{
-      box-shadow:0 6px 0 #7d5d1c, 0 0 0 12px rgba(231,178,75,.14),
-                 0 0 30px 6px rgba(255,214,120,.85), inset 0 2px 0 rgba(255,255,255,.7);
-      filter:brightness(1.35);
-    }
+    0%,100%{color:#241a08; text-shadow:0 1px 0 rgba(255,255,255,.4)}
+    45%    {color:#38b6ff;
+            text-shadow:0 0 8px rgba(120,205,255,.95), 0 0 18px rgba(56,182,255,.80), 0 0 28px rgba(56,182,255,.50)}
   }
 
   @keyframes fabattn{
