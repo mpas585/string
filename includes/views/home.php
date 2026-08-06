@@ -89,7 +89,7 @@ foreach ($ORDERED as $ins) {
 
   <header class="hm-head">
     <div class="hm-logo"><img src="<?= h($BASE) ?>public/icons/logo-v3.svg" alt="<?= h(APP_NAME) ?>" width="406" height="165" decoding="async"></div>
-    <h1 class="hm-title"><?= h(APP_NAME) ?></h1>
+    <h1 class="hm-title hm-title-logo"><?= h(APP_NAME) ?></h1>
     <p class="hm-sub"><?php e('home.sub') ?></p>
   </header>
 
@@ -134,7 +134,7 @@ foreach ($ORDERED as $ins) {
       <a<?= $l === $LANG ? ' class="on"' : '' ?> href="<?= h($LANG_HOME_URLS[$l]) ?>" hreflang="<?= h($l) ?>"><?= h($ln['name']) ?></a>
 <?php endforeach; ?>
     </div>
-    <small><a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/privacy/"><?php e('legal.link') ?></a> &middot; <a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/terms/"><?php e('terms.link') ?></a> &middot; &copy; <?= date('Y') ?> <?= h(APP_NAME) ?></small>
+    <small><a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/privacy/"><?php e('legal.link') ?></a> &middot; <a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/terms/"><?php e('terms.link') ?></a> &middot; <a href="<?= h($rootPath) ?>/<?= h($LANG) ?>/contact/"><?php e('contact.link') ?></a> &middot; &copy; <?= date('Y') ?> <?= h(APP_NAME) ?></small>
   </footer>
 </main>
 <div id="dockScrim" class="dkscrim"></div>

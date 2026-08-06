@@ -609,6 +609,14 @@ return [
 
   /* ===== 联系我们（api/contact.php） ===== */
   'contact' => [
+    /* 联系页面（/{语言}/contact/）的标题 */
+    'page_title' => '联系我们 | GEN strings',
+    'page_desc'  => '欢迎提出意见、报告问题，或申请删除已在 GEN strings 公开的曲目。',
+    'page_h1'    => '联系我们',
+    'lead'       => '除了意见与问题反馈，公开在“大家的曲目”中的曲目删除申请也可从这里提交。',
+    'back'       => '返回 GEN strings 首页',
+    /* トップのフッタに並べる短い表記（privacy.link / terms.link とそろえる） */
+    'link'    => '联系我们',
     'name'    => '姓名',
     'name_ph' => '例：上田昌树',
     'email'   => '邮箱（需要回复时填写）',

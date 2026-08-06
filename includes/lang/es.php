@@ -612,6 +612,14 @@ return [
 
   /* ===== Formulario de contacto (api/contact.php) ===== */
   'contact' => [
+    /* Encabezados de la página de contacto (/{idioma}/contact/) */
+    'page_title' => 'Contacto | GEN strings',
+    'page_desc'  => 'Envía comentarios, informa de un problema o solicita la retirada de una pieza publicada en GEN strings.',
+    'page_h1'    => 'Contacto',
+    'lead'       => 'Aquí puedes enviarnos comentarios o informar de un fallo. Las solicitudes de retirada de piezas publicadas en «Piezas de todos» también se reciben en este formulario.',
+    'back'       => 'Volver al inicio de GEN strings',
+    /* トップのフッタに並べる短い表記（privacy.link / terms.link とそろえる） */
+    'link'    => 'Contacto',
     'name'    => 'Tu nombre',
     'name_ph' => 'p. ej. Masaki Ueda',
     'email'   => 'Correo (si quieres respuesta)',

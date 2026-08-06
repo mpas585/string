@@ -609,6 +609,14 @@ return [
 
   /* ===== Contact form (api/contact.php) ===== */
   'contact' => [
+    /* Headings for the contact page (/{lang}/contact/) */
+    'page_title' => 'Contact | GEN strings',
+    'page_desc'  => 'Send feedback, report a problem, or request the removal of a piece published on GEN strings.',
+    'page_h1'    => 'Contact',
+    'lead'       => 'Send us feedback or a bug report here. Requests to take down a piece published under “Everyone’s pieces” also come through this form.',
+    'back'       => 'Back to the GEN strings home',
+    /* トップのフッタに並べる短い表記（privacy.link / terms.link とそろえる） */
+    'link'    => 'Contact',
     'name'    => 'Your name',
     'name_ph' => 'e.g. Masaki Ueda',
     'email'   => 'Email (if you would like a reply)',
