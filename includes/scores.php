@@ -22,6 +22,7 @@
 if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 const SCORE_MAX_ITEMS = 3;      /* アカウント1つあたりの件数の上限 */
+const SCORE_MAX_ITEMS_ADMIN = 999;  /* 管理者（config/app.php の admin_email）だけの上限 */
 const SCORE_MAX_BYTES = 512000;  /* 譜面1件の JSON の上限（約500KB） */
 const SCORE_NAME_MAX  = 120;     /* 一覧に出す名前の長さ */
 const SCORE_SUB_MAX   = 80;      /* 副題（MIDIで選んだトラック名）の長さ */
@@ -76,6 +77,12 @@ function score_table(PDO $db): void {
    ※ 一覧（score_list）は分けない。譜面そのものはどの楽器でも使えるので、
       同じ楽譜を楽器の数だけ預け直さなくてよい。 */
 
+/* この人が持てる件数の上限。管理者（config/app.php の admin_email）だけ広げる */
+function score_max_items(?array $u): int {
+  if ($u && APP_ADMIN_EMAIL !== '' && strtolower((string)$u['email']) === APP_ADMIN_EMAIL) return SCORE_MAX_ITEMS_ADMIN;
+  return SCORE_MAX_ITEMS;
+}
+
 /* 楽器名の検証。一覧に無い値が来たら既定楽器として扱う */
 function score_inst(string $inst): string {
   return in_array($inst, APP_INSTRUMENTS, true) ? $inst : APP_DEFAULT_INSTRUMENT;
@@ -119,7 +126,7 @@ function score_open(): array {
   $db = acc_db();
   score_table($db);
 
-  return ['ok' => true, 'db' => $db, 'code' => (string)$u['data_key']];
+  return ['ok' => true, 'db' => $db, 'code' => (string)$u['data_key'], 'user' => $u];
 }
 
 /* 一覧（新しいものから）。data は返さない＝一覧の通信を軽くする */
@@ -205,7 +212,7 @@ function score_save(string $name, int $notes, string $data, string $sig = '', st
   /* 新規追加 */
   $st = $db->prepare('SELECT COUNT(*) FROM scores WHERE code = ?');
   $st->execute([$code]);
-  if (((int)$st->fetchColumn()) >= SCORE_MAX_ITEMS) return ['ok' => false, 'error' => 'limit'];
+  if (((int)$st->fetchColumn()) >= score_max_items($g['user'])) return ['ok' => false, 'error' => 'limit'];
 
   $db->prepare('INSERT INTO scores (code, name, sub, notes, data, sig, fing, src, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
      ->execute([$code, $name, $sub, $notes, $data, $sig, $fing, (string)$src, $now, $now]);

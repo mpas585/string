@@ -138,10 +138,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       </button>
     </div>
 
-    <!-- ===== 言語（いちばん下）=====
+    <!-- ===== 言語 =====
          行数のある項目は行にして、押したらサブメニューへ差し替える（表示・音量と同じ作法）。
-         右端の値は src/drawer.js の syncSettingsUI() が書き換える -->
-    <hr class="sep">
+         右端の値は src/drawer.js の syncSettingsUI() が書き換える。
+         「ホーム画面に追加」とのあいだの区切り線は置かない（続きの行として詰める） -->
     <button class="gp-row" data-gpopen="lang">
       <span><?php e('ui.lang_label') ?></span><span class="v" id="langRowV"></span><span class="cv">›</span>
     </button>

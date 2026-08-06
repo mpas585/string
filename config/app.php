@@ -22,7 +22,7 @@ return [
   'name'               => 'GEN strings',
 
   'langs'              => ['ja', 'en', 'es', 'zh'],
-  'instruments'        => ['cello', 'violin', 'viola', 'contrabass'],
+  'instruments'        => ['violin', 'viola', 'cello', 'contrabass'],
   /* 一覧に無い値が来たときの既定。ルートの / からの転送先もこの組み合わせ */
   'default_lang'       => 'ja',
   'default_instrument' => 'cello',

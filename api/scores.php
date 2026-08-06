@@ -81,7 +81,7 @@ try {
 
     case 'save': {
       $r = score_save($name, $notes, $data, $sig, $fing, $id, $sub, $src, $inst);
-      if (!$r['ok']) err($r['error'], SCORE_MAX_ITEMS);
+      if (!$r['ok']) err($r['error'], score_max_items($me));
       out(['ok' => true, 'id' => $r['id'], 'mode' => $r['mode']]);
     }
 

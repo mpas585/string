@@ -766,22 +766,22 @@
 
   /* ---- 入口：いちばん使う「曲を練習する」だけ目立たせる ----
      付くのは .pk-card.pk-main（includes/views/app.php）。
-     地の色（金）と別系統のオレンジで塗るだけ。min-height は触らない
+     「分かった！」（button.primary）と同じ金で塗るだけ。立体の影は付けない。min-height は触らない
      （横画面のレイアウトが別途 min-height を決めているため）。 */
   .pk-main{
-    border-color:#f0913f;
-    background:linear-gradient(135deg,#f0842f,#d2611c 72%);
-    color:#fff;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.24), 0 5px 0 #8f3f0f;
-  }
-  .pk-main .pk-b{font-size:18px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.28)}
-  .pk-main .pk-b small{color:rgba(255,255,255,.86)}
-  .pk-main .pk-ic{
-    background:rgba(255,255,255,.20);
-    border-color:rgba(255,255,255,.34);
+    border-color:var(--accent);
+    background:var(--accent);
+    color:#241a08;
     box-shadow:none;
   }
-  .pk-main:active{transform:translateY(3px); box-shadow:inset 0 1px 0 rgba(255,255,255,.24), 0 2px 0 #8f3f0f}
+  .pk-main .pk-b{font-size:18px; color:#241a08; text-shadow:none}
+  .pk-main .pk-b small{color:rgba(36,26,8,.72)}
+  .pk-main .pk-ic{
+    background:rgba(36,26,8,.10);
+    border-color:rgba(36,26,8,.22);
+    box-shadow:none;
+  }
+  .pk-main:active{transform:translateY(1px); box-shadow:none}
     box-shadow:0 1px 0 rgba(0,0,0,.35), 0 0 26px rgba(231,178,75,.24)}
   .pk-ic{
     background:linear-gradient(180deg,#3a2f1d,#241d14);
@@ -1086,8 +1086,9 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .accwho.on{color:var(--accent)}
 
-  /* dkmodal は本来ドック用に左下固定。アカウントとお問い合わせは画面中央に置く（#mInst と同じ扱い） */
-  #mAcc, #mAccAsk, #mContact, #mPractice{
+  /* dkmodal は本来ドック用に左下固定。アカウントとお問い合わせ、
+     採点ゲームの説明（#mGameIntro）は画面中央に置く（#mInst と同じ扱い） */
+  #mAcc, #mAccAsk, #mContact, #mPractice, #mGameIntro{
     left:50%; right:auto; top:50%; bottom:auto;
     transform:translate(-50%,-50%);
     width:min(340px, calc(100vw - 40px));
@@ -1430,8 +1431,8 @@
      （▶ は #fab の文字そのものなので、color と text-shadow だけを動かせば字だけが光る）。 */
   @keyframes fabled{
     0%,100%{color:#241a08; text-shadow:0 1px 0 rgba(255,255,255,.4)}
-    45%    {color:#38b6ff;
-            text-shadow:0 0 8px rgba(120,205,255,.95), 0 0 18px rgba(56,182,255,.80), 0 0 28px rgba(56,182,255,.50)}
+    45%    {color:#ff9a38;
+            text-shadow:0 0 8px rgba(255,190,120,.95), 0 0 18px rgba(255,154,56,.80), 0 0 28px rgba(255,154,56,.50)}
   }
 
   @keyframes fabattn{

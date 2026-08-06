@@ -32,7 +32,7 @@
 import { ST } from './state.js';
 import { tt, midiName, INSTRUMENT_ID } from './util.js';
 import { toast, openDockModal, closeDockModal } from './dom.js';
-import { isSignedIn, getCsrf, setSaveWatcher } from './account.js';
+import { isSignedIn, isAdminUser, getCsrf, setSaveWatcher } from './account.js';
 import { setScore } from './modes.js';
 import { setTempo, stopPlay } from './audio/scheduler.js';
 import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher, setScoreSub } from './drawer.js';
@@ -43,6 +43,10 @@ const API  = new URL('../api/scores.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
 
 export const MAX_ITEMS = 3;        /* サーバ側 SCORE_MAX_ITEMS と合わせる */
+export const MAX_ITEMS_ADMIN = 999; /* サーバ側 SCORE_MAX_ITEMS_ADMIN と合わせる（管理者だけ） */
+/* いまログインしている人が持てる件数。判定はサーバ側（includes/scores.php の score_max_items）が本体で、
+   ここは案内の数字を合わせるためだけに見ている */
+function maxItems() { return isAdminUser() ? MAX_ITEMS_ADMIN : MAX_ITEMS; }
 const MAX_BYTES = 512000;           /* サーバ側 SCORE_MAX_BYTES と合わせる */
 
 let items    = [];                  /* [{id, name, sub, notes, sig, updated_at}] */
@@ -122,7 +126,7 @@ export function renderUploads() {
 
   if (!isSignedIn()) {
     box.innerHTML = '<div class="upempty">' + esc(tt('ui.uploads_need_save')) + '</div>';
-    if (note) note.textContent = tt('ui.uploads_note', MAX_ITEMS);
+    if (note) note.textContent = tt('ui.uploads_note', maxItems());
     return;
   }
   if (!items.length) {
@@ -149,7 +153,7 @@ export function renderUploads() {
         + '</div>';
     }).join('');
   }
-  if (note) note.textContent = tt('ui.uploads_count', items.length, MAX_ITEMS);
+  if (note) note.textContent = tt('ui.uploads_count', items.length, maxItems());
 }
 
 export async function refreshUploads() {
@@ -242,7 +246,7 @@ async function sendUpload(p, quiet) {
     if (p.src != null) body.src = p.src;
     const r = await call('save', body);
     if (!r || !r.ok) {
-      if (r && r.error === 'limit') toast(tt('msg.up_full', MAX_ITEMS));
+      if (r && r.error === 'limit') toast(tt('msg.up_full', maxItems()));
       else if (r && r.message)      toast(tt('msg.up_err', r.message));
       return;
     }

@@ -227,6 +227,7 @@ on('viewSeg','click', e=>{
   if(ST.view==='staff'){
     if(!ST.landscape){ ST.landAuto=true; setLandscape(true); toast(tt('msg.staff_landscape')); }
   } else {
+    applyZoom();                                                 /* 指板に戻した直後の枠サイズに合わせて掛け直す */
     if(ST.landAuto){ ST.landAuto=false; setLandscape(false); }   /* 自動でONにした分だけ戻す */
   }
 });
