@@ -1,0 +1,108 @@
+{
+  "id": "pd_da2017_37_recitative_dido_thy_hand_belin",
+  "title": {
+    "ja": "ディドとエネアス「あなたの手を、ベリンダ」",
+    "en": "Dido and Aeneas – Thy hand, Belinda",
+    "es": "Dido y Eneas – Tu mano, Belinda",
+    "zh": "狄多与埃涅阿斯《你的手，贝琳达》"
+  },
+  "desc": {
+    "ja": "ト短調・4/4拍子（9小節）",
+    "en": "G minor, 4/4 (9 bars)",
+    "es": "Sol menor, 4/4 (9 compases)",
+    "zh": "g小调・4/4拍（9小节）"
+  },
+  "key": "Gm",
+  "tempo": 53,
+  "beatsPerMeasure": 4,
+  "chords": [
+    "Cm",
+    "Cm",
+    "F",
+    "Gm",
+    "Gm",
+    "Gm",
+    "Cm",
+    "Dm",
+    "Dm"
+  ],
+  "notes": [
+    [
+      48,
+      8.0
+    ],
+    [
+      41,
+      4.0
+    ],
+    [
+      43,
+      2.0
+    ],
+    [
+      44,
+      2.0
+    ],
+    [
+      43,
+      2.0
+    ],
+    [
+      43,
+      2.0
+    ],
+    [
+      43,
+      2.0
+    ],
+    [
+      43,
+      2.0
+    ],
+    [
+      48,
+      4.0
+    ],
+    [
+      50,
+      2.0
+    ],
+    [
+      51,
+      2.0
+    ],
+    [
+      50,
+      4.0
+    ]
+  ],
+  "composer": "Henry Purcell",
+  "range": {
+    "min": 41,
+    "max": 51
+  },
+  "baseInstrument": "cello",
+  "playable": {
+    "violin": [
+      19,
+      31,
+      43
+    ],
+    "viola": [
+      12,
+      24,
+      36
+    ],
+    "cello": [
+      0,
+      12,
+      24
+    ],
+    "contrabass": [
+      0,
+      -12,
+      12
+    ]
+  },
+  "playableNote": "contrabass は4度調弦のため運指は原曲と一致しません"
+}

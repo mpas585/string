@@ -1,0 +1,122 @@
+{
+  "id": "pd_da2017_10_recitative_aeneas_if_not_for_m",
+  "title": {
+    "ja": "ディドとエネアス レチタティーヴォ（エネアス）",
+    "en": "Dido and Aeneas – Recitative (Aeneas)",
+    "es": "Dido y Eneas – Recitativo (Eneas)",
+    "zh": "狄多与埃涅阿斯 宣叙调（埃涅阿斯）"
+  },
+  "desc": {
+    "ja": "ト長調・4/4拍子（7小節）",
+    "en": "G major, 4/4 (7 bars)",
+    "es": "Sol mayor, 4/4 (7 compases)",
+    "zh": "G大调・4/4拍（7小节）"
+  },
+  "key": "G",
+  "tempo": 70,
+  "beatsPerMeasure": 4,
+  "chords": [
+    "C",
+    "C",
+    "Am",
+    "Am",
+    "C",
+    "C",
+    "G"
+  ],
+  "notes": [
+    [
+      52,
+      2.0
+    ],
+    [
+      48,
+      4.0
+    ],
+    [
+      47,
+      4.0
+    ],
+    [
+      45,
+      2.0
+    ],
+    [
+      57,
+      1.5
+    ],
+    [
+      55,
+      0.5
+    ],
+    [
+      53,
+      1.0
+    ],
+    [
+      55,
+      1.0
+    ],
+    [
+      52,
+      1.0
+    ],
+    [
+      48,
+      1.0
+    ],
+    [
+      50,
+      1.0
+    ],
+    [
+      47,
+      0.5
+    ],
+    [
+      43,
+      0.5
+    ],
+    [
+      48,
+      2.0
+    ],
+    [
+      50,
+      1.0
+    ],
+    [
+      38,
+      1.0
+    ],
+    [
+      43,
+      2.0
+    ]
+  ],
+  "composer": "Henry Purcell",
+  "range": {
+    "min": 38,
+    "max": 57
+  },
+  "baseInstrument": "cello",
+  "playable": {
+    "violin": [
+      19,
+      31
+    ],
+    "viola": [
+      12,
+      24
+    ],
+    "cello": [
+      0,
+      12,
+      24
+    ],
+    "contrabass": [
+      0
+    ]
+  },
+  "playableNote": "contrabass は4度調弦のため運指は原曲と一致しません"
+}
