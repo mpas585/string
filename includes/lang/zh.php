@@ -144,6 +144,8 @@ return [
     /* 收藏（src/favorites.js）：指板左上角的爱心与曲目列表的筛选 */
     'fav_only'       => '收藏',
     'fav_add'        => '加入收藏',
+    'share_btn_private' => '未公开',
+    'share_btn_public'  => '公开中',
     'fav_del'        => '取消收藏',
     'fav_none'       => '还没有收藏的曲目。打开乐曲后，按指板左上角的爱心即可加入',
     'level'          => '难度',
@@ -220,6 +222,7 @@ return [
     'fing_export'    => '导出',
     'fing_import'    => '导入',
     'fing_reset'     => '重置',
+    'fing_reset_all' => '全部重置',
     'fing_note'      => '修改后的指法会自动保存',
 
     'scale_gen'      => '生成音阶',
@@ -271,6 +274,9 @@ return [
     'fing_imported'        => '已载入指法',
     'load_failed'          => '无法载入：%s',
     'fing_reset_done'      => '已重置指法',
+    'fing_reset_one'       => '仅重置此音',
+    'fing_reset_one_done'  => '已重置此音的指法',
+    'fing_reset_all_confirm' => '将把所有音符的指法恢复为推荐设置，确定吗？',
     'zoom_fit'             => '全览显示（%s%）',
     'str_finger'           => '%s弦%s指',
     'str_open'             => '%s弦 空弦',

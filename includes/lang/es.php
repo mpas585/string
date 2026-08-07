@@ -147,6 +147,8 @@ return [
     /* Favoritos (src/favorites.js): el corazón del diapasón y el filtro de la lista */
     'fav_only'       => 'Favoritos',
     'fav_add'        => 'Añadir a favoritos',
+    'share_btn_private' => 'Privado',
+    'share_btn_public'  => 'Público',
     'fav_del'        => 'Quitar de favoritos',
     'fav_none'       => 'Aún no hay favoritos. Abre una pieza y pulsa el corazón de la esquina superior izquierda del diapasón',
     'level'          => 'Dificultad',
@@ -223,6 +225,7 @@ return [
     'fing_export'    => 'Exportar',
     'fing_import'    => 'Importar',
     'fing_reset'     => 'Restablecer',
+    'fing_reset_all' => 'Restablecer todo',
     'fing_note'      => 'La digitación editada se guarda automáticamente',
 
     'scale_gen'      => 'Generar escala',
@@ -274,6 +277,9 @@ return [
     'fing_imported'        => 'Digitación importada',
     'load_failed'          => 'No se puede cargar: %s',
     'fing_reset_done'      => 'Digitación restablecida',
+    'fing_reset_one'       => 'Restablecer solo esta nota',
+    'fing_reset_one_done'  => 'Digitación de esta nota restablecida',
+    'fing_reset_all_confirm' => 'Se restablecerá la digitación de todas las notas al valor recomendado. ¿Continuar?',
     'zoom_fit'             => 'Ajustado a la pantalla (%s%)',
     'str_finger'           => 'cuerda %s, dedo %s',
     'str_open'             => 'cuerda %s, al aire',

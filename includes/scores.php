@@ -129,12 +129,23 @@ function score_open(): array {
   return ['ok' => true, 'db' => $db, 'code' => (string)$u['data_key'], 'user' => $u];
 }
 
-/* 一覧（新しいものから）。data は返さない＝一覧の通信を軽くする */
+/* 一覧（新しいものから）。data は返さない＝一覧の通信を軽くする。
+   shares（includes/shares.php）を sig で突き合わせ、公開中かどうかと公開ぶんの id を添える
+   （指運ビューの公開/非公開ボタンで使う。フロントは score.js の renderUploads() が読む）。 */
 function score_list(): array {
   $g = score_open();
   if (!$g['ok']) return $g;
 
-  $st = $g['db']->prepare("SELECT id, name, sub, notes, sig, updated_at, (src <> '') AS hassrc FROM scores WHERE code = ? ORDER BY id DESC");
+  if (function_exists('share_table')) share_table($g['db']);
+
+  $st = $g['db']->prepare(
+    "SELECT s.id, s.name, s.sub, s.notes, s.sig, s.updated_at, (s.src <> '') AS hassrc,
+            sh.id AS share_id
+       FROM scores s
+       LEFT JOIN shares sh ON sh.owner = s.code AND sh.sig = s.sig AND sh.sig <> '' AND sh.status = 'public'
+      WHERE s.code = ?
+      ORDER BY s.id DESC"
+  );
   $st->execute([$g['code']]);
   $rows = [];
   foreach ($st->fetchAll() as $r) {
@@ -147,6 +158,9 @@ function score_list(): array {
       'sig'        => (string)$r['sig'],
       /* 元のMIDIを持っている＝一覧から「トラック」を選び直せる */
       'hassrc'     => ((int)$r['hassrc'] === 1),
+      /* 公開中かどうか。公開ぶんの shares.id は unshare の呼び出しに使う */
+      'shared'     => ($r['share_id'] !== null),
+      'share_id'   => ($r['share_id'] !== null) ? (int)$r['share_id'] : 0,
       'updated_at' => (int)$r['updated_at'],
     ];
   }

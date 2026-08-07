@@ -27,7 +27,7 @@ import { ST } from './state.js';
 import { tt } from './util.js';
 import { toast, openDockModal, closeDockModal, setFabLed } from './dom.js';
 import { isSignedIn, isAdminUser, getCsrf, setSaveWatcher } from './account.js';
-import { unpackScore } from './uploads.js';
+import { unpackScore, refreshUploads } from './uploads.js';
 import { setScore, syncDock } from './modes.js';
 import { setTempo, stopPlay } from './audio/scheduler.js';
 import { closeDrawer } from './drawer.js';
@@ -155,6 +155,7 @@ export async function doShare() {
     shareId = 0;
     closeDockModal();
     await refreshShares();
+    await refreshUploads();   /* 指板の「非公開/公開中」を今の状態に合わせる */
     toast(r.message || '');
   } catch (e) {
     setMsg(tt('acc.err.offline'), true);
@@ -172,6 +173,7 @@ export async function unshareSong(id) {
     const r = await post('unshare', { id: id });
     if (!r || !r.ok) { toast(tt('share.err', (r && r.message) || '')); return; }
     await refreshShares();
+    await refreshUploads();   /* 指板の「非公開/公開中」を今の状態に合わせる */
     toast(r.message || '');
   } catch (e) {
     toast(tt('share.err', e.message));

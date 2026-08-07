@@ -8,10 +8,10 @@
 import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
 import { applyZoom, centerBoardH, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
-import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop } from './modes.js';
+import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop, resetSelectedFingering } from './modes.js';
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
-import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub } from './drawer.js';
+import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub, resetFingering } from './drawer.js';
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
          renderSongList, setFavFilter, favFilterOn } from './songs.js';
 /* お気に入り（指板の左上のハート／曲一覧の絞り込み） */
@@ -25,7 +25,7 @@ import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, s
          doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin, askLogin, askSkip,
          setSaveApply, armSave, setSaveWatcher } from './account.js';
 import { openContact, sendContact, syncKind } from './contact.js';
-import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename } from './uploads.js';
+import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename, curUploadItem, syncShareDeleteBtns } from './uploads.js';
 /* みんなの曲（利用者が共有した楽譜）。一覧に混ぜて出す／公開する／削除依頼／管理 */
 import { initShares, loadShared, openShare, doShare, unshareSong,
          openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
@@ -150,6 +150,7 @@ on('edit','click', e=>{
   const lead=e.target.closest('.lead-pick'); if(lead){ setLead(+lead.dataset.idx); return; }
   const str=e.target.closest('.str-pick');   if(str){ setStringForSelected(+str.dataset.str); return; }
   const fin=e.target.closest('.fing-pick');  if(fin){ setFinger(fin.dataset.fin); return; }
+  const one=e.target.closest('.reset-one-btn'); if(one){ resetSelectedFingering(); return; }
 });
 /* 指板の候補○タップ（委譲） */
 on('fbsvg','click', e=>{
@@ -218,6 +219,11 @@ function openEditSheet(){
 }
 function closeEditSheet(){ document.getElementById('editSheet').classList.remove('open'); }
 on('editClose','click', closeEditSheet);
+on('editResetAll','click', ()=>{
+  if(!ST.events.length) return;
+  if(!confirm(tt('msg.fing_reset_all_confirm'))) return;
+  resetFingering();
+});
 
 /* ===== 設定（歯車） ===== */
 on('viewSeg','click', e=>{
@@ -353,6 +359,26 @@ on('favBtn','click', ()=>{
   syncFavBtn();
   renderSongList();
   toast(tt(on ? 'msg.fav_on' : 'msg.fav_off'));
+});
+/* 指板の左上・ハートの上の「非公開 / 公開中」。
+   非公開なら共有の確認画面（#mShare）を出し、公開中なら公開をやめる。 */
+on('shareBtn','click', ()=>{
+  const it=curUploadItem();
+  if(!it) return;
+  if(it.shared) unshareSong(it.share_id);
+  else openShare(it.id);
+});
+/* 指板の右上のゴミ箱。いま開いているアップロード済みの譜面を消す
+   （確認は deleteUpload の中で出す）。以前は「譜面を読み込む」の一覧にだけあった。 */
+on('delBtn','click', ()=>{
+  const it=curUploadItem();
+  if(it) deleteUpload(it.id);
+});
+/* 上部バーの曲名。自分がアップロードした譜面のときだけ押せて、その場で名前を変えられる */
+on('scoretitle','click', e=>{
+  const b=e.currentTarget;
+  if(b.disabled || !b.dataset.id) return;
+  openRename(b.dataset.id, b.dataset.name || '');
 });
 /* 曲一覧のページ送り（50件ごと） */
 on('songPager','click', e=>{

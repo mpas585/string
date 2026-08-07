@@ -62,20 +62,26 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <div id="app">
 <div class="topbar">
   <button id="menu" class="iconbtn" aria-label="<?php e('ui.menu') ?>">☰</button>
-  <!-- 上段＝いま開いている譜面の名前（src/modes.js の renderScoreTitle）
-       下段＝押さえる音の情報（renderNow）。曲名が音の情報で消えないよう2段にしている -->
-  <div class="nowwrap">
-    <div id="scoretitle" class="scoretitle"></div>
-    <div id="nowline" class="nowbar"><?php e('ui.nowline') ?></div>
-  </div>
+  <!-- 上部バーはいま開いている譜面の名前だけを出す（src/modes.js の renderScoreTitle）。
+       押さえる音の情報は指板の上に出ているので、ここでは重ねない。
+       自分がアップロードした譜面のときだけ押せるようになり、その場で名前を変えられる
+       （出し入れは src/uploads.js の syncShareDeleteBtns、変更は openRename）。 -->
+  <button id="scoretitle" class="scoretitle" type="button" disabled></button>
   <button id="gear" class="iconbtn" aria-label="<?php e('ui.gear_aria') ?>">⚙</button>
 </div>
 
 <!-- 全画面 指板 -->
 <div class="board-full">
+  <!-- 公開/非公開（左上・ハートの上）。自分がアップロードした譜面を開いているときだけ出る。
+       出し入れと文言の切り替えは src/uploads.js の syncShareDeleteBtns。公開中は青くなる。 -->
+  <button id="shareBtn" class="sharebtn" hidden aria-pressed="false" aria-label="<?php e('ui.share_btn_private') ?>">
+    <span class="sb-ic" aria-hidden="true">🔗</span><span class="sb-t"><?php e('ui.share_btn_private') ?></span>
+  </button>
   <!-- お気に入り。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js の syncFavBtn）。
        .fab と同じく位置は画面に対して固定なので、指板を動かしても左上に残る。 -->
   <button id="favBtn" class="favbtn" hidden aria-pressed="false" aria-label="<?php e('ui.fav_add') ?>">♡</button>
+  <!-- アップロードした譜面の削除（右上）。自分の譜面を開いているときだけ出る -->
+  <button id="delBtn" class="delbtn" hidden aria-label="<?php e('ui.uploads_delete') ?>" title="<?php e('ui.uploads_delete') ?>">🗑</button>
   <div id="fbsvg" class="fbsvg"></div>
   <div id="staffview" class="staffview"></div>
 </div>
@@ -352,7 +358,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <span class="pk-ic">🎼</span><span class="pk-b"><?php e('ui.mode_score') ?><small><?php e('ui.mode_score_s') ?></small></span>
   </button>
   <button class="pk-card" data-mode="game">
-    <span class="pk-ic">🎮</span><span class="pk-b"><?php e('ui.mode_game') ?><small><?php e('ui.mode_game_s') ?></small></span>
+    <span class="pk-ic">🎮</span><span class="pk-b"><span class="pk-b-title"><?php e('ui.mode_game') ?><span class="beta-badge">β</span></span><small><?php e('ui.mode_game_s') ?></small></span>
   </button>
   <button class="pk-card" data-mode="tuner">
     <span class="pk-ic">🎯</span><span class="pk-b"><?php e('ui.mode_tuner') ?><small><?php e('ui.mode_tuner_s') ?></small></span>
@@ -860,7 +866,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <div class="seg" id="modeSeg" role="tablist">
       <button data-mode="score"><?php e('ui.seg_score') ?></button>
-      <button data-mode="game"><?php e('ui.seg_game') ?></button>
+      <button data-mode="game"><?php e('ui.seg_game') ?><span class="beta-badge">β</span></button>
       <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
     </div>
   </div>
@@ -943,10 +949,12 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <div class="sub"><?php e('ui.game_songs_note') ?></div>
     <hr class="sep">
-    <div class="row controls">
+    <div class="sub"><?php e('ui.game_start_note') ?></div>
+    <!-- 課題曲の一覧が長いので、下までスクロールしないと押せなかった。
+         下辺に貼り付けて、曲を選んだらそのまま押せるようにする（.gstart-bar） -->
+    <div class="row controls gstart-bar">
       <button id="gameStart" class="primary" style="flex:1; justify-content:center; min-height:46px"><?php e('ui.game_start') ?></button>
     </div>
-    <div class="sub"><?php e('ui.game_start_note') ?></div>
   </div>
 
   <!-- ========== 共通：推奨ポジション ==========
@@ -1030,6 +1038,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <div id="editSheet" class="sheet edit-sheet">
   <div class="sheet-head">
     <span class="t"><?php e('ui.edit_t') ?></span>
+    <button id="editResetAll" class="iconbtn" aria-label="<?php e('ui.fing_reset_all') ?>" title="<?php e('ui.fing_reset_all') ?>">⟲</button>
     <button id="editClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
   <div id="edit" class="edit">

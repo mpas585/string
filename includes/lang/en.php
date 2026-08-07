@@ -144,6 +144,8 @@ return [
     /* Favourites (src/favorites.js): the heart on the fingerboard and the list filter */
     'fav_only'       => 'Favourites',
     'fav_add'        => 'Add to favourites',
+    'share_btn_private' => 'Private',
+    'share_btn_public'  => 'Public',
     'fav_del'        => 'Remove from favourites',
     'fav_none'       => 'No favourites yet. Open a piece and tap the heart at the top left of the fingerboard',
     'level'          => 'Difficulty',
@@ -220,6 +222,7 @@ return [
     'fing_export'    => 'Export',
     'fing_import'    => 'Import',
     'fing_reset'     => 'Reset',
+    'fing_reset_all' => 'Reset all',
     'fing_note'      => 'Edited fingering is saved automatically',
 
     'scale_gen'      => 'Generate scale',
@@ -271,6 +274,9 @@ return [
     'fing_imported'        => 'Fingering imported',
     'load_failed'          => 'Could not load: %s',
     'fing_reset_done'      => 'Fingering reset',
+    'fing_reset_one'       => 'Reset this note',
+    'fing_reset_one_done'  => 'Fingering reset for this note',
+    'fing_reset_all_confirm' => 'Reset the fingering of every note back to the recommended default. Continue?',
     'zoom_fit'             => 'Fit to screen (%s%)',
     'str_finger'           => '%s string, finger %s',
     'str_open'             => '%s string, open',

@@ -212,6 +212,7 @@ export function renderScoreTitle(){
 }
 export function renderNow(ev){
   const el=document.getElementById('nowline');
+  if(!el) return;                      /* 上部バーは曲名だけにしたので、この行は無いことがある */
   if(!ev || !ev.fing){ el.textContent=''; return; }
   const lead=ev.pitches[ev.leadIdx];
   el.innerHTML = `<b>${lead.name}</b> · ${strFingerText(ev.fing.str, ev.fing.off, ev.fing.finger)} · ${ev.fing.zone}`;
@@ -226,6 +227,7 @@ export function renderEdit(ev){
   ev.pitches.forEach((p,i)=>{
     cur += `<span class="${i===ev.leadIdx?'lead':'oth'}">${p.name}</span>${i<ev.pitches.length-1?' ':''}`;
   });
+  cur += `<button type="button" class="reset-one-btn" data-action="reset-one">${tt('msg.fing_reset_one')}</button>`;
   cur+=`</div>`;
 
   /* リード選択（和音のとき） */
@@ -329,6 +331,17 @@ export function setFinger(fn){
   saveFingering();
   render();
 }
+/* 選択中の1音だけを推奨運指へ戻す（「個別リセット」用。全体リセットは drawer.js の resetFingering） */
+export function resetSelectedFingering(){
+  if(ST.selected==null) return;
+  const ev=ST.events[ST.selected];
+  if(!ev) return;
+  ev.leadIdx=ev.pitches.length-1;
+  ev.fing=recommend(ev.pitches[ev.leadIdx].midi);
+  saveFingering();
+  render();
+  toast(tt('msg.fing_reset_one_done'));
+}
 export function setPref(p){
   ST.pref=p;
   document.querySelectorAll('.pref').forEach(b=>b.classList.toggle('on', b.dataset.pref===p));
@@ -412,6 +425,9 @@ export function setScore(parsed, scoreName, title){
   ST.scoreTitle=title || '';
   renderScoreTitle();
   syncFavBtn();                        /* 曲が変わったので、左上のハートを合わせる */
+  /* 指板の「公開/非公開」と「削除」も曲に合わせて出し入れする。
+     uploads.js は modes.js を読み込んでいるので、直接呼ばず知らせるだけにする（相互参照を作らない）。 */
+  try{ window.dispatchEvent(new CustomEvent('gs:scorechanged')); }catch(e){}
   ST.selected=0; ST.current=null; ST.lastScrollId=null; ST.playhead=0;
   applyOctave();
 

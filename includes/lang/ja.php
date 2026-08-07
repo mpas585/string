@@ -150,6 +150,9 @@ return [
     /* お気に入り（src/favorites.js。指板の左上のハートと曲一覧の絞り込み） */
     'fav_only'       => 'お気に入り',
     'fav_add'        => 'お気に入りに入れる',
+    /* 指板の左上・ハートの上の公開ボタン（src/uploads.js の syncShareDeleteBtns） */
+    'share_btn_private' => '非公開',
+    'share_btn_public'  => '公開中',
     'fav_del'        => 'お気に入りから外す',
     'fav_none'       => 'お気に入りの曲はまだありません。曲を開いて、指板の左上のハートを押すと入ります',
     'level'          => '難易度',
@@ -226,6 +229,7 @@ return [
     'fing_export'    => '書き出し',
     'fing_import'    => '読み込み',
     'fing_reset'     => 'リセット',
+    'fing_reset_all' => '全部リセット',
     'fing_note'      => '編集した運指は自動保存されます',
 
     'scale_gen'      => 'スケールを生成',
@@ -277,6 +281,9 @@ return [
     'fing_imported'        => '運指を読み込みました',
     'load_failed'          => '読み込めません：%s',
     'fing_reset_done'      => '運指をリセットしました',
+    'fing_reset_one'       => 'この音だけリセット',
+    'fing_reset_one_done'  => 'この音の運指をリセットしました',
+    'fing_reset_all_confirm' => 'すべての音の運指を初期状態（おすすめ）に戻します。よろしいですか？',
     'zoom_fit'             => '全体表示（%s%）',
     'str_finger'           => '%s線%s指',
     'str_open'             => '%s線 開放',

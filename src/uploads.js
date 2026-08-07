@@ -33,7 +33,7 @@ import { ST } from './state.js';
 import { tt, midiName, INSTRUMENT_ID } from './util.js';
 import { toast, openDockModal, closeDockModal } from './dom.js';
 import { isSignedIn, isAdminUser, getCsrf, setSaveWatcher } from './account.js';
-import { setScore } from './modes.js';
+import { setScore, renderScoreTitle } from './modes.js';
 import { setTempo, stopPlay } from './audio/scheduler.js';
 import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher, setScoreSub } from './drawer.js';
 import { recommend } from './fingerboard.js';
@@ -49,7 +49,7 @@ export const MAX_ITEMS_ADMIN = 999; /* サーバ側 SCORE_MAX_ITEMS_ADMIN と合
 function maxItems() { return isAdminUser() ? MAX_ITEMS_ADMIN : MAX_ITEMS; }
 const MAX_BYTES = 512000;           /* サーバ側 SCORE_MAX_BYTES と合わせる */
 
-let items    = [];                  /* [{id, name, sub, notes, sig, updated_at}] */
+let items    = [];                  /* [{id, name, sub, notes, sig, hassrc, shared, share_id, updated_at}] */
 /* いま進行中の読み込み操作。MIDI のトラックを選び直したときに、新しい行を作らず
    同じ1件を書き換えるために持つ（beginUpload でファイルごとに引き直す）。 */
 let session  = { name: '', id: 0 };
@@ -139,8 +139,8 @@ export function renderUploads() {
       const trk = it.hassrc
         ? '<button type="button" class="ubtn ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
         : '';
-      /* 操作は行の下段にまとめる（名前・トラック・シェア・削除の4つが並ぶため、
-         細い画面でも譜面の名前を押しつぶさないようにする＝MIDIトラック一覧と同じ作り）。
+      /* 操作は行の下段にまとめる（細い画面でも譜面の名前を押しつぶさないようにする
+         ＝MIDIトラック一覧と同じ作り）。削除は指板の右上へ移したのでここには出さない。
          data-name は、押したときに名前を出し直すために持たせている（配線は main.js）。 */
       return '<div class="uprow' + on + '" data-id="' + it.id + '">'
         + '<span class="un">' + esc(it.name) + '<small>' + esc(sub) + '</small></span>'
@@ -148,7 +148,6 @@ export function renderUploads() {
         +   '<button type="button" class="ubtn ur" data-id="' + it.id + '" data-name="' + esc(it.name) + '">' + esc(tt('share.rename')) + '</button>'
         +   trk
         +   '<button type="button" class="ubtn us" data-id="' + it.id + '" data-name="' + esc(it.name) + '">' + esc(tt('share.btn')) + '</button>'
-        +   '<button type="button" class="ubtn ud" data-id="' + it.id + '">' + esc(tt('ui.uploads_delete')) + '</button>'
         + '</span>'
         + '</div>';
     }).join('');
@@ -163,6 +162,58 @@ export async function refreshUploads() {
     items = (r && r.ok && Array.isArray(r.items)) ? r.items : [];
   } catch (e) { items = []; }        /* 通信できないときは空のまま。次の機会に取り直す */
   renderUploads();
+  syncShareDeleteBtns();
+}
+
+/* ===== 指運ビューの「公開/非公開」「削除」ボタン（右上・左上）用 =====
+   いま画面に出ている譜面が自分のアップロードのどれかに対応するときだけ、
+   items の中からその1件を返す（対応しなければ null＝ボタンは隠す）。 */
+export function curUploadItem() {
+  if (!curId) return null;
+  /* 別の曲（用意した曲・みんなの曲・読み込んだだけのファイル）に移っていたら対象外。
+     curId は開き直すまで残るので、いま出ている譜面と一致するかを必ず見る。 */
+  if (ST.scoreName !== curScore) return null;
+  return items.find(it => it.id === curId) || null;
+}
+
+/* 指板の左上「公開/非公開」（ハートの上）と右上「削除」ボタン。
+   曲が変わるたび（src/modes.js の setScore）と、一覧を取り直すたびに呼ぶ。 */
+export function syncShareDeleteBtns() {
+  const it = curUploadItem();
+  const sb = document.getElementById('shareBtn');
+  const db = document.getElementById('delBtn');
+  if (sb) {
+    if (!it || !isSignedIn()) {
+      sb.hidden = true;
+    } else {
+      sb.hidden = false;
+      const on = !!it.shared;
+      sb.classList.toggle('on', on);
+      sb.setAttribute('aria-pressed', on ? 'true' : 'false');
+      sb.setAttribute('aria-label', tt(on ? 'ui.share_btn_public' : 'ui.share_btn_private'));
+      const t = sb.querySelector('.sb-t');
+      if (t) t.textContent = tt(on ? 'ui.share_btn_public' : 'ui.share_btn_private');
+    }
+  }
+  if (db) {
+    if (!it || !isSignedIn()) { db.hidden = true; }
+    else { db.hidden = false; db.dataset.id = String(it.id); }
+  }
+  /* 上部バーの曲名。自分の譜面のときだけ押せるようにして、その場で名前を変えられる */
+  const tb = document.getElementById('scoretitle');
+  if (tb) {
+    const own = !!it && isSignedIn();
+    tb.disabled = !own;
+    tb.classList.toggle('editable', own);
+    if (own) {
+      tb.dataset.id = String(it.id);
+      tb.dataset.name = it.name;
+      tb.setAttribute('title', tt('share.m_rename'));
+    } else {
+      delete tb.dataset.id; delete tb.dataset.name;
+      tb.removeAttribute('title');
+    }
+  }
 }
 
 /* ===== 「同じ譜面っぽいもの」を一覧から探す =====
@@ -351,6 +402,8 @@ export async function doRename() {
     /* いま進行中の読み込み操作が同じ1件なら、そちらの名前も合わせておく
        （合わせないと、次にトラックを選び直したときに別の1件として扱われる） */
     if (session.id === renameId) session.name = r.name;
+    /* いま開いている譜面そのものなら、上部バーに出ている名前もその場で書き換える */
+    if (curId === renameId) { ST.scoreTitle = r.name; renderScoreTitle(); }
     renameId = 0;
     closeDockModal();
     await refreshUploads();
@@ -395,5 +448,8 @@ export async function updateUploadFingering() {
 export function initUploads() {
   setSaveWatcher(function () { refreshUploads(); });
   setFingWatcher(function () { updateUploadFingering(); });
+  /* 曲が変わったら指板の「公開/非公開」「削除」を出し直す（知らせは modes.js の setScore から） */
+  window.addEventListener('gs:scorechanged', function () { syncShareDeleteBtns(); });
   renderUploads();
+  syncShareDeleteBtns();
 }

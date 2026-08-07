@@ -36,13 +36,22 @@
   }
   .iconbtn:active{transform:translateY(1px)}
   .iconbtn:disabled{opacity:.32}
-  /* 上部バーの中央は2段。上＝譜面名（#scoretitle）／下＝押さえる音（#nowbar） */
-  .nowwrap{flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1px}
+  /* 上部バーの中央は譜面名だけ（押さえる音は指板の上に出るので、ここでは重ねない）。
+     自分がアップロードした譜面のときだけ押せる状態(.editable)になり、名前を変えられる。 */
   .scoretitle{
-    font-size:11px; line-height:1.25; color:var(--faint);
+    flex:1; min-width:0; display:block; text-align:left;
+    font-size:14px; line-height:1.3; font-weight:700; color:var(--ink);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    background:transparent; border:1px solid transparent; border-radius:8px;
+    padding:6px 8px; min-height:0;
   }
   .scoretitle:empty{display:none}
+  /* 押せないとき（用意した曲・みんなの曲・読み込んだだけのファイル）はただの見出し */
+  .scoretitle:disabled{opacity:1; cursor:default}
+  /* 押せるときは鉛筆を添えて、名前を変えられることが分かるようにする */
+  .scoretitle.editable{border-color:var(--line); background:var(--panel2); cursor:pointer}
+  .scoretitle.editable::after{content:'✎'; margin-left:6px; font-size:12px; color:var(--muted)}
+  .scoretitle.editable:active{transform:translateY(1px)}
   .nowbar{flex:1; min-width:0; font-family:var(--mono); font-size:13px; color:var(--muted);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .nowwrap .nowbar{flex:0 1 auto; line-height:1.3}
@@ -334,7 +343,7 @@
      ・.favfilter … 「曲を選ぶ」の右端。押すとお気に入りだけに絞る */
   .favbtn{
     position:fixed; z-index:5; left:calc(12px + env(safe-area-inset-left));
-    top:calc(62px + env(safe-area-inset-top));
+    top:calc(110px + env(safe-area-inset-top));
     width:40px; height:40px; min-height:0; padding:0; border-radius:50%;
     display:inline-flex; align-items:center; justify-content:center;
     font-size:19px; line-height:1;
@@ -344,6 +353,38 @@
   .favbtn[hidden]{display:none}
   .favbtn.on{color:#e2607a; border-color:#7a3345; background:#2a171c}
   .favbtn:active{transform:translateY(1px)}
+
+  /* ---- 公開/非公開（指板の左上・ハートの上）----
+     アイコンだけでは「共有する」のか「共有済み」なのか分からないので文言も添える。
+     公開中（.on）は青くして、ひと目で今の状態が分かるようにする。 */
+  .sharebtn{
+    position:fixed; z-index:5; left:calc(12px + env(safe-area-inset-left));
+    top:calc(62px + env(safe-area-inset-top));
+    min-height:0; padding:0 10px; height:40px; border-radius:20px;
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    font-size:11px; font-weight:700; line-height:1; white-space:nowrap;
+    background:var(--panel2); border:1px solid var(--line); color:var(--muted);
+    box-shadow:0 3px 10px rgba(0,0,0,.42); cursor:pointer;
+  }
+  .sharebtn[hidden]{display:none}
+  .sharebtn .sb-ic{font-size:14px}
+  /* 公開中。青（--info が無い環境でも効くよう実色で指定する） */
+  .sharebtn.on{color:#6fb4f0; border-color:#2f5f8c; background:#132436}
+  .sharebtn:active{transform:translateY(1px)}
+
+  /* ---- アップロードした譜面の削除（指板の右上）----
+     以前ここにあったシェアは左上へ移した。押すと確認してから消す（src/uploads.js の deleteUpload）。 */
+  .delbtn{
+    position:fixed; z-index:5; right:calc(12px + env(safe-area-inset-right));
+    top:calc(62px + env(safe-area-inset-top));
+    width:40px; height:40px; min-height:0; padding:0; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:17px; line-height:1;
+    background:var(--panel2); border:1px solid var(--line); color:var(--muted);
+    box-shadow:0 3px 10px rgba(0,0,0,.42); cursor:pointer;
+  }
+  .delbtn[hidden]{display:none}
+  .delbtn:active{transform:translateY(1px); color:var(--danger); border-color:#7a3345}
   .songbtn{position:relative}
   .songbtn.hasfav{padding-right:32px}
   .songbtn .fav{
@@ -391,26 +432,23 @@
     background:#4a3a1c; color:var(--accent); vertical-align:1px;
   }
 
-  /* ---- アップロードした楽譜（保存番号に紐づく。上限99件） ---- */
-  .uplist{display:flex; flex-direction:column; gap:5px; margin-bottom:6px}
+  /* ---- アップロードした楽譜（保存番号に紐づく。上限99件） ----
+     見栄えは「曲を選ぶ」の一覧（.songlist / .songbtn）にそろえてある。
+     同じ「曲を開く」ための一覧なのに、間隔も角の丸みも字の大きさも違っていたため。
+     削除は指板の右上へ移したので、行に並ぶ操作は 名前・トラック・シェア の3つ。 */
+  .uplist{display:flex; flex-direction:column; gap:7px; margin-bottom:8px}
   .uprow{
-    display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer;
-    background:var(--panel2); border:1px solid var(--line); border-radius:9px;
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px; cursor:pointer;
+    min-height:52px; padding:10px 12px; border-radius:11px; line-height:1.3;
+    background:var(--panel2); border:1px solid var(--line);
   }
   .uprow.on{border-color:var(--accent); background:#332813}
-  .uprow .un{flex:1; min-width:0; font-size:13px; display:flex; flex-direction:column; line-height:1.3;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .uprow .un small{font-family:var(--mono); font-size:10px; color:var(--faint)}
-  .uprow .ud, .uprow .ut{
-    flex:0 0 auto; min-height:0; padding:4px 8px; font-size:11px; border-radius:7px;
-    background:transparent; border:1px solid var(--line); color:var(--muted); box-shadow:none;
-  }
-  .uprow .ut{color:var(--accent); border-color:#4a3a1c}
-  .uprow .ud:active, .uprow .ut:active{transform:none; opacity:.6}
+  /* 曲名＝.songbtn と同じ 14px、その下の説明＝同じ 11px の --muted */
+  .uprow .un{flex:1; min-width:0; font-size:14px; display:flex; flex-direction:column; gap:2px;
+    line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .uprow .un small{font-family:var(--jp); font-size:11px; color:var(--muted); font-weight:400}
   .upempty{font-size:11px; color:var(--faint); line-height:1.6; padding:2px 0}
-  /* 操作は行の下段にまとめる（名前・トラック・シェア・削除の4つが並ぶため）。
-     MIDIトラック一覧（.trow .tb）と同じ作りにそろえてある。 */
-  .uprow{flex-wrap:wrap}
+  /* 操作は行の下段にまとめる。MIDIトラック一覧（.trow .tb）と同じ作り */
   .uprow .ub{flex:0 0 100%; display:flex; gap:6px}
   .uprow .ubtn{
     flex:1; justify-content:center; min-height:30px; min-width:0; padding:0 6px;
@@ -420,7 +458,15 @@
   .uprow .ubtn.ut{color:var(--accent); border-color:#4a3a1c}
   .uprow .ubtn:active{transform:none; opacity:.6}
 
-  /* ---- 楽譜を共有する画面（#mShare） ---- */
+  /* ---- 楽譜を共有する画面（#mShare） ----
+     .dkmodal は本来ドック（テンポ/オクターブ/ループ）の吹き出しなので左下寄りに出る。
+     共有モーダルは独立した確認ダイアログなので、画面の上下左右中央に出す。 */
+  #mShare{
+    left:50%; right:auto; top:50%; bottom:auto;
+    transform:translate(-50%, -50%);
+    width:min(340px, calc(100vw - 32px));
+    max-height:calc(100vh - 32px); overflow-y:auto;
+  }
   .shwarn{
     margin:2px 0 10px; padding:9px 11px; border-radius:9px; line-height:1.7; font-size:11px;
     background:#2a1f12; border:1px solid #4a3a1c; color:var(--muted);
@@ -556,6 +602,11 @@
     display:flex; align-items:center; justify-content:center; font-size:22px}
   .pk-b{display:flex; flex-direction:column; gap:3px; font-size:16px; font-weight:700; color:var(--ink); min-width:0}
   .pk-b small{font-size:11px; font-weight:400; color:var(--muted); line-height:1.5; white-space:normal}
+  .pk-b-title{display:flex; align-items:center; gap:6px}
+  .beta-badge{display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;
+    line-height:1; padding:2px 5px; border-radius:6px; background:var(--panel2); border:1px solid var(--accent);
+    color:var(--accent); letter-spacing:.02em; vertical-align:middle}
+  .seg button .beta-badge{margin-left:4px; transform:translateY(-1px)}
   /* ---- 入口：ロゴ ---- */
   /* 横長ロゴ（405x165）なので幅で決める。高さ基準のままだと横幅が画面をはみ出す */
   .pk-logo{font-size:128px; line-height:1; margin:0 auto 2px; width:min(300px, 100%); text-align:center}
@@ -1407,7 +1458,9 @@
 
   /* ======== 設定を変えたら ▶ で反映（スケール練習） ======== */
   /* ドロワー(z-index:41)を開いたまま押せるように、光っている間だけ前面へ出す */
-  .fab.attn{animation:fabattn 1.1s ease-in-out infinite}
+  /* 光り方は「▶ の字がオレンジに光る」(fabled) に統一した。
+     以前の淵が脈打つ演出(fabattn)は、LED点灯と2種類あって意味が読み取りづらかったため。 */
+  .fab.attn:not(:disabled):not(.playing){animation:fabled 1.4s ease-in-out infinite}
 
   /* ======== 「✓ 保存しました」が出たら ▶ を前面へ ========
      設定を変えた＝聴き直したい場面なので、✕ で閉じなくても ▶ を押せるようにする。
@@ -1421,7 +1474,7 @@
      スクリムが上に乗ってタップを吸ってしまう（テンポ・ループ等を変えた直後がこれ）。
      冒頭カウント(70) より下なので、カウントダウン中に前へ出ることはない。 */
   body.save-attn .fab{z-index:62}
-  body.save-attn .fab:not(:disabled):not(.playing){animation:fabattn 1.1s ease-in-out infinite}
+  body.save-attn .fab:not(:disabled):not(.playing){animation:fabled 1.4s ease-in-out infinite}
   /* ======== 曲を読み込んだ直後の ▶：LED風に点灯 ========
      ドロワーが閉じて指板だけが残る場面で、次に押すのが ▶ だと分かるようにする。
      付けるのは src/dom.js の setFabLed()、外すのは clearFabLed()（再生開始時）。
@@ -1435,12 +1488,18 @@
             text-shadow:0 0 8px rgba(255,190,120,.95), 0 0 18px rgba(255,154,56,.80), 0 0 28px rgba(255,154,56,.50)}
   }
 
-  @keyframes fabattn{
-    0%,100%{box-shadow:0 6px 0 #7d5d1c, 0 8px 26px rgba(231,178,75,.45), inset 0 2px 0 rgba(255,255,255,.5)}
-    50%    {box-shadow:0 6px 0 #7d5d1c, 0 0 0 9px rgba(231,178,75,.20), 0 8px 34px rgba(231,178,75,.85), inset 0 2px 0 rgba(255,255,255,.5)}
-  }
-
   /* ======== 採点ゲーム ======== */
+  /* 「録音して採点する」はドロワーの下辺に貼り付ける。
+     課題曲の一覧が長いと画面の外へ出てしまい、曲を選んだあと下までスクロールしないと
+     押せなかったため。ドロワー(.drawer)がスクロールする側なので sticky で足りる。 */
+  .gstart-bar{
+    position:sticky; z-index:2;
+    /* .drawer の下の余白は 24px。そのぶん下げておかないと、貼り付いた位置の下に隙間が残る */
+    bottom:-24px;
+    margin:0 -14px calc(-24px + env(safe-area-inset-bottom));
+    padding:10px 14px calc(24px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg, rgba(31,25,19,0) 0%, var(--panel) 30%, var(--panel) 100%);
+  }
   /* 課題曲の一覧：いま選んでいる曲だけ枠を光らせる（.songbtn をそのまま使う） */
   .songlist .songbtn.on{border-color:var(--accent); color:var(--accent)}
   .songbtn .gbest{font-family:var(--mono); font-size:11px; color:var(--good); margin-left:6px}
