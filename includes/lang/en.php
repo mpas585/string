@@ -88,6 +88,8 @@ return [
     'mode_tuner_s'   => 'Real-time pitch detection',
     'mode_game'      => 'Scoring game',
     'mode_game_s'    => 'Play a piece and get scored',
+    'mode_metro'     => 'Metronome',
+    'mode_metro_s'   => 'Set a tempo and a time signature',
 
     'fab_aria'       => 'Play / Stop',
     'cue_aria'       => 'Back to start',
@@ -124,6 +126,30 @@ return [
     'seg_score'      => '🎼 Pieces',
     'seg_tuner'      => '🎯 Tuner',
     'seg_game'       => '🎮 Score',
+    'seg_metro'      => '⏱ Metronome',
+
+    /* ===== Metronome (src/metronome.js) ===== */
+    'metro_bpm'          => 'BPM',
+    'metro_sig'          => 'Time signature',
+    'metro_beat'         => 'Beat',
+    'metro_drum'         => 'Play as drums',
+    'metro_start'        => 'Start',
+    'metro_stop'         => 'Stop',
+    'metro_tap'          => 'Tap tempo',
+    'metro_tap_note'     => 'Tap four times at the speed you want and the tempo follows',
+    'metro_dn'           => 'Slower',
+    'metro_up'           => 'Faster',
+    'metro_today'        => 'Today',
+    'metro_total'        => 'Total',
+    'metro_note'         => 'Time counts towards your practice record while it is running',
+    'metro_drawer_note'  => 'Tempo, time signature and beat are in the middle of the screen',
+    'metro_beat_names'   => [
+      'eight'   => '8-beat',
+      'sixteen' => '16-beat',
+      'four'    => 'Four on the floor',
+      'shuffle' => 'Shuffle',
+      'waltz'   => 'Waltz',
+    ],
 
     'mic'            => 'Microphone',
     'mic_sw'         => 'Detect pitch with the microphone',
@@ -397,7 +423,7 @@ return [
     'lead'  => 'A web app that puts a %s fingerboard on your phone screen so you can check stopping positions, finger numbers and pitch as you practise. Nothing to install — it runs in the browser.',
     'items' => [
       ['🎼', 'Practise a piece', 'Choose one of the pieces provided, or load MusicXML / MIDI, and you get a score with fingerings. Tap a note to change its fingering.'],
-      ['🎮', 'Scoring game',     'Play along with the metronome and the app listens through your microphone, scores you out of 100 and tells you how your pitch and timing went.'],
+      ['⏱', 'Metronome',        'Set a tempo and a time signature and let it run. You can switch it to a drum pattern, and the time counts towards your practice record.'],
       ['🎵', 'Scale practice',   'Inside piece practice, choose a key and a number of octaves and the scale is laid out on the fingerboard and the stave, with backing and metronome.'],
       ['🎯', 'Tuner',            'Reads the pitch from your microphone and shows where the sounding note sits on the fingerboard.'],
     ],
@@ -408,7 +434,7 @@ return [
       'Scores can be loaded from MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid). For MIDI the closest-sounding track is chosen automatically, and you can switch tracks afterwards.',
       'Fingerings can be changed by tapping a note, and changes are saved automatically. You can also export them and carry them to another device.',
       'Tempo changes, a one-bar count-in and looped playback over a chosen bar range are all supported.',
-      'In the scoring game your playing is picked up by the microphone and scored out of 100, and your best score for each piece is kept.',
+      'The metronome runs at the tempo, time signature and beat you choose. The tempo can be set with the number, the slider, or by tapping at the speed you want.',
       'Pieces you like can be starred with the heart at the top left of the fingerboard, and the list can be filtered down to favourites.',
       'A score you have loaded can be published as one of “Everyone’s pieces”, and pieces published by others appear in the same list. You can withdraw yours at any time.',
       'Practice time is recorded on a calendar, with a monthly total and the number of days practised.',
@@ -420,20 +446,20 @@ return [
     'use_title' => 'How to use it',
     'steps' => [
       'Pick how you want to practise from the buttons above. Once you are signed in, the piece list opens straight away next time.',
-      'For piece practice choose a piece or a score file; for the scoring game choose a set piece. Scale practice lives inside piece practice, where you pick a key and octave count.',
+      'For piece practice choose a piece or a score file. Scale practice lives inside piece practice, where you pick a key and octave count. The metronome just needs a tempo and a time signature.',
       'Press play and the notes sound, with the position of the current note shown on the fingerboard.',
     ],
     'faq_title' => 'Questions',
     'faqs' => [
       ['Do I need to install anything?', 'No. Just open it in a browser. Adding it to your home screen makes it open like an app.'],
-      ['Do I have to sign in?', 'No. The fingerboard, piece practice, the scoring game and the tuner all work without an account. Signing in carries your settings, fingerings, favourites and practice record over to another device.'],
+      ['Do I have to sign in?', 'No. The fingerboard, piece practice, the metronome and the tuner all work without an account. Signing in carries your settings, fingerings, favourites and practice record over to another device.'],
       ['The microphone does not respond', 'Microphone input only works over https:// or on localhost. It will not work if the file was opened directly with file://, or if the browser has not been given permission.'],
       ['Which score files can I use?', 'MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid).'],
       ['Can I change the fingerings myself?', 'Tap a note and the alternatives appear. Your choice is saved automatically, and fingerings can be exported and imported.'],
-      ['Is the scoring game recording kept?', 'No. The microphone signal is used only for scoring and is discarded as soon as the score is calculated.'],
+      ['Can I use just the metronome?', 'Yes. “Metronome” on the opening screen runs on its own without loading a score, and the time still counts towards your practice record.'],
       ['Can I withdraw a piece I published?', 'Yes — use [Stop publishing] on your own piece in the list. Rights holders can request removal from the gear menu under Contact: choose “Takedown request” and send the title and the reason.'],
     ],
-    'note'  => 'Showing the fingerboard, loading scores and editing fingerings all happen on your device. Only when you are signed in are your settings, fingerings, favourites, practice record and published pieces kept on the server. Microphone audio from the scoring game and the tuner never leaves your device.',
+    'note'  => 'Showing the fingerboard, loading scores and editing fingerings all happen on your device. Only when you are signed in are your settings, fingerings, favourites, practice record and published pieces kept on the server. Microphone audio from the tuner never leaves your device.',
   ],
 
   /* ===== Practice troubleshooting guide (entry point for the GEO/SEO articles) =====
@@ -492,7 +518,7 @@ return [
     'prev'      => 'Previous instrument',
     'next'      => 'Next instrument',
     'about_t'   => 'About GEN strings',
-    'about'     => 'Turns your phone screen into a fingerboard so you can check stopping positions, finger numbers and pitch while you practise. It includes piece practice (MusicXML / MIDI), scale practice, a scoring game that listens through the microphone, a tuner and a practice calendar. Sign in and your settings, fingerings, favourites and practice record carry over to another device. No install needed; it runs in the browser.',
+    'about'     => 'Turns your phone screen into a fingerboard so you can check stopping positions, finger numbers and pitch while you practise. It includes piece practice (MusicXML / MIDI), scale practice, a metronome, a tuner and a practice calendar. Sign in and your settings, fingerings, favourites and practice record carry over to another device. No install needed; it runs in the browser.',
   ],
 
   /* ===== Accounts (email + password / Google sign-in).

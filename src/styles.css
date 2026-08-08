@@ -194,9 +194,24 @@
   /* edit panel */
   .edit{margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px}
   .edit h3{margin:0 0 4px; font-size:12px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; font-weight:600}
-  .edit .cur{font-family:var(--mono); font-size:18px; margin-bottom:10px}
+  /* 音名は左、「この音だけリセット」は右端。
+     音名だけを .cur-n でくくってあるので（src/modes.js の renderEdit）、
+     間を空けるだけで音名の並びはそのまま（区切りの空白も潰れない）。 */
+  .edit .cur{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-family:var(--mono); font-size:18px; margin-bottom:10px;
+  }
+  .edit .cur .cur-n{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .edit .cur .lead{color:var(--accent); font-weight:700}
   .edit .cur .oth{color:var(--faint)}
+  /* 押し間違えて運指が消えると困るので、控えめな見た目にして右端へ寄せる */
+  .edit .cur .reset-one-btn{
+    flex:0 0 auto; margin-left:auto;
+    min-height:0; padding:6px 10px; border-radius:8px;
+    font-family:var(--jp); font-size:11px; font-weight:400; line-height:1;
+    background:var(--panel2); border:1px solid var(--line); color:var(--muted); cursor:pointer;
+  }
+  .edit .cur .reset-one-btn:active{transform:translateY(1px); color:var(--accent); border-color:var(--accent-dim)}
   .grp{margin:10px 0}
   .grp .lbl{font-size:12px; color:var(--muted); margin-bottom:5px}
   .chips{display:flex; gap:6px; flex-wrap:wrap}
@@ -366,12 +381,15 @@
   .songbtn:disabled{opacity:.42; text-decoration:none}
 
   /* ---- お気に入り ----
-     ・.favbtn  … 指板の左上。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js）
+     ・.favbtn  … 指板の左上のいちばん上。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js）
+                  ※ 公開/非公開（.sharebtn）とは上下を入れ替えてある。
+                     ハートは曲を開けば必ず出るので、位置が動かない上段に置く。
+                     公開ボタンは自分の譜面のときしか出ないので、その下に足す。
      ・.songbtn .fav … 曲一覧のボタンの右端の印。付いている曲は .hasfav で右に余白を作る
      ・.favfilter … 「曲を選ぶ」の右端。押すとお気に入りだけに絞る */
   .favbtn{
     position:fixed; z-index:5; left:calc(12px + env(safe-area-inset-left));
-    top:calc(110px + env(safe-area-inset-top));
+    top:calc(62px + env(safe-area-inset-top));
     width:40px; height:40px; min-height:0; padding:0; border-radius:50%;
     display:inline-flex; align-items:center; justify-content:center;
     font-size:19px; line-height:1;
@@ -382,12 +400,12 @@
   .favbtn.on{color:#e2607a; border-color:#7a3345; background:#2a171c}
   .favbtn:active{transform:translateY(1px)}
 
-  /* ---- 公開/非公開（指板の左上・ハートの上）----
+  /* ---- 公開/非公開（指板の左上・ハートの下）----
      アイコンだけでは「共有する」のか「共有済み」なのか分からないので文言も添える。
      公開中（.on）は青くして、ひと目で今の状態が分かるようにする。 */
   .sharebtn{
     position:fixed; z-index:5; left:calc(12px + env(safe-area-inset-left));
-    top:calc(62px + env(safe-area-inset-top));
+    top:calc(110px + env(safe-area-inset-top));
     min-height:0; padding:0 10px; height:40px; border-radius:20px;
     display:inline-flex; align-items:center; justify-content:center; gap:6px;
     font-size:11px; font-weight:700; line-height:1; white-space:nowrap;
@@ -597,6 +615,84 @@
 
   /* ---- モード切替 ---- */
   .m-hide{display:none !important}
+
+  /* ===== メトロノーム（src/metronome.js）=====
+     採点ゲームがあった場所。指板ではなく、この画面ひとつで完結する。
+     ・まん中がテンポの数字。＋−・スライダー・タップのどれでも変えられる
+     ・拍のランプは拍子の数だけ作り直す（JS 側で作る）
+     ・ドラムモードのときだけ .mt-beatwrap を見せる */
+  .mtv{
+    position:fixed; left:0; right:0; z-index:4;
+    top:calc(52px + env(safe-area-inset-top)); bottom:0;
+    overflow:auto; -webkit-overflow-scrolling:touch;
+    display:flex; justify-content:center; align-items:flex-start;
+    padding:14px calc(12px + env(safe-area-inset-right))
+            calc(24px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+    background:radial-gradient(120% 60% at 50% 0%, #1c1610 0%, var(--bg) 72%);
+  }
+  .mt-in{width:100%; max-width:420px}
+  .mt-lbl{font-size:11px; letter-spacing:.06em; color:var(--muted); margin:0 0 6px}
+  .mt-chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .mt-chips button{
+    min-height:0; padding:8px 12px; border-radius:9px; font-size:13px; font-family:var(--mono);
+    background:var(--panel2); border:1px solid var(--line); color:var(--muted); cursor:pointer;
+  }
+  .mt-chips button.on{background:#332813; border-color:var(--accent-dim); color:var(--accent); font-weight:700}
+  .mt-chips button:active{transform:translateY(1px)}
+
+  /* 拍のランプ。1拍目だけ大きく光らせて、頭がどこか分かるようにする */
+  .mt-lamps{display:flex; justify-content:center; align-items:center; gap:9px; margin:4px 0 10px; min-height:16px}
+  .mt-lamp{
+    width:12px; height:12px; border-radius:50%;
+    background:var(--panel2); border:1px solid var(--line);
+  }
+  .mt-lamp.hit{background:var(--accent-dim); border-color:var(--accent-dim)}
+  .mt-lamp.acc{width:16px; height:16px}
+  .mt-lamp.acc.hit{background:var(--accent); border-color:var(--accent); box-shadow:0 0 12px var(--accent-dim)}
+
+  /* ど真ん中のテンポ */
+  .mt-dial{display:flex; align-items:center; justify-content:center; gap:16px; margin:2px 0 6px}
+  .mt-step{
+    flex:0 0 auto; width:54px; height:54px; min-height:0; padding:0; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center; font-size:24px; line-height:1;
+    background:var(--panel2); border:1px solid var(--line); color:var(--accent); cursor:pointer;
+  }
+  .mt-step:active{background:var(--accent); color:#241a08; border-color:var(--accent)}
+  .mt-bpm{display:flex; flex-direction:column; align-items:center; min-width:140px}
+  .mt-bpm b{
+    font-family:var(--mono); font-size:58px; line-height:1; font-weight:800;
+    color:var(--accent); font-variant-numeric:tabular-nums;
+  }
+  .mt-bpm span{font-size:10px; letter-spacing:.14em; color:var(--muted); margin-top:3px}
+  .mt-range{width:100%; margin:4px 0 14px; accent-color:var(--accent)}
+
+  .mt-row{display:flex; gap:10px; align-items:stretch}
+  .mt-tap{flex:1; justify-content:center; min-height:54px}
+  .mt-play{
+    flex:0 0 96px; justify-content:center; min-height:54px; font-size:20px; font-weight:800;
+  }
+  .mt-play .p-stop{display:none}
+  .mt-play.on{background:var(--danger); color:#fff; border-color:var(--danger)}
+  .mt-play.on .p-play{display:none}
+  .mt-play.on .p-stop{display:inline}
+  .mt-sub{font-size:11px; color:var(--faint); margin:8px 0 0; text-align:center; line-height:1.6}
+
+  /* ドラムモードを切ったらビートの札は畳む（選べない札を残さない） */
+  .mt-beatwrap{margin-top:4px}
+  .mt-beatwrap.off{display:none}
+
+  .mt-time{display:flex; gap:10px; margin-top:14px}
+  .mt-time > div{
+    flex:1; background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:9px 11px; text-align:center;
+  }
+  .mt-time span{display:block; font-size:10px; color:var(--muted); margin-bottom:3px}
+  .mt-time b{font-family:var(--mono); font-size:16px; color:var(--ink)}
+
+  /* 横画面のときは上下の余白を詰めて、数字とボタンが1画面に収まるようにする */
+  body.landscape-layout .mtv{padding-top:8px}
+  body.landscape-layout .mt-bpm b{font-size:42px}
+  body.landscape-layout .mt-step{width:46px; height:46px; font-size:21px}
   .seg{display:flex; gap:4px; margin-bottom:12px; background:var(--panel2);
     border:1px solid var(--line); border-radius:10px; padding:3px}
   .seg button{
@@ -1400,7 +1496,16 @@
     background:transparent; border:none;
     display:flex; align-items:flex-end; justify-content:center;
   }
-  .hm-stage.on .hm-card .ic img{width:100%; height:100%; object-fit:contain; display:block}
+  /* 中の画像にも掛けておく。-webkit-user-drag は継承しないので、
+     .hm-card に付けただけでは <img> のネイティブなドラッグが残り、
+     マウスで押したまま動かしても pointermove がそちらへ取られて回らなくなる。 */
+  .hm-stage.on .hm-card .ic img{
+    width:100%; height:100%; object-fit:contain; display:block;
+    -webkit-user-drag:none; user-select:none; -webkit-user-select:none; pointer-events:none;
+  }
+  /* 掴んでいる間のカーソル。マウスでも回せることが見て分かるようにする */
+  .hm-stage.on{cursor:grab}
+  .hm-stage.on.grabbing{cursor:grabbing}
   .hm-stage.on .hm-card .b{flex:0 0 auto; align-items:center; font-size:14px}
   .hm-stage.on .hm-card .b small{font-size:10px}
   .hm-stage.on .hm-card .cv{display:none}

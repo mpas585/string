@@ -1,0 +1,1762 @@
+--- a/sw.js
++++ b/sw.js
+@@ -12,7 +12,7 @@
+   更新するとき: 下の VER を上げる。古いキャッシュは activate で消える。
+   ルート直下に置くこと（スコープが / になる）。
+ */
+-const VER   = 'gs-v16';
++const VER   = 'gs-v17';
+ const CORE  = 'core-' + VER;    /* 先読みする最小限 */
+ const ASSET = 'asset-' + VER;   /* src/ public/ の実行時キャッシュ */
+ const PAGE  = 'page-' + VER;    /* HTML の控え */
+--- a/src/drawer.js
++++ b/src/drawer.js
+@@ -50,6 +50,8 @@
+     volProfiles:ST.volProfiles, volBump:VOL_BUMP, countIn:ST.countIn, countBeats:ST.countBeats, keepAwake:ST.keepAwake,
+     lite:ST.lite,
+     tempo:ST.tempo, enjoy:ST.enjoy, loop:ST.loop, lang:ST.lang,
++    metro:ST.metro,
++
+     keyRoot:ST.keyRoot, scaleType:ST.scaleType, scaleOct:ST.scaleOct
+   }));
+   settingsChanged();          /* 保存番号があればサーバへも上書き。無ければ作成を尋ねる */
+@@ -65,6 +67,14 @@
+     if(typeof j.zoom==='number') ST.zoom=j.zoom;
+     if(j.octave!=null) ST.octave=j.octave;
+     if(j.pref) ST.pref=j.pref;
++    /* メトロノーム。知っているキーだけを拾う（古い保存や壊れた値で画面が崩れないように） */
++    if(j.metro && typeof j.metro==='object'){
++      const m=j.metro;
++      if(typeof m.bpm==='number' && m.bpm>=30 && m.bpm<=260) ST.metro.bpm=Math.round(m.bpm);
++      if(typeof m.sig==='string' && /^\d+\/\d+$/.test(m.sig)) ST.metro.sig=m.sig;
++      if(typeof m.drum==='boolean') ST.metro.drum=m.drum;
++      if(typeof m.beat==='string') ST.metro.beat=m.beat;
++    }
+     if(j.volProfiles){
+       if(j.volProfiles.scale) Object.assign(ST.volProfiles.scale, j.volProfiles.scale);
+       if(j.volProfiles.score) Object.assign(ST.volProfiles.score, j.volProfiles.score);
+--- a/src/home-gallery.js
++++ b/src/home-gallery.js
+@@ -57,6 +57,15 @@
+   addEventListener('resize', () => layout(false));
+ 
+   /* ---- 指・マウス ---- */
++  /* 札は <a> と <img> でできているので、マウスで押したまま動かすと
++     ブラウザがリンク／画像のドラッグを始めてしまい、pointermove がそちらへ取られて回らない。
++     ドラッグそのものを断って、指のときと同じ経路（pointer events）だけを通す。 */
++  stage.addEventListener('dragstart', e => e.preventDefault());
++  cards.forEach(c => {
++    c.setAttribute('draggable', 'false');
++    c.querySelectorAll('img').forEach(im => im.setAttribute('draggable', 'false'));
++  });
++
+   stage.addEventListener('pointerdown', e => {
+     if (e.button != null && e.button !== 0) return;
+     dragging = true; moved = 0; lastDX = 0;
+@@ -76,7 +85,10 @@
+     moved  = Math.max(moved, Math.abs(dx));
+     /* 8px を越えて はじめて「回している」とみなし、そこで初めて捕まえる。
+        ただ押しただけのときは捕まえないので、click がそのまま <a> に届く（PCのクリック対策）。 */
+-    if (!wasDrag && moved > 8) { try { stage.setPointerCapture(e.pointerId); } catch (err) {} }
++    if (!wasDrag && moved > 8) {
++      try { stage.setPointerCapture(e.pointerId); } catch (err) {}
++      stage.classList.add('grabbing');       /* マウスのときだけ見た目が変わる */
++    }
+     /* 指の動きに追いてまわす */
+     cur = startCur - dx / stepPx();      /* 一周するので、どこまで回しても止めない */
+     layout(false);
+@@ -86,6 +98,7 @@
+   const endDrag = () => {
+     if (!dragging) return;
+     dragging = false;
++    stage.classList.remove('grabbing');
+     /* 勢いよく払ったときはひとつ先まで送る */
+     const flick = Math.abs(lastDX) > 6 ? -Math.sign(lastDX) : 0;
+     go(Math.round(cur) + flick);
+--- a/src/main.js
++++ b/src/main.js
+@@ -30,6 +30,8 @@
+ import { initShares, loadShared, openShare, doShare, unshareSong,
+          openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
+ import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
++/* メトロノーム（採点ゲームがあった場所）。画面ごと src/metronome.js が受け持つ */
++import { initMetro, stopMetro } from './metronome.js';
+ import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
+ 
+ /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
+@@ -422,22 +424,31 @@
+ document.querySelectorAll('[data-dkclose]').forEach(b=> b.addEventListener('click', closeDockModal));
+ 
+ /* ===== 採点ゲーム =====
+-   課題曲を選ぶ → 開始カウント → メトロノームを聞きながら演奏 → 採点（src/game.js） */
+-on('gameSongs','click', e=>{
+-  const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;
+-  const id=b.dataset.game;
+-  if(!id){ toast(tt('msg.soon')); return; }
+-  pickGameSong(id);
+-});
+-on('gameStart','click', startGame);
+-on('gameAbort','click', ()=> abortGame());
+-on('gresRetry','click', retryGame);
+-/* 録音の準備：入力レベルを見てから始める。やめる／✕ ではマイクも閉じる */
+-on('gckGo','click', beginRun);
+-on('gckCancel','click', cancelGameCheck);
+-on('gckClose','click', cancelGameCheck);
+-/* スクリムで閉じたときもマイクを閉じる（closeDockModal の配線はそのまま残す） */
+-on('dockScrim','click', cancelGameCheck);
++   課題曲を選ぶ → 開始カウント → メトロノームを聞きながら演奏 → 採点（src/game.js）
++   config/app.php の 'game_enabled' が false のあいだは HTML ごと出していないので、
++   要素があるときだけ配線する（無いまま on() を呼ぶとコンソールに警告が出るため）。 */
++if(document.getElementById('gameSongs')){
++  on('gameSongs','click', e=>{
++    const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;
++    const id=b.dataset.game;
++    if(!id){ toast(tt('msg.soon')); return; }
++    pickGameSong(id);
++  });
++  on('gameStart','click', startGame);
++  on('gameAbort','click', ()=> abortGame());
++  on('gresRetry','click', retryGame);
++  /* 録音の準備：入力レベルを見てから始める。やめる／✕ ではマイクも閉じる */
++  on('gckGo','click', beginRun);
++  on('gckCancel','click', cancelGameCheck);
++  on('gckClose','click', cancelGameCheck);
++  /* スクリムで閉じたときもマイクを閉じる（closeDockModal の配線はそのまま残す） */
++  on('dockScrim','click', cancelGameCheck);
++}
++
++/* ===== メトロノーム =====
++   つまみを動かしたら設定として保存する。metronome.js から drawer.js を直接呼ぶと
++   読み込みの輪ができるので、知らせ（CustomEvent）を受けてここで保存する。 */
++window.addEventListener('gs:metrochanged', ()=> saveSettings());
+ 
+ /* ===== ゲーム / チューナー ===== */
+ on('micSw','click', async ()=>{
+@@ -613,9 +624,13 @@
+   });
+   /* ログイン状態は描画に関係しないので、初期描画の後で取りに行く */
+   initAccount();
+-  /* 練習時間の計測。ST.playing を1秒ごとに見るだけなので、他の処理には触らない */
++  /* 練習時間の計測。ST.playing / ST.metroOn を1秒ごとに見るだけなので、他の処理には触らない */
+   initPractice();
+   initPracticeUI();
++  /* メトロノーム。札の組み立てとボタンの配線（設定を読んだあとに呼ぶ） */
++  initMetro();
+ })();
++/* ページを離れるときはメトロノームを止める（練習時間が増えたままにならないように） */
++window.addEventListener('pagehide', ()=> stopMetro());
+ window.addEventListener('orientationchange', ()=> setTimeout(applyZoom, 250));
+ window.addEventListener('resize', centerBoardH);          /* はみ出しぶんは常に中央に置く */
+--- a/src/metronome.js
++++ b/src/metronome.js
+@@ -0,0 +1,355 @@
++/*
++  metronome.js — メトロノーム（採点ゲームがあった場所）。
++
++  画面（#metroView / includes/views/app.php）ひとつで完結する。指板は使わない。
++    ・まん中の大きい数字がテンポ。＋−・スライダー・タップのどれでも変えられる
++    ・拍子を選ぶと、拍のランプの数と、頭（1拍目）のアクセントが変わる
++    ・ドラムモードに切り替えると、クリックの代わりにドラムのパターンで鳴る
++      （ドラムモードのときだけビートを選べる）
++    ・鳴らしているあいだは練習した時間に加わる（ST.metroOn を src/practice.js が見ている）
++
++  拍の数え方は「1クリック＝1拍、間隔は 60/BPM 秒」で通してある。
++  6/8 のような譜面の拍子でも、鳴る速さは画面の数字そのままになる（表示と音が食い違わない）。
++  拍子の分母は、アクセントの付け方（3つごとに軽い頭を作るか）にだけ使う。
++
++  音は他と同じ src/audio/synth.js を鳴らしているので、歯車の音量（メトロノーム／ドラム）が
++  そのまま効く。音量プロファイルはスケール練習と同じものを使う（state.js の volProfileKey）。
++*/
++
++import { ST } from './state.js';
++import { tt } from './util.js';
++import { audio, makeBuses, NOISEBUF } from './audio/context.js';
++import { metroClick, drKick, drSnare, drHat } from './audio/synth.js';
++import { acquireWake, releaseWake } from './audio/scheduler.js';
++import { load as loadPractice, totalSec, daySec, dayKey, fmt } from './practice.js';
++
++/* 選べる拍子。数字は「1小節あたりの拍数 / 拍の音符」 */
++const SIGS = ['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '9/8', '12/8'];
++/* 選べるビート（ドラムモード）。並び順はそのまま画面の並び順 */
++const BEATS = ['eight', 'sixteen', 'four', 'shuffle', 'waltz'];
++
++const BPM_MIN = 30, BPM_MAX = 260;
++
++/* 先読み。scheduler.js ほど長く取らなくても、クリックは1音ずつなので詰まらない */
++const LOOK = 0.20;    /* 秒：この先まで予約しておく */
++const TICK = 25;      /* ms：予約を足しに行く間隔 */
++
++/* 動いているあいだだけ持つもの */
++let pumpTimer = 0;    /* 予約を足すタイマー */
++let timeTimer = 0;    /* 練習時間の表示を更新するタイマー */
++let raf = 0;          /* ランプの点灯 */
++let nextT = 0;        /* 次に鳴らす時刻（AudioContext の時計） */
++let idx = 0;          /* 通し拍数。小節内の位置は idx % beats() */
++let lamps = [];       /* [{i, t}] 鳴る予定。時刻が来たら光らせて捨てる */
++let taps = [];        /* タップでテンポを決めるときの、たたいた時刻 */
++
++const $ = (id) => document.getElementById(id);
++
++/* ===== 今の設定（ST.metro に置いてある＝設定と一緒に保存・引き継ぎされる） ===== */
++function M() {
++  if (!ST.metro) ST.metro = { bpm: 80, sig: '4/4', drum: false, beat: 'eight' };
++  return ST.metro;
++}
++function beatsOf(sig) { return Math.max(1, parseInt(String(sig).split('/')[0], 10) || 4); }
++function unitOf(sig)  { return parseInt(String(sig).split('/')[1], 10) || 4; }
++function beats() { return beatsOf(M().sig); }
++/* 6/8・9/8・12/8 は3つずつのまとまりとして数えるので、頭以外にも軽いアクセントを置く */
++function isCompound() { const m = M(); return unitOf(m.sig) === 8 && beatsOf(m.sig) % 3 === 0; }
++function accentAt(i) {
++  if (i === 0) return 'strong';
++  if (isCompound() && i % 3 === 0) return 'weak';
++  return '';
++}
++
++/* ===== 鳴らす ===== */
++/* 1拍ぶん。ドラムモードのときは、その拍に置くドラムをまとめて予約する。
++   t は AudioContext の時計での時刻（すでに先読みして決めてある）。 */
++function fire(i, t) {
++  const ctx = ST.ctx, B = ST.buses;
++  if (!ctx || !B) return;
++  const m = M();
++  const spb = 60 / bpm();
++
++  if (!m.drum) {
++    /* 鳴らすのは1拍につき1回だけ。6/8 のような「3つずつのまとまり」の頭は、
++       同じ音を重ねて鳴らすと音量だけ跳ね上がって耳につくので、
++       音は普通のクリックのままにして、大きいランプ（.mt-lamp.acc）で示す。 */
++    metroClick(ctx, B.metro, t, accentAt(i) === 'strong');
++    return;
++  }
++
++  const n = beats();
++  const last = (i === n - 1);
++  const D = B.drum;
++  switch (m.beat) {
++    case 'sixteen':
++      /* 16ビート。ハットを16分で刻む。裏拍の細かさで速さが分かりやすい */
++      if (i % 2 === 0) drKick(ctx, D, t); else drSnare(ctx, D, t);
++      for (let k = 0; k < 4; k++) drHat(ctx, D, t + spb * 0.25 * k, last && k === 3);
++      break;
++    case 'four':
++      /* 4つ打ち。すべての拍にキック、裏にハット */
++      drKick(ctx, D, t);
++      if (i % 2 === 1) drSnare(ctx, D, t);
++      drHat(ctx, D, t + spb * 0.5, last);
++      break;
++    case 'shuffle':
++      /* シャッフル。ハットの裏を後ろへ寄せて跳ねさせる（3連の3つめ） */
++      if (i % 2 === 0) drKick(ctx, D, t); else drSnare(ctx, D, t);
++      drHat(ctx, D, t, false);
++      drHat(ctx, D, t + spb * (2 / 3), last);
++      break;
++    case 'waltz':
++      /* ワルツ。頭がキック、あとはスネア。拍ごとにハット */
++      if (i === 0) drKick(ctx, D, t); else drSnare(ctx, D, t);
++      drHat(ctx, D, t, last);
++      break;
++    default:
++      /* 8ビート */
++      if (i % 2 === 0) drKick(ctx, D, t); else drSnare(ctx, D, t);
++      drHat(ctx, D, t, false);
++      drHat(ctx, D, t + spb * 0.5, last);
++      break;
++  }
++}
++
++/* 先読みして予約を足す。テンポは毎回読み直すので、鳴らしたまま変えても次の拍から効く */
++function pump() {
++  const ctx = ST.ctx;
++  if (!ctx || !ST.buses) { stopMetro(); return; }
++  const until = ctx.currentTime + LOOK;
++  let guard = 0;
++  while (nextT < until && guard++ < 64) {
++    const i = idx % beats();
++    fire(i, nextT);
++    lamps.push({ i: i, t: nextT, n: beats() });
++    nextT += 60 / bpm();
++    idx++;
++  }
++}
++
++/* ランプ。予約した時刻を過ぎたものから点ける（音と目で見えるものをそろえる） */
++function tickLamps() {
++  raf = 0;
++  const ctx = ST.ctx;
++  if (!ST.metroOn || !ctx) return;
++  const now = ctx.currentTime;
++  let cur = -1, n = 0;
++  while (lamps.length && lamps[0].t <= now) { cur = lamps[0].i; n = lamps[0].n; lamps.shift(); }
++  if (cur >= 0) paintLamps(cur, n);
++  raf = requestAnimationFrame(tickLamps);
++}
++
++/* ===== 画面 ===== */
++function bpm() {
++  const v = Math.round(M().bpm || 80);
++  return Math.min(BPM_MAX, Math.max(BPM_MIN, v));
++}
++
++export function setBpm(v, quiet) {
++  const m = M();
++  m.bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(v || 0)));
++  const b = $('mtBpm'), r = $('mtRange');
++  if (b) b.textContent = String(m.bpm);
++  if (r && String(r.value) !== String(m.bpm)) r.value = String(m.bpm);
++  if (!quiet) saveLater();
++}
++
++/* 拍のランプを作り直す（拍子を変えたときと、起動時） */
++function buildLamps() {
++  const box = $('mtLamps');
++  if (!box) return;
++  const n = beats();
++  let html = '';
++  for (let i = 0; i < n; i++) {
++    const a = accentAt(i) ? ' acc' : '';
++    html += `<span class="mt-lamp${a}"></span>`;
++  }
++  box.innerHTML = html;
++}
++function paintLamps(cur, n) {
++  const box = $('mtLamps');
++  if (!box) return;
++  const els = box.children;
++  if (els.length !== n) { buildLamps(); return; }
++  for (let i = 0; i < els.length; i++) els[i].classList.toggle('hit', i === cur);
++}
++function clearLamps() {
++  const box = $('mtLamps');
++  if (!box) return;
++  Array.from(box.children).forEach(e => e.classList.remove('hit'));
++}
++
++function buildChips() {
++  const sig = $('mtSig');
++  if (sig) {
++    sig.innerHTML = SIGS.map(s => `<button type="button" data-sig="${s}">${s}</button>`).join('');
++  }
++  const bt = $('mtBeat');
++  if (bt) {
++    bt.innerHTML = BEATS.map(k =>
++      `<button type="button" data-beat="${k}">${tt('ui.metro_beat_names.' + k)}</button>`).join('');
++  }
++  syncChips();
++}
++function syncChips() {
++  const m = M();
++  document.querySelectorAll('#mtSig button').forEach(b => b.classList.toggle('on', b.dataset.sig === m.sig));
++  document.querySelectorAll('#mtBeat button').forEach(b => b.classList.toggle('on', b.dataset.beat === m.beat));
++  const sw = $('mtDrumSw');
++  if (sw) { sw.classList.toggle('on', !!m.drum); sw.setAttribute('aria-checked', m.drum ? 'true' : 'false'); }
++  const wrap = $('mtBeatWrap');
++  if (wrap) wrap.classList.toggle('off', !m.drum);
++}
++
++/* 練習時間の表示。鳴らしているあいだは1秒ごとに追いかける */
++export function refreshMetroTime() {
++  const a = $('mtToday'), b = $('mtTotal');
++  if (!a && !b) return;
++  const d = loadPractice();
++  if (a) a.textContent = fmt(daySec(dayKey(), d));
++  if (b) b.textContent = fmt(totalSec(d));
++}
++
++/* 設定の保存。つまみを動かすたびに書くと重いので、少し待ってからまとめて1回だけ書く */
++let saveTimer = 0;
++function saveLater() {
++  clearTimeout(saveTimer);
++  saveTimer = setTimeout(() => {
++    /* drawer.js を直接呼ぶと読み込みの輪ができるので、知らせだけ投げる
++       （受け取って saveSettings() を呼ぶのは src/main.js） */
++    try { window.dispatchEvent(new CustomEvent('gs:metrochanged')); } catch (e) {}
++  }, 600);
++}
++
++/* ===== 開始・停止 ===== */
++export function startMetro() {
++  if (ST.metroOn) return;
++  const ctx = audio();
++  ST.ctx = ctx;
++  ST.noise = NOISEBUF;               /* スネア・ハットはこのノイズを使う */
++  ST.buses = makeBuses(ctx);
++  ST.master = ST.buses.master;
++  ST.metroOn = true;
++
++  idx = 0; lamps = [];
++  nextT = ctx.currentTime + 0.12;    /* 少し先から。押した瞬間に鳴らすと頭が欠ける */
++  pump();
++  pumpTimer = setInterval(pump, TICK);
++  if (!raf) raf = requestAnimationFrame(tickLamps);
++  timeTimer = setInterval(refreshMetroTime, 1000);
++  acquireWake();
++  syncPlayBtn();
++}
++
++export function stopMetro() {
++  if (!ST.metroOn) { syncPlayBtn(); return; }
++  ST.metroOn = false;
++  if (pumpTimer) { clearInterval(pumpTimer); pumpTimer = 0; }
++  if (timeTimer) { clearInterval(timeTimer); timeTimer = 0; }
++  if (raf) { cancelAnimationFrame(raf); raf = 0; }
++  lamps = [];
++  clearLamps();
++
++  /* 音を切る。ぶつ切りにすると「プツッ」と鳴るので、少し落としてから外す
++     （やり方は scheduler.js の stopPlay と同じ） */
++  if (ST.buses && ST.ctx) {
++    const t = ST.ctx.currentTime, m = ST.buses.master, B = ST.buses;
++    try {
++      m.gain.cancelScheduledValues(t);
++      m.gain.setValueAtTime(m.gain.value, t);
++      m.gain.linearRampToValueAtTime(0.0001, t + 0.05);
++    } catch (e) {}
++    setTimeout(() => { try { m.disconnect(); if (B.conv) B.conv.disconnect(); if (B.limiter) B.limiter.disconnect(); } catch (e) {} }, 250);
++  }
++  ST.buses = null; ST.master = null;
++  releaseWake();
++  refreshMetroTime();
++  syncPlayBtn();
++}
++
++export function toggleMetro() { if (ST.metroOn) stopMetro(); else startMetro(); }
++
++function syncPlayBtn() {
++  const b = $('mtPlay');
++  if (!b) return;
++  b.classList.toggle('on', !!ST.metroOn);
++  b.setAttribute('aria-label', tt(ST.metroOn ? 'ui.metro_stop' : 'ui.metro_start'));
++}
++
++/* モードに入ったとき／出るときに main.js・modes.js から呼ぶ */
++export function enterMetro() {
++  syncChips();
++  buildLamps();
++  setBpm(M().bpm, true);
++  refreshMetroTime();
++  syncPlayBtn();
++}
++
++/* ===== タップでテンポ ===== */
++const TAP_GAP = 2500;   /* これだけ間が空いたら数え直し（ms） */
++function tap() {
++  const now = (window.performance && performance.now) ? performance.now() : Date.now();
++  if (taps.length && (now - taps[taps.length - 1]) > TAP_GAP) taps = [];
++  taps.push(now);
++  if (taps.length > 6) taps.shift();
++  if (taps.length < 2) return;
++  const span = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
++  if (span <= 0) return;
++  const v = Math.round(60000 / span);
++  if (v >= BPM_MIN && v <= BPM_MAX) setBpm(v);
++}
++
++/* ===== 起動時の配線 ===== */
++export function initMetro() {
++  if (!$('metroView')) return;      /* メトロノームを出していない画面（採点だけ等）では何もしない */
++  buildChips();
++  buildLamps();
++  setBpm(M().bpm, true);
++  refreshMetroTime();
++  syncPlayBtn();
++
++  const sig = $('mtSig');
++  if (sig) sig.addEventListener('click', e => {
++    const b = e.target.closest('button[data-sig]');
++    if (!b) return;
++    M().sig = b.dataset.sig;
++    idx = 0;                        /* 拍子を変えたら小節の頭から数え直す */
++    syncChips(); buildLamps(); saveLater();
++  });
++
++  const bt = $('mtBeat');
++  if (bt) bt.addEventListener('click', e => {
++    const b = e.target.closest('button[data-beat]');
++    if (!b) return;
++    M().beat = b.dataset.beat;
++    syncChips(); saveLater();
++  });
++
++  const sw = $('mtDrumSw');
++  if (sw) {
++    const flip = () => { M().drum = !M().drum; syncChips(); saveLater(); };
++    sw.addEventListener('click', flip);
++    sw.addEventListener('keydown', e => {
++      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
++    });
++  }
++
++  const dn = $('mtDown'), up = $('mtUp');
++  if (dn) dn.addEventListener('click', () => setBpm(bpm() - 1));
++  if (up) up.addEventListener('click', () => setBpm(bpm() + 1));
++
++  const r = $('mtRange');
++  if (r) r.addEventListener('input', () => setBpm(parseInt(r.value, 10)));
++
++  const tp = $('mtTap');
++  if (tp) tp.addEventListener('click', tap);
++
++  const pl = $('mtPlay');
++  if (pl) pl.addEventListener('click', toggleMetro);
++
++  /* 画面を離れたら止める（裏で鳴り続けて、練習時間だけ増えるのを防ぐ） */
++  document.addEventListener('visibilitychange', () => {
++    if (document.hidden && ST.metroOn) stopMetro();
++  });
++}
+--- a/src/modes.js
++++ b/src/modes.js
+@@ -25,6 +25,8 @@
+ import { loadSample, renderTracks, midiFile, setMidiFile } from './songs.js';
+ /* 採点ゲーム。モードの出入りで課題曲一覧を作り直し、録音中に抜けたら止める */
+ import { abortGame, renderGameSongs, syncStartBtn, maybeShowGameIntro } from './game.js';
++/* メトロノーム。モードを離れるときは必ず止める（裏で鳴り続けないように） */
++import { enterMetro, stopMetro } from './metronome.js';
+ /* お気に入り（指板の左上のハート）。曲が変わるたびに出し入れする */
+ import { syncFavBtn } from './favorites.js';
+ 
+@@ -42,6 +44,16 @@
+     return;
+   }
+   picker.style.display='none';
++
++  /* メトロノーム → 指板も譜面も使わない。#metroView が画面をまるごと受け持つ
++     （出し入れは applyMode の data-m）。ここでは下の「譜面がありません」を出さないようにする */
++  if(ST.mode==='metro'){
++    emptyEl.style.display='none';
++    renderBoard(null);
++    setNowLine(tt('ui.mode_metro_s'));
++    renderLegend(); updateTransport(); updateChrome();
++    return;
++  }
+ 
+   /* チューナーモード → 譜面なしで指板＋検出表示 */
+   if(ST.mode==='tuner'){
+@@ -75,7 +87,7 @@
+ }
+ export function renderLegend(){
+   const lg=document.getElementById('legend');
+-  if(!ST.mode || ST.mode==='tuner' || !ST.events.length){ lg.style.display='none'; return; }
++  if(!ST.mode || ST.mode==='tuner' || ST.mode==='metro' || !ST.events.length){ lg.style.display='none'; return; }
+   lg.style.display='flex';
+   const chordItem = (ST.mode==='score') ? `<span><i class="dot chord"></i>${tt('msg.lg_chord')}</span>` : '';
+   lg.innerHTML = '<span><i class="dot lead"></i>' + (ST.mode==='score' ? tt('msg.lg_lead') : tt('msg.lg_press')) + '</span>'
+@@ -96,6 +108,9 @@
+ export function setMode(mode, keepDrawer){
+   warmAudio();
+   if(ST.mode===mode) return;
++  /* メトロノームは stopPlay より先に止める。stopPlay が音のバスを外してしまうと、
++     鳴っていないのに ST.metroOn だけ立ったままになり、練習時間が増え続けるため。 */
++  stopMetro();
+   stopPlay();
+ 
+   /* チューナーモードを離れる → マイクとシートを必ず閉じる */
+@@ -107,6 +122,11 @@
+   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
+   ST.lastScrollId=null; ST.scoreName=''; ST.scoreTitle='';
+   renderScoreTitle();
++  /* 譜面を手放したので、指板の左上のハートと、公開/非公開・削除も引っ込める。
++     メトロノームは画面をまるごと覆うので、ここに古いボタンが浮いたままだと押せてしまう。
++     公開/非公開・削除の出し入れは uploads.js が この知らせを受けて行う。 */
++  syncFavBtn();
++  try{ window.dispatchEvent(new CustomEvent('gs:scorechanged')); }catch(e){}
+   setMidiFile(null); renderTracks();
+   applyMode();
+   ST.vol = ST.volProfiles[volProfileKey()];      /* モード別の音量プロファイル */
+@@ -135,6 +155,14 @@
+     render();
+     toast(tt('msg.hint_game'));
+     maybeShowGameIntro();                   /* 初めて開いたときだけ説明を出す */
++
++  } else if(mode==='metro'){
++    /* メトロノームは譜面を持たない。伴奏も使わないので必ずOFFに戻す */
++    ST.enjoy=false;
++    document.getElementById('enjoySw').classList.remove('on');
++    if(!keepDrawer) closeDrawer();       /* 操作は画面のまん中にあるのでドロワーは閉じる */
++    render();
++    enterMetro();
+ 
+   } else if(mode==='tuner'){
+     ST.enjoy=false;
+@@ -240,10 +268,13 @@
+   if(!ev){ el.innerHTML=tt('msg.edit_empty_html'); return; }
+   const lead=ev.pitches[ev.leadIdx];
+ 
+-  let cur=`<div class="cur">`;
++  /* 音名は .cur-n でひとまとめにする。こうしておくと .cur を flex にしたときに
++     音名の並び（和音のときの空白区切り）を崩さずに、ボタンだけ右端へ寄せられる。 */
++  let cur=`<div class="cur"><span class="cur-n">`;
+   ev.pitches.forEach((p,i)=>{
+     cur += `<span class="${i===ev.leadIdx?'lead':'oth'}">${p.name}</span>${i<ev.pitches.length-1?' ':''}`;
+   });
++  cur += `</span>`;
+   cur += `<button type="button" class="reset-one-btn" data-action="reset-one">${tt('msg.fing_reset_one')}</button>`;
+   cur+=`</div>`;
+ 
+--- a/src/practice.js
++++ b/src/practice.js
+@@ -2,7 +2,7 @@
+   practice.js — 練習した時間を数えて、日ごとに残す。
+ 
+   数え方は「実際に鳴っていた時間」。
+-    ・再生中だけ増える。止めているあいだ・一時停止中は増えない
++    ・再生中（またはメトロノームを鳴らしているあいだ）だけ増える。止めているあいだは増えない
+     ・同じ小節を繰り返し練習すれば、その回数ぶん増える
+     ・巻き戻しても減らない（かけた時間そのものを数えるため）
+ 
+@@ -103,7 +103,9 @@
+   const now = Date.now();
+   const gap = now - last;
+   last = now;
+-  if (!ST.playing) return;
++  /* 譜面の再生（ST.playing）と、メトロノーム（ST.metroOn）のどちらでも数える。
++     メトロノームは譜面を読み込まずに使えるので、ST.playing だけ見ていると数え落とす。 */
++  if (!ST.playing && !ST.metroOn) return;
+   if (gap <= 0 || gap > MAXGAP) return;   /* 端末が眠っていた・タブが止まっていた */
+ 
+   const d = load();
+--- a/src/state.js
++++ b/src/state.js
+@@ -15,11 +15,12 @@
+   score: {master:0.80, lead:0.90, drum:0.65, bass:0.65, chord:0.60, metro:0.55}
+ };
+ export const VOL_KEYS=['master','lead','drum','bass','chord','metro'];
+-export function volProfileKey(){ return (ST.mode==='scale') ? 'scale' : 'score'; }
++/* メトロノームはスケール練習と同じ配分（クリックが大きくメロディが小さい）を使う */
++export function volProfileKey(){ return (ST.mode==='scale' || ST.mode==='metro') ? 'scale' : 'score'; }
+ 
+ /* ===== 状態 ===== */
+ export const ST = {
+-  mode: null,            // null | 'score' | 'game' | 'tuner'
++  mode: null,            // null | 'score' | 'game' | 'metro' | 'tuner'
+   events: [],
+   measures: [],          // [{num, start, end}] 単位=4分音符
+   beatsPerMeasure: 4,    // 4分音符=1 換算の1小節の長さ（MusicXML も beats*(4/beat-type) で正規化）
+@@ -45,6 +46,10 @@
+   keyRoot: 0,
+   scaleType: 'pop',
+   scaleOct: 2,
++  /* メトロノーム（src/metronome.js）。設定と一緒に保存される（drawer.js の saveSettings） */
++  metro: {bpm:80, sig:'4/4', drum:false, beat:'eight'},
++  /* 鳴らしているあいだ true。練習時間に足すかどうかの判断に使う（src/practice.js） */
++  metroOn: false,
+   /* チューナーモード */
+   tunerMidi: null,
+   tunerCents: 0,
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -194,9 +194,24 @@
+   /* edit panel */
+   .edit{margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px}
+   .edit h3{margin:0 0 4px; font-size:12px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; font-weight:600}
+-  .edit .cur{font-family:var(--mono); font-size:18px; margin-bottom:10px}
++  /* 音名は左、「この音だけリセット」は右端。
++     音名だけを .cur-n でくくってあるので（src/modes.js の renderEdit）、
++     間を空けるだけで音名の並びはそのまま（区切りの空白も潰れない）。 */
++  .edit .cur{
++    display:flex; align-items:center; justify-content:space-between; gap:10px;
++    font-family:var(--mono); font-size:18px; margin-bottom:10px;
++  }
++  .edit .cur .cur-n{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+   .edit .cur .lead{color:var(--accent); font-weight:700}
+   .edit .cur .oth{color:var(--faint)}
++  /* 押し間違えて運指が消えると困るので、控えめな見た目にして右端へ寄せる */
++  .edit .cur .reset-one-btn{
++    flex:0 0 auto; margin-left:auto;
++    min-height:0; padding:6px 10px; border-radius:8px;
++    font-family:var(--jp); font-size:11px; font-weight:400; line-height:1;
++    background:var(--panel2); border:1px solid var(--line); color:var(--muted); cursor:pointer;
++  }
++  .edit .cur .reset-one-btn:active{transform:translateY(1px); color:var(--accent); border-color:var(--accent-dim)}
+   .grp{margin:10px 0}
+   .grp .lbl{font-size:12px; color:var(--muted); margin-bottom:5px}
+   .chips{display:flex; gap:6px; flex-wrap:wrap}
+@@ -366,12 +381,15 @@
+   .songbtn:disabled{opacity:.42; text-decoration:none}
+ 
+   /* ---- お気に入り ----
+-     ・.favbtn  … 指板の左上。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js）
++     ・.favbtn  … 指板の左上のいちばん上。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js）
++                  ※ 公開/非公開（.sharebtn）とは上下を入れ替えてある。
++                     ハートは曲を開けば必ず出るので、位置が動かない上段に置く。
++                     公開ボタンは自分の譜面のときしか出ないので、その下に足す。
+      ・.songbtn .fav … 曲一覧のボタンの右端の印。付いている曲は .hasfav で右に余白を作る
+      ・.favfilter … 「曲を選ぶ」の右端。押すとお気に入りだけに絞る */
+   .favbtn{
+     position:fixed; z-index:5; left:calc(12px + env(safe-area-inset-left));
+-    top:calc(110px + env(safe-area-inset-top));
++    top:calc(62px + env(safe-area-inset-top));
+     width:40px; height:40px; min-height:0; padding:0; border-radius:50%;
+     display:inline-flex; align-items:center; justify-content:center;
+     font-size:19px; line-height:1;
+@@ -382,12 +400,12 @@
+   .favbtn.on{color:#e2607a; border-color:#7a3345; background:#2a171c}
+   .favbtn:active{transform:translateY(1px)}
+ 
+-  /* ---- 公開/非公開（指板の左上・ハートの上）----
++  /* ---- 公開/非公開（指板の左上・ハートの下）----
+      アイコンだけでは「共有する」のか「共有済み」なのか分からないので文言も添える。
+      公開中（.on）は青くして、ひと目で今の状態が分かるようにする。 */
+   .sharebtn{
+     position:fixed; z-index:5; left:calc(12px + env(safe-area-inset-left));
+-    top:calc(62px + env(safe-area-inset-top));
++    top:calc(110px + env(safe-area-inset-top));
+     min-height:0; padding:0 10px; height:40px; border-radius:20px;
+     display:inline-flex; align-items:center; justify-content:center; gap:6px;
+     font-size:11px; font-weight:700; line-height:1; white-space:nowrap;
+@@ -597,6 +615,84 @@
+ 
+   /* ---- モード切替 ---- */
+   .m-hide{display:none !important}
++
++  /* ===== メトロノーム（src/metronome.js）=====
++     採点ゲームがあった場所。指板ではなく、この画面ひとつで完結する。
++     ・まん中がテンポの数字。＋−・スライダー・タップのどれでも変えられる
++     ・拍のランプは拍子の数だけ作り直す（JS 側で作る）
++     ・ドラムモードのときだけ .mt-beatwrap を見せる */
++  .mtv{
++    position:fixed; left:0; right:0; z-index:4;
++    top:calc(52px + env(safe-area-inset-top)); bottom:0;
++    overflow:auto; -webkit-overflow-scrolling:touch;
++    display:flex; justify-content:center; align-items:flex-start;
++    padding:14px calc(12px + env(safe-area-inset-right))
++            calc(24px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
++    background:radial-gradient(120% 60% at 50% 0%, #1c1610 0%, var(--bg) 72%);
++  }
++  .mt-in{width:100%; max-width:420px}
++  .mt-lbl{font-size:11px; letter-spacing:.06em; color:var(--muted); margin:0 0 6px}
++  .mt-chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
++  .mt-chips button{
++    min-height:0; padding:8px 12px; border-radius:9px; font-size:13px; font-family:var(--mono);
++    background:var(--panel2); border:1px solid var(--line); color:var(--muted); cursor:pointer;
++  }
++  .mt-chips button.on{background:#332813; border-color:var(--accent-dim); color:var(--accent); font-weight:700}
++  .mt-chips button:active{transform:translateY(1px)}
++
++  /* 拍のランプ。1拍目だけ大きく光らせて、頭がどこか分かるようにする */
++  .mt-lamps{display:flex; justify-content:center; align-items:center; gap:9px; margin:4px 0 10px; min-height:16px}
++  .mt-lamp{
++    width:12px; height:12px; border-radius:50%;
++    background:var(--panel2); border:1px solid var(--line);
++  }
++  .mt-lamp.hit{background:var(--accent-dim); border-color:var(--accent-dim)}
++  .mt-lamp.acc{width:16px; height:16px}
++  .mt-lamp.acc.hit{background:var(--accent); border-color:var(--accent); box-shadow:0 0 12px var(--accent-dim)}
++
++  /* ど真ん中のテンポ */
++  .mt-dial{display:flex; align-items:center; justify-content:center; gap:16px; margin:2px 0 6px}
++  .mt-step{
++    flex:0 0 auto; width:54px; height:54px; min-height:0; padding:0; border-radius:50%;
++    display:inline-flex; align-items:center; justify-content:center; font-size:24px; line-height:1;
++    background:var(--panel2); border:1px solid var(--line); color:var(--accent); cursor:pointer;
++  }
++  .mt-step:active{background:var(--accent); color:#241a08; border-color:var(--accent)}
++  .mt-bpm{display:flex; flex-direction:column; align-items:center; min-width:140px}
++  .mt-bpm b{
++    font-family:var(--mono); font-size:58px; line-height:1; font-weight:800;
++    color:var(--accent); font-variant-numeric:tabular-nums;
++  }
++  .mt-bpm span{font-size:10px; letter-spacing:.14em; color:var(--muted); margin-top:3px}
++  .mt-range{width:100%; margin:4px 0 14px; accent-color:var(--accent)}
++
++  .mt-row{display:flex; gap:10px; align-items:stretch}
++  .mt-tap{flex:1; justify-content:center; min-height:54px}
++  .mt-play{
++    flex:0 0 96px; justify-content:center; min-height:54px; font-size:20px; font-weight:800;
++  }
++  .mt-play .p-stop{display:none}
++  .mt-play.on{background:var(--danger); color:#fff; border-color:var(--danger)}
++  .mt-play.on .p-play{display:none}
++  .mt-play.on .p-stop{display:inline}
++  .mt-sub{font-size:11px; color:var(--faint); margin:8px 0 0; text-align:center; line-height:1.6}
++
++  /* ドラムモードを切ったらビートの札は畳む（選べない札を残さない） */
++  .mt-beatwrap{margin-top:4px}
++  .mt-beatwrap.off{display:none}
++
++  .mt-time{display:flex; gap:10px; margin-top:14px}
++  .mt-time > div{
++    flex:1; background:var(--panel2); border:1px solid var(--line); border-radius:10px;
++    padding:9px 11px; text-align:center;
++  }
++  .mt-time span{display:block; font-size:10px; color:var(--muted); margin-bottom:3px}
++  .mt-time b{font-family:var(--mono); font-size:16px; color:var(--ink)}
++
++  /* 横画面のときは上下の余白を詰めて、数字とボタンが1画面に収まるようにする */
++  body.landscape-layout .mtv{padding-top:8px}
++  body.landscape-layout .mt-bpm b{font-size:42px}
++  body.landscape-layout .mt-step{width:46px; height:46px; font-size:21px}
+   .seg{display:flex; gap:4px; margin-bottom:12px; background:var(--panel2);
+     border:1px solid var(--line); border-radius:10px; padding:3px}
+   .seg button{
+@@ -1400,7 +1496,16 @@
+     background:transparent; border:none;
+     display:flex; align-items:flex-end; justify-content:center;
+   }
+-  .hm-stage.on .hm-card .ic img{width:100%; height:100%; object-fit:contain; display:block}
++  /* 中の画像にも掛けておく。-webkit-user-drag は継承しないので、
++     .hm-card に付けただけでは <img> のネイティブなドラッグが残り、
++     マウスで押したまま動かしても pointermove がそちらへ取られて回らなくなる。 */
++  .hm-stage.on .hm-card .ic img{
++    width:100%; height:100%; object-fit:contain; display:block;
++    -webkit-user-drag:none; user-select:none; -webkit-user-select:none; pointer-events:none;
++  }
++  /* 掴んでいる間のカーソル。マウスでも回せることが見て分かるようにする */
++  .hm-stage.on{cursor:grab}
++  .hm-stage.on.grabbing{cursor:grabbing}
+   .hm-stage.on .hm-card .b{flex:0 0 auto; align-items:center; font-size:14px}
+   .hm-stage.on .hm-card .b small{font-size:10px}
+   .hm-stage.on .hm-card .cv{display:none}
+--- a/includes/bootstrap.php
++++ b/includes/bootstrap.php
+@@ -33,6 +33,11 @@
+      突き合わせは小文字にそろえてから行う（users.email は小文字で持っている） */
+   define('APP_ADMIN_EMAIL',        strtolower(trim((string)($APP_CFG['admin_email'] ?? ''))));
+   define('APP_GA_ID',              $APP_CFG['ga_id'] ?? '');
++  /* 採点ゲームを画面に出すか。views/app.php が見ている。
++     既定は false（出さない）。config/app.php に 'game_enabled' => true, の1行を足すと復活する。
++     src/game.js と辞書 ui.game_* はそのまま残してあるので、消したのは導線だけ。
++     ※ 戻すときは includes/lang/*.php の intro / home の文言も採点ゲーム側へ戻すこと。 */
++  define('APP_GAME_ENABLED',       (bool)($APP_CFG['game_enabled'] ?? false));
+   define('APP_DB_PATH',            $APP_CFG['db_path']);
+   /* アカウント（includes/account.php / api/account.php / oauth/google.php で使う） */
+   define('APP_SITE_URL',           rtrim((string)($APP_CFG['site_url'] ?? ''), '/'));
+--- a/includes/views/app.php
++++ b/includes/views/app.php
+@@ -11,6 +11,8 @@
+ <!doctype html>
+ <html lang="<?= h($T['html_lang']) ?>">
+ <head>
++<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
++<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+   <meta name="theme-color" content="#15110c">
+@@ -72,12 +74,13 @@
+ 
+ <!-- 全画面 指板 -->
+ <div class="board-full">
+-  <!-- 公開/非公開（左上・ハートの上）。自分がアップロードした譜面を開いているときだけ出る。
++  <!-- 公開/非公開（左上・ハートの下）。自分がアップロードした譜面を開いているときだけ出る。
+        出し入れと文言の切り替えは src/uploads.js の syncShareDeleteBtns。公開中は青くなる。 -->
+   <button id="shareBtn" class="sharebtn" hidden aria-pressed="false" aria-label="<?php e('ui.share_btn_private') ?>">
+     <span class="sb-ic" aria-hidden="true">🔗</span><span class="sb-t"><?php e('ui.share_btn_private') ?></span>
+   </button>
+-  <!-- お気に入り。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js の syncFavBtn）。
++  <!-- お気に入り（左上のいちばん上）。曲を読み込んでいるときだけ出る
++       （出し入れは src/favorites.js の syncFavBtn）。
+        .fab と同じく位置は画面に対して固定なので、指板を動かしても左上に残る。 -->
+   <button id="favBtn" class="favbtn" hidden aria-pressed="false" aria-label="<?php e('ui.fav_add') ?>">♡</button>
+   <!-- アップロードした譜面の削除（右上）。自分の譜面を開いているときだけ出る -->
+@@ -366,8 +369,14 @@
+   <button class="pk-card pk-main" data-mode="score">
+     <span class="pk-ic">🎼</span><span class="pk-b"><?php e('ui.mode_score') ?><small><?php e('ui.mode_score_s') ?></small></span>
+   </button>
++<?php if (APP_GAME_ENABLED): ?>
+   <button class="pk-card" data-mode="game">
+     <span class="pk-ic">🎮</span><span class="pk-b"><span class="pk-b-title"><?php e('ui.mode_game') ?><span class="beta-badge">β</span></span><small><?php e('ui.mode_game_s') ?></small></span>
++  </button>
++<?php endif; ?>
++  <!-- 採点ゲームがあった場所。中身は src/metronome.js -->
++  <button class="pk-card" data-mode="metro">
++    <span class="pk-ic">⏱</span><span class="pk-b"><?php e('ui.mode_metro') ?><small><?php e('ui.mode_metro_s') ?></small></span>
+   </button>
+   <button class="pk-card" data-mode="tuner">
+     <span class="pk-ic">🎯</span><span class="pk-b"><?php e('ui.mode_tuner') ?><small><?php e('ui.mode_tuner_s') ?></small></span>
+@@ -724,6 +733,7 @@
+   </div>
+ </div>
+ 
++<?php if (APP_GAME_ENABLED): ?>
+ <!-- 採点ゲーム：録音の準備。マイクの入力レベルを見せてから始める。
+      ✕・「やめる」・スクリムはどれも src/game.js の cancelGameCheck()（マイクも閉じる）。 -->
+ <div id="mGameReady" class="dkmodal gready" role="dialog" aria-modal="true">
+@@ -807,6 +817,7 @@
+   </div>
+   <div class="sub"><?php e('ui.game_intro_note') ?></div>
+ </div>
++<?php endif; /* APP_GAME_ENABLED */ ?>
+ 
+ <!-- アップロードした楽譜：同じ譜面っぽいものがあるとき、上書きか新規追加かを尋ねる
+      （中身まで同じときは尋ねずに何もしない。判定は src/uploads.js の findSimilar） -->
+@@ -875,7 +886,10 @@
+     </div>
+     <div class="seg" id="modeSeg" role="tablist">
+       <button data-mode="score"><?php e('ui.seg_score') ?></button>
++<?php if (APP_GAME_ENABLED): ?>
+       <button data-mode="game"><?php e('ui.seg_game') ?><span class="beta-badge">β</span></button>
++<?php endif; ?>
++      <button data-mode="metro"><?php e('ui.seg_metro') ?></button>
+       <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
+     </div>
+   </div>
+@@ -948,6 +962,7 @@
+     </div>
+   </div>
+ 
++<?php if (APP_GAME_ENABLED): ?>
+   <!-- ========== 採点ゲームモード ==========
+        課題曲の一覧は「曲を練習する」と同じ public/songs/manifest.json から作る
+        （中身を入れるのは src/game.js の renderGameSongs）。 -->
+@@ -964,6 +979,16 @@
+     <div class="row controls gstart-bar">
+       <button id="gameStart" class="primary" style="flex:1; justify-content:center; min-height:46px"><?php e('ui.game_start') ?></button>
+     </div>
++  </div>
++<?php endif; /* APP_GAME_ENABLED */ ?>
++
++  <!-- ========== メトロノームモード ==========
++       画面のまん中に大きく出すほうが使いやすいので、操作そのものは
++       ドロワーではなく #metroView（下のほう）に置いてある。
++       ここはドロワーを開いたときの案内だけ。 -->
++  <div data-m="metro">
++    <div class="seclbl"><?php e('ui.mode_metro') ?></div>
++    <div class="sub"><?php e('ui.metro_drawer_note') ?></div>
+   </div>
+ 
+   <!-- ========== 共通：推奨ポジション ==========
+@@ -1064,6 +1089,7 @@
+ <!-- 小節フラッシュ（シークバーで小節を移動した時に一瞬だけ出す） -->
+ <div id="mflash" class="mflash" aria-hidden="true"></div>
+ 
++<?php if (APP_GAME_ENABLED): ?>
+ <!-- 採点ゲーム：録音中の表示（中身は src/game.js が書き換える） -->
+ <div id="gameRec" class="grec" aria-live="polite">
+   <span class="gr-dot"></span>
+@@ -1071,6 +1097,59 @@
+   <span id="gameRecPos" class="gr-pos">1</span>
+   <button id="gameAbort" class="ghost"><?php e('ui.game_abort') ?></button>
+ </div>
++<?php endif; /* APP_GAME_ENABLED */ ?>
++
++<!-- ========== メトロノーム（画面本体）==========
++     data-m="metro" なので、モードが metro のときだけ出る（src/modes.js の applyMode）。
++     ・まん中の数字がテンポ。＋−・スライダー・タップのどれでも変えられる
++     ・拍子とビートの札は src/metronome.js が辞書（window.T）から作る
++     ・鳴らしているあいだは練習時間に足す（ST.metroOn を src/practice.js が見ている） -->
++<div id="metroView" class="mtv m-hide" data-m="metro">
++  <div class="mt-in">
++
++    <div class="mt-lbl"><?php e('ui.metro_sig') ?></div>
++    <div id="mtSig" class="mt-chips" role="group" aria-label="<?php e('ui.metro_sig') ?>"></div>
++
++    <!-- 拍のランプ（いま何拍目か）。数は拍子に合わせて作り直す -->
++    <div id="mtLamps" class="mt-lamps" aria-hidden="true"></div>
++
++    <!-- ど真ん中：テンポ -->
++    <div class="mt-dial">
++      <button type="button" id="mtDown" class="mt-step" aria-label="<?php e('ui.metro_dn') ?>">−</button>
++      <div class="mt-bpm"><b id="mtBpm">80</b><span>BPM</span></div>
++      <button type="button" id="mtUp" class="mt-step" aria-label="<?php e('ui.metro_up') ?>">＋</button>
++    </div>
++    <input id="mtRange" class="mt-range" type="range" min="30" max="260" step="1" value="80"
++           aria-label="<?php e('ui.metro_bpm') ?>">
++
++    <div class="mt-row">
++      <button type="button" id="mtTap" class="ghost mt-tap"><?php e('ui.metro_tap') ?></button>
++      <button type="button" id="mtPlay" class="primary mt-play" aria-label="<?php e('ui.metro_start') ?>">
++        <span class="p-play">▶</span><span class="p-stop">■</span>
++      </button>
++    </div>
++    <div class="mt-sub"><?php e('ui.metro_tap_note') ?></div>
++
++    <hr class="sep">
++
++    <!-- ドラムモード。ONのあいだはクリックではなくドラムのパターンで鳴らす -->
++    <div id="mtDrumSw" class="sw" role="switch" aria-checked="false" tabindex="0">
++      <span><?php e('ui.metro_drum') ?></span><span class="knob"></span>
++    </div>
++    <div id="mtBeatWrap" class="mt-beatwrap">
++      <div class="mt-lbl"><?php e('ui.metro_beat') ?></div>
++      <div id="mtBeat" class="mt-chips" role="group" aria-label="<?php e('ui.metro_beat') ?>"></div>
++    </div>
++
++    <!-- 練習時間（練習カレンダーと同じ数字。鳴らしているあいだ増える） -->
++    <div class="mt-time">
++      <div><span><?php e('ui.metro_today') ?></span><b id="mtToday">–</b></div>
++      <div><span><?php e('ui.metro_total') ?></span><b id="mtTotal">–</b></div>
++    </div>
++    <div class="mt-sub"><?php e('ui.metro_note') ?></div>
++
++  </div>
++</div>
+ 
+ <div id="toast" class="toast"></div>
+ 
+--- a/includes/views/contact.php
++++ b/includes/views/contact.php
+@@ -12,6 +12,8 @@
+ <!doctype html>
+ <html lang="<?= h($T['html_lang']) ?>" class="home">
+ <head>
++<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
++<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+   <meta name="theme-color" content="#15110c">
+--- a/includes/views/guide.php
++++ b/includes/views/guide.php
+@@ -14,6 +14,8 @@
+ <!doctype html>
+ <html lang="<?= h($T['html_lang']) ?>" class="home">
+ <head>
++<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
++<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+   <meta name="theme-color" content="#15110c">
+--- a/includes/views/home.php
++++ b/includes/views/home.php
+@@ -30,6 +30,8 @@
+ <!doctype html>
+ <html lang="<?= h($T['html_lang']) ?>" class="home">
+ <head>
++<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
++<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+   <meta name="theme-color" content="#15110c">
+--- a/includes/views/legal.php
++++ b/includes/views/legal.php
+@@ -16,6 +16,8 @@
+ <!doctype html>
+ <html lang="<?= h($T['html_lang']) ?>" class="home">
+ <head>
++<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
++<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+   <meta name="theme-color" content="#15110c">
+--- a/includes/views/terms.php
++++ b/includes/views/terms.php
+@@ -17,6 +17,8 @@
+ <!doctype html>
+ <html lang="<?= h($T['html_lang']) ?>" class="home">
+ <head>
++<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
++<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+   <meta name="theme-color" content="#15110c">
+--- a/includes/lang/en.php
++++ b/includes/lang/en.php
+@@ -88,6 +88,8 @@
+     'mode_tuner_s'   => 'Real-time pitch detection',
+     'mode_game'      => 'Scoring game',
+     'mode_game_s'    => 'Play a piece and get scored',
++    'mode_metro'     => 'Metronome',
++    'mode_metro_s'   => 'Set a tempo and a time signature',
+ 
+     'fab_aria'       => 'Play / Stop',
+     'cue_aria'       => 'Back to start',
+@@ -124,6 +126,30 @@
+     'seg_score'      => '🎼 Pieces',
+     'seg_tuner'      => '🎯 Tuner',
+     'seg_game'       => '🎮 Score',
++    'seg_metro'      => '⏱ Metronome',
++
++    /* ===== Metronome (src/metronome.js) ===== */
++    'metro_bpm'          => 'BPM',
++    'metro_sig'          => 'Time signature',
++    'metro_beat'         => 'Beat',
++    'metro_drum'         => 'Play as drums',
++    'metro_start'        => 'Start',
++    'metro_stop'         => 'Stop',
++    'metro_tap'          => 'Tap tempo',
++    'metro_tap_note'     => 'Tap four times at the speed you want and the tempo follows',
++    'metro_dn'           => 'Slower',
++    'metro_up'           => 'Faster',
++    'metro_today'        => 'Today',
++    'metro_total'        => 'Total',
++    'metro_note'         => 'Time counts towards your practice record while it is running',
++    'metro_drawer_note'  => 'Tempo, time signature and beat are in the middle of the screen',
++    'metro_beat_names'   => [
++      'eight'   => '8-beat',
++      'sixteen' => '16-beat',
++      'four'    => 'Four on the floor',
++      'shuffle' => 'Shuffle',
++      'waltz'   => 'Waltz',
++    ],
+ 
+     'mic'            => 'Microphone',
+     'mic_sw'         => 'Detect pitch with the microphone',
+@@ -397,7 +423,7 @@
+     'lead'  => 'A web app that puts a %s fingerboard on your phone screen so you can check stopping positions, finger numbers and pitch as you practise. Nothing to install — it runs in the browser.',
+     'items' => [
+       ['🎼', 'Practise a piece', 'Choose one of the pieces provided, or load MusicXML / MIDI, and you get a score with fingerings. Tap a note to change its fingering.'],
+-      ['🎮', 'Scoring game',     'Play along with the metronome and the app listens through your microphone, scores you out of 100 and tells you how your pitch and timing went.'],
++      ['⏱', 'Metronome',        'Set a tempo and a time signature and let it run. You can switch it to a drum pattern, and the time counts towards your practice record.'],
+       ['🎵', 'Scale practice',   'Inside piece practice, choose a key and a number of octaves and the scale is laid out on the fingerboard and the stave, with backing and metronome.'],
+       ['🎯', 'Tuner',            'Reads the pitch from your microphone and shows where the sounding note sits on the fingerboard.'],
+     ],
+@@ -408,7 +434,7 @@
+       'Scores can be loaded from MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid). For MIDI the closest-sounding track is chosen automatically, and you can switch tracks afterwards.',
+       'Fingerings can be changed by tapping a note, and changes are saved automatically. You can also export them and carry them to another device.',
+       'Tempo changes, a one-bar count-in and looped playback over a chosen bar range are all supported.',
+-      'In the scoring game your playing is picked up by the microphone and scored out of 100, and your best score for each piece is kept.',
++      'The metronome runs at the tempo, time signature and beat you choose. The tempo can be set with the number, the slider, or by tapping at the speed you want.',
+       'Pieces you like can be starred with the heart at the top left of the fingerboard, and the list can be filtered down to favourites.',
+       'A score you have loaded can be published as one of “Everyone’s pieces”, and pieces published by others appear in the same list. You can withdraw yours at any time.',
+       'Practice time is recorded on a calendar, with a monthly total and the number of days practised.',
+@@ -420,20 +446,20 @@
+     'use_title' => 'How to use it',
+     'steps' => [
+       'Pick how you want to practise from the buttons above. Once you are signed in, the piece list opens straight away next time.',
+-      'For piece practice choose a piece or a score file; for the scoring game choose a set piece. Scale practice lives inside piece practice, where you pick a key and octave count.',
++      'For piece practice choose a piece or a score file. Scale practice lives inside piece practice, where you pick a key and octave count. The metronome just needs a tempo and a time signature.',
+       'Press play and the notes sound, with the position of the current note shown on the fingerboard.',
+     ],
+     'faq_title' => 'Questions',
+     'faqs' => [
+       ['Do I need to install anything?', 'No. Just open it in a browser. Adding it to your home screen makes it open like an app.'],
+-      ['Do I have to sign in?', 'No. The fingerboard, piece practice, the scoring game and the tuner all work without an account. Signing in carries your settings, fingerings, favourites and practice record over to another device.'],
++      ['Do I have to sign in?', 'No. The fingerboard, piece practice, the metronome and the tuner all work without an account. Signing in carries your settings, fingerings, favourites and practice record over to another device.'],
+       ['The microphone does not respond', 'Microphone input only works over https:// or on localhost. It will not work if the file was opened directly with file://, or if the browser has not been given permission.'],
+       ['Which score files can I use?', 'MusicXML (.xml / .musicxml / .mxl) and MIDI (.mid).'],
+       ['Can I change the fingerings myself?', 'Tap a note and the alternatives appear. Your choice is saved automatically, and fingerings can be exported and imported.'],
+-      ['Is the scoring game recording kept?', 'No. The microphone signal is used only for scoring and is discarded as soon as the score is calculated.'],
++      ['Can I use just the metronome?', 'Yes. “Metronome” on the opening screen runs on its own without loading a score, and the time still counts towards your practice record.'],
+       ['Can I withdraw a piece I published?', 'Yes — use [Stop publishing] on your own piece in the list. Rights holders can request removal from the gear menu under Contact: choose “Takedown request” and send the title and the reason.'],
+     ],
+-    'note'  => 'Showing the fingerboard, loading scores and editing fingerings all happen on your device. Only when you are signed in are your settings, fingerings, favourites, practice record and published pieces kept on the server. Microphone audio from the scoring game and the tuner never leaves your device.',
++    'note'  => 'Showing the fingerboard, loading scores and editing fingerings all happen on your device. Only when you are signed in are your settings, fingerings, favourites, practice record and published pieces kept on the server. Microphone audio from the tuner never leaves your device.',
+   ],
+ 
+   /* ===== Practice troubleshooting guide (entry point for the GEO/SEO articles) =====
+@@ -492,7 +518,7 @@
+     'prev'      => 'Previous instrument',
+     'next'      => 'Next instrument',
+     'about_t'   => 'About GEN strings',
+-    'about'     => 'Turns your phone screen into a fingerboard so you can check stopping positions, finger numbers and pitch while you practise. It includes piece practice (MusicXML / MIDI), scale practice, a scoring game that listens through the microphone, a tuner and a practice calendar. Sign in and your settings, fingerings, favourites and practice record carry over to another device. No install needed; it runs in the browser.',
++    'about'     => 'Turns your phone screen into a fingerboard so you can check stopping positions, finger numbers and pitch while you practise. It includes piece practice (MusicXML / MIDI), scale practice, a metronome, a tuner and a practice calendar. Sign in and your settings, fingerings, favourites and practice record carry over to another device. No install needed; it runs in the browser.',
+   ],
+ 
+   /* ===== Accounts (email + password / Google sign-in).
+--- a/includes/lang/es.php
++++ b/includes/lang/es.php
+@@ -91,6 +91,8 @@
+     'mode_tuner_s'   => 'Detección de afinación en tiempo real',
+     'mode_game'      => 'Juego de puntuación',
+     'mode_game_s'    => 'Toca una pieza y recibe tu puntuación',
++    'mode_metro'     => 'Metrónomo',
++    'mode_metro_s'   => 'Elige tempo y compás',
+ 
+     'fab_aria'       => 'Reproducir / Detener',
+     'cue_aria'       => 'Volver al inicio',
+@@ -127,6 +129,30 @@
+     'seg_score'      => '🎼 Piezas',
+     'seg_tuner'      => '🎯 Afinador',
+     'seg_game'       => '🎮 Puntuar',
++    'seg_metro'      => '⏱ Metrónomo',
++
++    /* ===== Metrónomo (src/metronome.js) ===== */
++    'metro_bpm'          => 'BPM',
++    'metro_sig'          => 'Compás',
++    'metro_beat'         => 'Ritmo',
++    'metro_drum'         => 'Sonar con batería',
++    'metro_start'        => 'Empezar',
++    'metro_stop'         => 'Parar',
++    'metro_tap'          => 'Tempo por toques',
++    'metro_tap_note'     => 'Toca cuatro veces a la velocidad que quieras y el tempo la seguirá',
++    'metro_dn'           => 'Más lento',
++    'metro_up'           => 'Más rápido',
++    'metro_today'        => 'Hoy',
++    'metro_total'        => 'Total',
++    'metro_note'         => 'Mientras suena, el tiempo se suma a tu registro de práctica',
++    'metro_drawer_note'  => 'El tempo, el compás y el ritmo están en el centro de la pantalla',
++    'metro_beat_names'   => [
++      'eight'   => 'Ritmo de 8',
++      'sixteen' => 'Ritmo de 16',
++      'four'    => 'Bombo a negras',
++      'shuffle' => 'Shuffle',
++      'waltz'   => 'Vals',
++    ],
+ 
+     'mic'            => 'Micrófono',
+     'mic_sw'         => 'Detectar la afinación con el micrófono',
+@@ -400,7 +426,7 @@
+     'lead'  => 'Una aplicación web que muestra el diapasón del %s en la pantalla del móvil para comprobar la posición, el número de dedo y la afinación mientras practicas. No hay que instalar nada: funciona en el navegador.',
+     'items' => [
+       ['🎼', 'Practicar una pieza', 'Elige una de las piezas incluidas o carga MusicXML / MIDI y obtendrás la partitura con digitación. Puedes corregirla tocando la nota.'],
+-      ['🎮', 'Juego de puntuación', 'Toca siguiendo el metrónomo: la app escucha por el micrófono, puntúa sobre 100 y te dice cómo han ido la afinación y el ritmo.'],
++      ['⏱', 'Metrónomo',           'Elige tempo y compás y déjalo sonar. Puedes cambiarlo a un patrón de batería, y el tiempo se suma a tu registro de práctica.'],
+       ['🎵', 'Práctica de escalas', 'Dentro de la práctica de piezas, elige tonalidad y número de octavas y la escala aparece en el diapasón y en el pentagrama, con acompañamiento y metrónomo.'],
+       ['🎯', 'Afinador',            'Detecta la altura por el micrófono y muestra en el diapasón dónde está la nota que suena.'],
+     ],
+@@ -411,7 +437,7 @@
+       'Se pueden cargar partituras en MusicXML (.xml / .musicxml / .mxl) y MIDI (.mid). En MIDI se elige automáticamente la pista más cercana al registro, y luego puedes cambiar de pista.',
+       'La digitación se cambia tocando la nota y se guarda sola. También puedes exportarla y llevarla a otro dispositivo.',
+       'Admite cambio de tempo, un compás de preparación y reproducción en bucle sobre los compases que indiques.',
+-      'En el juego de puntuación, el micrófono recoge lo que tocas y lo puntúa sobre 100, y se guarda tu mejor marca de cada pieza.',
++      'El metrónomo suena con el tempo, el compás y el ritmo que elijas. El tempo se puede fijar con el número, con el deslizador o tocando a la velocidad que quieras.',
+       'Las piezas que te gusten se marcan con el corazón de la esquina superior izquierda del diapasón, y la lista puede filtrarse por favoritos.',
+       'Una partitura cargada puede publicarse en «Piezas de todos», y las publicadas por otras personas aparecen en la misma lista. Puedes retirar la tuya cuando quieras.',
+       'El tiempo practicado queda registrado en un calendario, con el total del mes y los días practicados.',
+@@ -423,20 +449,20 @@
+     'use_title' => 'Cómo se usa',
+     'steps' => [
+       'Elige arriba cómo quieres practicar. Si has iniciado sesión, la próxima vez se abrirá directamente la lista de piezas.',
+-      'Para practicar una pieza elige una pieza o un archivo de partitura; para el juego de puntuación elige una pieza propuesta. Las escalas están dentro de la práctica de piezas.',
++      'Para practicar una pieza elige una pieza o un archivo de partitura. Las escalas están dentro de la práctica de piezas. Para el metrónomo basta con el tempo y el compás.',
+       'Al reproducir suena la música y la posición de la nota actual se marca en el diapasón.',
+     ],
+     'faq_title' => 'Preguntas frecuentes',
+     'faqs' => [
+       ['¿Hay que instalar algo?', 'No. Basta con abrirlo en el navegador. Si lo añades a la pantalla de inicio, se abre como una aplicación.'],
+-      ['¿Hace falta iniciar sesión?', 'No. El diapasón, la práctica de piezas, el juego de puntuación y el afinador funcionan sin cuenta. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo.'],
++      ['¿Hace falta iniciar sesión?', 'No. El diapasón, la práctica de piezas, el metrónomo y el afinador funcionan sin cuenta. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo.'],
+       ['El micrófono no responde', 'El micrófono solo funciona con https:// o en localhost. No funcionará si has abierto el archivo con file:// ni si no le has dado permiso al navegador.'],
+       ['¿Qué archivos de partitura puedo usar?', 'MusicXML (.xml / .musicxml / .mxl) y MIDI (.mid).'],
+       ['¿Puedo corregir la digitación?', 'Toca una nota y aparecerán las alternativas. Lo que elijas se guarda solo, y la digitación puede exportarse e importarse.'],
+-      ['¿Se guarda la grabación del juego?', 'No. El sonido del micrófono se usa solo para puntuar y se borra en cuanto termina el cálculo.'],
++      ['¿Puedo usar solo el metrónomo?', 'Sí. Desde “Metrónomo” en la pantalla de inicio suena sin necesidad de cargar ninguna partitura, y el tiempo se suma igualmente a tu registro de práctica.'],
+       ['¿Puedo retirar una pieza publicada?', 'Sí: usa [Dejar de publicar] en tu propia pieza dentro de la lista. Los titulares de derechos pueden pedir la retirada desde el menú de ajustes, en Contacto: elige «Solicitud de retirada» y envía el título y el motivo.'],
+     ],
+-    'note'  => 'Mostrar el diapasón, cargar partituras y editar digitaciones ocurre todo en tu dispositivo. Solo cuando inicias sesión se guardan en el servidor los ajustes, las digitaciones, los favoritos, el registro de práctica y las piezas publicadas. El sonido del micrófono del juego y del afinador no sale del dispositivo.',
++    'note'  => 'Mostrar el diapasón, cargar partituras y editar digitaciones ocurre todo en tu dispositivo. Solo cuando inicias sesión se guardan en el servidor los ajustes, las digitaciones, los favoritos, el registro de práctica y las piezas publicadas. El sonido del micrófono del afinador no sale del dispositivo.',
+   ],
+ 
+   /* ===== Guía de problemas de práctica (entrada a los artículos GEO/SEO) =====
+@@ -495,7 +521,7 @@
+     'prev'      => 'Instrumento anterior',
+     'next'      => 'Instrumento siguiente',
+     'about_t'   => 'Qué es GEN strings',
+-    'about'     => 'Convierte la pantalla del móvil en un diapasón para comprobar la posición, el número de dedo y la afinación mientras practicas. Incluye práctica de piezas (MusicXML / MIDI), práctica de escalas, un juego de puntuación que escucha por el micrófono, afinador y calendario de práctica. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo. No hace falta instalar nada: funciona en el navegador.',
++    'about'     => 'Convierte la pantalla del móvil en un diapasón para comprobar la posición, el número de dedo y la afinación mientras practicas. Incluye práctica de piezas (MusicXML / MIDI), práctica de escalas, metrónomo, afinador y calendario de práctica. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo. No hace falta instalar nada: funciona en el navegador.',
+   ],
+ 
+   /* ===== Cuentas (correo + contraseña / inicio con Google).
+--- a/includes/lang/ja.php
++++ b/includes/lang/ja.php
+@@ -94,6 +94,8 @@
+     'mode_tuner_s'   => '音程をリアルタイム判定',
+     'mode_game'      => '採点ゲーム',
+     'mode_game_s'    => '課題曲を弾いて採点',
++    'mode_metro'     => 'メトロノーム',
++    'mode_metro_s'   => 'テンポと拍子を決めて鳴らす',
+ 
+     'fab_aria'       => '再生 / 停止',
+     'cue_aria'       => '頭出し',
+@@ -130,6 +132,31 @@
+     'seg_score'      => '🎼 曲練習',
+     'seg_tuner'      => '🎯 チューナー',
+     'seg_game'       => '🎮 採点',
++    'seg_metro'      => '⏱ メトロノーム',
++
++    /* ===== メトロノーム（src/metronome.js）=====
++       採点ゲームがあった場所。画面のまん中に大きくテンポを出す。 */
++    'metro_bpm'          => 'BPM',
++    'metro_sig'          => '拍子',
++    'metro_beat'         => 'ビート',
++    'metro_drum'         => 'ドラムで鳴らす',
++    'metro_start'        => '鳴らす',
++    'metro_stop'         => '止める',
++    'metro_tap'          => 'タップでテンポ',
++    'metro_tap_note'     => '弾きたい速さで4回たたくと、その速さになります',
++    'metro_dn'           => 'テンポを遅くする',
++    'metro_up'           => 'テンポを速くする',
++    'metro_today'        => '今日の練習',
++    'metro_total'        => '累計',
++    'metro_note'         => '鳴らしているあいだは、練習した時間に加わります',
++    'metro_drawer_note'  => 'テンポ・拍子・ビートの操作は画面のまん中にあります',
++    'metro_beat_names'   => [
++      'eight'   => '8ビート',
++      'sixteen' => '16ビート',
++      'four'    => '4つ打ち',
++      'shuffle' => 'シャッフル',
++      'waltz'   => 'ワルツ',
++    ],
+ 
+     'mic'            => 'マイク',
+     'mic_sw'         => 'マイクで音程を検出',
+@@ -405,7 +432,7 @@
+     'lead'  => '%sの指板をスマホの画面に映し、押さえる位置・指番号・音程を確かめながら練習できるWebアプリです。インストールは不要で、ブラウザだけで動きます。',
+     'items' => [
+       ['🎼', '曲を練習する', '用意された曲を選ぶか、MusicXML / MIDI を読み込むと運指付きの譜面になります。運指はタップで直せます。'],
+-      ['🎮', '採点ゲーム',   'メトロノームに合わせて弾くと、マイクが拾った音から100点満点で採点し、音程と間の取り方をお伝えします。'],
++      ['⏱', 'メトロノーム', 'テンポと拍子を決めて鳴らせます。ドラムのパターンにも切り替えられ、鳴らしているあいだは練習した時間に加わります。'],
+       ['🎵', 'スケール練習', '曲練習の中で調とオクターブ数を選ぶと、指板と五線譜にスケールが並びます。伴奏とメトロノームに合わせて弾けます。'],
+       ['🎯', 'チューナー',   'マイクで音程を判定し、いま鳴っている音の位置を指板に表示します。'],
+     ],
+@@ -416,7 +443,7 @@
+       '譜面は MusicXML（.xml / .musicxml / .mxl）と MIDI（.mid）を読み込めます。MIDI は音域の近いトラックを自動で選び、あとから別のトラックへ切り替えることもできます。',
+       '運指は音符をタップして変更でき、変更した内容は自動で保存されます。書き出して別の端末へ移すこともできます。',
+       'テンポの変更、冒頭の1小節カウント、小節を指定したループ再生に対応しています。',
+-      '採点ゲームでは、メトロノームに合わせて弾いた演奏をマイクで聴き取り、100点満点で採点します。曲ごとの自己ベストも残ります。',
++      'メトロノームはテンポ・拍子・ビートを選んで鳴らせます。テンポは数字・スライダーのほか、弾きたい速さでたたいて決めることもできます。',
+       '気に入った曲は、指板の左上のハートでお気に入りに入れられます。曲一覧は「お気に入り」で絞り込めます。',
+       '読み込んだ楽譜は「みんなの曲」として公開でき、ほかの人が公開した曲も曲一覧から開けます。公開はいつでも取り消せます。',
+       '練習した時間はカレンダーに記録され、月ごとの合計と練習した日数を見られます。',
+@@ -428,20 +455,20 @@
+     'use_title' => '使い方',
+     'steps' => [
+       '上のボタンから練習のしかたを選びます。ログインしていれば、次からは曲を選ぶ画面が直接開きます。',
+-      '曲練習なら曲か譜面ファイルを、採点ゲームなら課題曲を選びます。スケール練習は曲練習の中で調とオクターブ数を選びます。',
++      '曲練習なら曲か譜面ファイルを選びます。スケール練習は曲練習の中で調とオクターブ数を選びます。メトロノームはテンポと拍子を決めて鳴らします。',
+       '再生すると音が鳴り、いま弾く音の位置が指板に表示されます。',
+     ],
+     'faq_title' => 'よくある質問',
+     'faqs' => [
+       ['インストールは必要ですか？', 'いりません。ブラウザで開くだけで動きます。ホーム画面に追加すると、アプリのように開けます。'],
+-      ['ログインしないと使えませんか？', 'ログインしなくても、指板の表示・曲練習・採点ゲーム・チューナーはそのまま使えます。ログインすると、設定・運指・お気に入り・練習の記録を別の端末へ引き継げます。'],
++      ['ログインしないと使えませんか？', 'ログインしなくても、指板の表示・曲練習・メトロノーム・チューナーはそのまま使えます。ログインすると、設定・運指・お気に入り・練習の記録を別の端末へ引き継げます。'],
+       ['マイクが反応しません', 'マイクは https:// または localhost でのみ使えます。file:// でファイルを直接開いた場合や、ブラウザでマイクの使用を許可していない場合は動作しません。'],
+       ['どの譜面ファイルが使えますか？', 'MusicXML（.xml / .musicxml / .mxl）と MIDI（.mid）です。'],
+       ['運指は自分で直せますか？', '音符をタップすると候補が表示されます。選んだ運指は自動で保存され、書き出し・読み込みもできます。'],
+-      ['採点ゲームの録音は残りますか？', '残りません。マイクの音は採点のためだけに使い、採点が終わった時点で消去しています。'],
++      ['メトロノームだけ使えますか？', '使えます。入口の「メトロノーム」からは、譜面を読み込まなくてもテンポと拍子を決めて鳴らせます。鳴らしているあいだは練習した時間に加わります。'],
+       ['公開した曲を取り消せますか？', 'できます。曲一覧に並ぶ自分の曲の［公開をやめる］から取り消せます。権利者の方からの削除のご依頼は、歯車 → お問い合わせ で種別に「削除依頼」を選び、曲名と理由をお送りください。'],
+     ],
+-    'note'  => '指板の表示・譜面の読み込み・運指の編集は、すべて端末の中で行います。ログインしたときにかぎり、設定・運指・お気に入り・練習の記録・公開した曲をサーバでお預かりします。採点ゲームとチューナーのマイクの音は端末の外へは出ません。',
++    'note'  => '指板の表示・譜面の読み込み・運指の編集は、すべて端末の中で行います。ログインしたときにかぎり、設定・運指・お気に入り・練習の記録・公開した曲をサーバでお預かりします。チューナーのマイクの音は端末の外へは出ません。',
+   ],
+ 
+   /* ===== お悩みガイド（GEO/SEO 記事への導線）=====
+@@ -501,7 +528,7 @@
+     'prev'      => '前の楽器',
+     'next'      => '次の楽器',
+     'about_t'   => 'GEN strings とは',
+-    'about'     => 'スマホの画面を指板に見立てて、押さえる位置・指番号・音程を確かめながら練習できるWebアプリです。曲練習（MusicXML / MIDI の読み込み）、スケール練習、マイクで採点する採点ゲーム、チューナー、練習カレンダーを備えています。ログインすると設定・運指・お気に入り・練習の記録を別の端末へ引き継げます。インストールは不要で、ブラウザだけで動きます。',
++    'about'     => 'スマホの画面を指板に見立てて、押さえる位置・指番号・音程を確かめながら練習できるWebアプリです。曲練習（MusicXML / MIDI の読み込み）、スケール練習、メトロノーム、チューナー、練習カレンダーを備えています。ログインすると設定・運指・お気に入り・練習の記録を別の端末へ引き継げます。インストールは不要で、ブラウザだけで動きます。',
+   ],
+ 
+   /* ===== アカウント（メールアドレス＋パスワード / Google ログイン）。
+--- a/includes/lang/zh.php
++++ b/includes/lang/zh.php
+@@ -88,6 +88,8 @@
+     'mode_tuner_s'   => '实时判定音准',
+     'mode_game'      => '评分游戏',
+     'mode_game_s'    => '演奏课题曲并评分',
++    'mode_metro'     => '节拍器',
++    'mode_metro_s'   => '设定速度与拍子后发声',
+ 
+     'fab_aria'       => '播放 / 停止',
+     'cue_aria'       => '回到开头',
+@@ -124,6 +126,30 @@
+     'seg_score'      => '🎼 乐曲',
+     'seg_tuner'      => '🎯 调音器',
+     'seg_game'       => '🎮 评分',
++    'seg_metro'      => '⏱ 节拍器',
++
++    /* ===== 节拍器（src/metronome.js）===== */
++    'metro_bpm'          => 'BPM',
++    'metro_sig'          => '拍子',
++    'metro_beat'         => '节奏',
++    'metro_drum'         => '用鼓声发声',
++    'metro_start'        => '开始',
++    'metro_stop'         => '停止',
++    'metro_tap'          => '轻拍定速',
++    'metro_tap_note'     => '按想要的速度轻拍四次，速度就会跟上',
++    'metro_dn'           => '放慢速度',
++    'metro_up'           => '加快速度',
++    'metro_today'        => '今日练习',
++    'metro_total'        => '累计',
++    'metro_note'         => '发声期间会计入练习时间',
++    'metro_drawer_note'  => '速度・拍子・节奏的操作在画面中央',
++    'metro_beat_names'   => [
++      'eight'   => '8beat',
++      'sixteen' => '16beat',
++      'four'    => '四分踩镲',
++      'shuffle' => 'Shuffle',
++      'waltz'   => '华尔兹',
++    ],
+ 
+     'mic'            => '麦克风',
+     'mic_sw'         => '用麦克风检测音准',
+@@ -397,7 +423,7 @@
+     'lead'  => '把%s的指板显示在手机屏幕上，一边确认按弦位置、指法与音准一边练习的网页应用。无需安装，用浏览器即可使用。',
+     'items' => [
+       ['🎼', '练习乐曲', '选择内置曲目，或读取 MusicXML / MIDI，即可得到带指法的谱面。点一下音符就能修改指法。'],
+-      ['🎮', '评分游戏', '跟着节拍器演奏，程序通过麦克风采集声音，以100分制评分，并给出音准与节奏的反馈。'],
++      ['⏱', '节拍器', '设定速度与拍子后即可发声。也能切换成鼓的节奏型，发声期间会计入练习时间。'],
+       ['🎵', '音阶练习', '在乐曲练习中选择调性与八度数，音阶会同时排列在指板与五线谱上，可跟伴奏和节拍器一起练。'],
+       ['🎯', '调音器',   '通过麦克风判断音高，并在指板上显示当前发出的音的位置。'],
+     ],
+@@ -408,7 +434,7 @@
+       '谱面支持 MusicXML（.xml / .musicxml / .mxl）与 MIDI（.mid）。MIDI 会自动选择音域接近的音轨，之后也可切换到其他音轨。',
+       '点击音符即可修改指法，修改内容会自动保存，也可导出后带到其他设备。',
+       '支持修改速度、开头一小节预备拍，以及指定小节范围的循环播放。',
+-      '评分游戏会用麦克风采集你的演奏并以100分制评分，还会保留每首曲子的个人最佳成绩。',
++      '节拍器可以选择速度、拍子与节奏型。速度除了用数字与滑块，也能按想要的速度轻拍来决定。',
+       '喜欢的曲子可以用指板左上角的爱心加入收藏，曲目列表也能只显示收藏。',
+       '读取的乐谱可以作为“大家的曲目”公开，其他人公开的曲子也会出现在同一个列表里。公开随时可以取消。',
+       '练习时间会记录在日历上，可以查看每月合计与练习天数。',
+@@ -420,20 +446,20 @@
+     'use_title' => '使用方法',
+     'steps' => [
+       '从上方的按钮选择练习方式。已登录的话，下次会直接打开选曲画面。',
+-      '乐曲练习请选择曲目或谱面文件，评分游戏请选择课题曲。音阶练习在乐曲练习中选择调性与八度数。',
++      '乐曲练习请选择曲目或谱面文件。音阶练习在乐曲练习中选择调性与八度数。节拍器只需设定速度与拍子。',
+       '开始播放后会发出声音，当前要演奏的音的位置会显示在指板上。',
+     ],
+     'faq_title' => '常见问题',
+     'faqs' => [
+       ['需要安装吗？', '不需要。用浏览器打开即可使用。添加到主屏幕后，可以像应用一样打开。'],
+-      ['不登录能用吗？', '可以。指板显示、乐曲练习、评分游戏与调音器都无需账号。登录后，设置、指法、收藏与练习记录可在其他设备上继续使用。'],
++      ['不登录能用吗？', '可以。指板显示、乐曲练习、节拍器与调音器都无需账号。登录后，设置、指法、收藏与练习记录可在其他设备上继续使用。'],
+       ['麦克风没有反应', '麦克风仅在 https:// 或 localhost 下可用。若以 file:// 直接打开文件，或未在浏览器中允许使用麦克风，则无法工作。'],
+       ['可以使用哪些谱面文件？', 'MusicXML（.xml / .musicxml / .mxl）与 MIDI（.mid）。'],
+       ['指法可以自己修改吗？', '点击音符会显示候选。所选指法会自动保存，也可以导出与导入。'],
+-      ['评分游戏的录音会保留吗？', '不会。麦克风的声音仅用于评分，评分完成后立即删除。'],
++      ['可以只用节拍器吗？', '可以。从入口的“节拍器”进入，不读取谱面也能设定速度与拍子发声，发声期间同样计入练习时间。'],
+       ['公开的曲子可以取消吗？', '可以。在曲目列表中自己的曲子上按［停止公开］即可。权利人如需删除，请从设置 → 咨询中，将类型选为“删除请求”，并填写曲名与理由。'],
+     ],
+-    'note'  => '指板显示、谱面读取与指法编辑都在设备内完成。只有在登录时，设置、指法、收藏、练习记录与公开的曲子才会保存在服务器上。评分游戏与调音器的麦克风声音不会离开设备。',
++    'note'  => '指板显示、谱面读取与指法编辑都在设备内完成。只有在登录时，设置、指法、收藏、练习记录与公开的曲子才会保存在服务器上。调音器的麦克风声音不会离开设备。',
+   ],
+ 
+   /* ===== 练习烦恼指南（GEO/SEO 文章的入口）=====
+@@ -492,7 +518,7 @@
+     'prev'      => '上一件乐器',
+     'next'      => '下一件乐器',
+     'about_t'   => '关于 GEN strings',
+-    'about'     => '把手机屏幕当作指板，一边确认按弦位置、指法与音准一边练习。包含乐曲练习（MusicXML / MIDI 读取）、音阶练习、用麦克风评分的评分游戏、调音器与练习日历。登录后，设置、指法、收藏与练习记录可在其他设备上继续使用。无需安装，用浏览器即可使用。',
++    'about'     => '把手机屏幕当作指板，一边确认按弦位置、指法与音准一边练习。包含乐曲练习（MusicXML / MIDI 读取）、音阶练习、节拍器、调音器与练习日历。登录后，设置、指法、收藏与练习记录可在其他设备上继续使用。无需安装，用浏览器即可使用。',
+   ],
+ 
+   /* ===== 账户（邮箱＋密码 / Google 登录）。
+--- a/tools/langjson.py
++++ b/tools/langjson.py
+@@ -2,31 +2,77 @@
+ 
+ index.html は PHP を通さないので window.T が無く、tt() が 'msg.xxx' というキー名を
+ そのまま返してしまう。PHP 版と同じ辞書を index.html にも埋め込むために使う。
+-対応する構文は lang ファイルが実際に使っている範囲だけ:
+-  'key' => '値',            (シングルクォート文字列。\\' と \\\\ のみエスケープ)
+-  'key' => "値",            (ダブルクォート文字列。\\n \\t \\" \\\\ などを解釈する)
+-  'key' => [ ... ],         (連想配列)
+-  [ 'a', 'b' ],             (添字配列)
++
++使い方:
++    python tools/langjson.py includes/lang/ja.php             → JSON を標準出力へ
++    python tools/langjson.py includes/lang/ja.php --check      → 読めるかどうかだけ確かめる
++    python tools/langjson.py includes/lang/*.php --parity      → 言語間でキーがそろっているか見る
++
++対応する構文（lang ファイルが使う範囲＋よくある書き足し）:
++    'key' => '値',                シングルクォート文字列（\\' と \\\\ のみエスケープ）
++    'key' => "値",                ダブルクォート文字列（\\n \\t \\" \\\\ \\u{...} \\x.. を解釈）
++    'key' => 'あ' . 'い',          「.」でつないだ文字列（つないだ結果を1つの文字列にする）
++    'key' => <<<TXT ... TXT;      ヒアドキュメント／ナウドキュメント（<<<'TXT'）
++    'key' => [ ... ],             連想配列
++    [ 'a', 'b' ],                 添字配列
++    'key' => true / false / null / 数値
++    末尾のカンマ、/* */ と // と # のコメント
++
++読めない書き方（定数・関数呼び出し・変数の埋め込みなど）に当たったときは、
++何行目の何が読めなかったかを添えて止める。黙って途中で終わらないようにしてある。
+ """
+ import re
+ import json
+ import sys
++import glob
++
++
++class LangSyntaxError(Exception):
++    pass
+ 
+ 
+ class P:
+-    def __init__(self, s):
++    def __init__(self, s, path='(input)'):
+         self.s = s
+         self.i = 0
+-
++        self.path = path
++
++    # ---- 位置と、読めなかった理由 ----
++    def where(self, i=None):
++        """今見ている場所を「◯行目◯桁」で返す。行番号が出ないと直しようがないため。"""
++        i = self.i if i is None else i
++        line = self.s.count('\n', 0, i) + 1
++        col = i - (self.s.rfind('\n', 0, i) + 1) + 1
++        return line, col
++
++    def die(self, why, i=None):
++        i = self.i if i is None else i
++        line, col = self.where(i)
++        near = self.s[i:i + 60].replace('\n', '\\n')
++        raise LangSyntaxError(
++            '%s の %d行目 %d桁: %s\n  ここから読めません: %s' % (self.path, line, col, why, near))
++
++    def eof(self):
++        return self.i >= len(self.s)
++
++    def cur(self):
++        """今の1文字。ファイルの終わりに当たったときも、黙って止まらずに理由を出す。"""
++        if self.eof():
++            self.die("ファイルの終わりに来ました（] や ' の閉じ忘れがありそうです）")
++        return self.s[self.i]
++
++    # ---- 空白とコメント ----
+     def ws(self):
+         while self.i < len(self.s):
+             c = self.s[self.i]
+             if c in ' \t\r\n':
+                 self.i += 1
+             elif self.s.startswith('/*', self.i):
+-                j = self.s.index('*/', self.i)
++                j = self.s.find('*/', self.i + 2)
++                if j < 0:
++                    self.die('/* を閉じる */ がありません')
+                 self.i = j + 2
+-            elif self.s.startswith('//', self.i):
++            elif self.s.startswith('//', self.i) or c == '#':
+                 j = self.s.find('\n', self.i)
+                 self.i = len(self.s) if j < 0 else j + 1
+             else:
+@@ -36,23 +82,32 @@
+     DQ = {'n': '\n', 't': '\t', 'r': '\r', 'v': '\v', 'f': '\f',
+           'e': '\x1b', '\\': '\\', '"': '"', '$': '$'}
+ 
++    # ---- 文字列 ----
+     def string(self):
+-        q = self.s[self.i]
+-        assert q in ("'", '"'), self.s[self.i - 30:self.i + 30]
++        q = self.cur()
++        if q not in ("'", '"'):
++            self.die('文字列の始まりではありません')
++        start = self.i
+         self.i += 1
+         out = []
+         while True:
++            if self.eof():
++                self.die('文字列が %s で閉じられていません' % q, start)
+             c = self.s[self.i]
+             if c == '\\':
++                if self.i + 1 >= len(self.s):
++                    self.die('\\ のうしろが空です')
+                 nxt = self.s[self.i + 1]
+                 if q == "'":
+-                    # シングルクォートは \\' と \\\\ だけが特別。他は文字どおり残す
++                    # シングルクォートは \' と \\ だけが特別。他は文字どおり残す
+                     out.append(nxt if nxt in ("'", '\\') else '\\' + nxt)
+                     self.i += 2
+                     continue
+                 # 以下ダブルクォート
+                 if nxt == 'u' and self.s[self.i + 2:self.i + 3] == '{':
+-                    j = self.s.index('}', self.i)
++                    j = self.s.find('}', self.i)
++                    if j < 0:
++                        self.die('\\u{ を閉じる } がありません')
+                     out.append(chr(int(self.s[self.i + 3:j], 16)))
+                     self.i = j + 1
+                 elif nxt == 'x':
+@@ -74,51 +129,202 @@
+                 self.i += 1
+                 return ''.join(out)
+             else:
++                # ダブルクォートの中の $変数 は PHP 側で展開されてしまう。
++                # 気付かずに書いてあると JSON と食い違うので、ここで止める。
++                if q == '"' and c == '$' and re.match(r'\$[A-Za-z_{]', self.s[self.i:]):
++                    self.die('ダブルクォートの中の $ は変数として展開されます。'
++                             "シングルクォートにするか \\$ と書いてください")
+                 out.append(c)
+                 self.i += 1
+ 
++    def heredoc(self):
++        """<<<TXT ... TXT; と <<<'TXT' ... TXT;（ナウドキュメント）。"""
++        m = re.match(r"<<<[ \t]*(?:'(?P<nd>[A-Za-z_]\w*)'|\"?(?P<hd>[A-Za-z_]\w*)\"?)\r?\n",
++                     self.s[self.i:])
++        if not m:
++            self.die('ヒアドキュメントの始まりが読めません')
++        label = m.group('nd') or m.group('hd')
++        nowdoc = m.group('nd') is not None
++        self.i += m.end()
++        # 終わりの行（PHP 7.3 以降は字下げできる）
++        end = re.compile(r'^(?P<ind>[ \t]*)' + re.escape(label) + r'(?![A-Za-z0-9_])',
++                         re.MULTILINE)
++        m2 = end.search(self.s, self.i)
++        if not m2:
++            self.die('ヒアドキュメント %s を閉じる行がありません' % label)
++        body = self.s[self.i:m2.start()]
++        if body.endswith('\n'):
++            body = body[:-1]
++        if body.endswith('\r'):
++            body = body[:-1]
++        ind = m2.group('ind')
++        if ind:
++            body = '\n'.join(l[len(ind):] if l.startswith(ind) else l.lstrip()
++                             for l in body.split('\n'))
++        self.i = m2.end()
++        if nowdoc:
++            return body
++        # ヒアドキュメントはダブルクォートと同じ扱い。エスケープだけ解いておく
++        return re.sub(r'\\(.)', lambda mm: self.DQ.get(mm.group(1), '\\' + mm.group(1)), body)
++
++    # ---- 値 ----
+     def value(self):
++        v = self.one()
++        # 「.」でつないだ文字列。'あ' . 'い' のように書いてあっても1つにまとめる
++        while True:
++            save = self.i
++            self.ws()
++            if not self.eof() and self.s[self.i] == '.' and not self.s.startswith('...', self.i):
++                self.i += 1
++                rhs = self.one()
++                if not isinstance(v, str) or not isinstance(rhs, str):
++                    self.die('「.」でつなげるのは文字列だけです')
++                v = v + rhs
++            else:
++                self.i = save
++                return v
++
++    def one(self):
+         self.ws()
+-        if self.s[self.i] in ("'", '"'):
++        c = self.cur()
++        if c in ("'", '"'):
+             return self.string()
+-        if self.s[self.i] == '[':
++        if c == '[':
+             return self.array()
+-        m = re.match(r'(true|false|null|-?\d+(?:\.\d+)?)', self.s[self.i:])
++        if self.s.startswith('<<<', self.i):
++            return self.heredoc()
++        if self.s.startswith('array(', self.i):
++            self.die('array( ... ) 形式は読めません。[ ... ] で書いてください')
++        m = re.match(r'(true|false|null|-?\d+(?:\.\d+)?)(?![A-Za-z0-9_])',
++                     self.s[self.i:], re.IGNORECASE)
+         if m:
+             self.i += m.end()
+             t = m.group(1)
+-            return {'true': True, 'false': False, 'null': None}.get(
+-                t, float(t) if '.' in t else int(t))
+-        raise SyntaxError('値が読めない: ' + repr(self.s[self.i:self.i + 40]))
++            low = t.lower()
++            if low in ('true', 'false', 'null'):
++                return {'true': True, 'false': False, 'null': None}[low]
++            return float(t) if '.' in t else int(t)
++        # 定数・関数呼び出し・変数はここへ来る。何が書いてあるかを添えて止める
++        m = re.match(r'[A-Za-z_$\\][\w$\\]*', self.s[self.i:])
++        if m:
++            self.die("'%s' は文字列ではありません（定数・変数・関数は辞書に書けません）" % m.group(0))
++        self.die('値が読めません')
+ 
+     def array(self):
+-        assert self.s[self.i] == '['
++        start = self.i
++        if self.cur() != '[':
++            self.die('[ ではありません')
+         self.i += 1
+         items, obj = [], {}
+         while True:
+             self.ws()
++            if self.eof():
++                self.die('[ を閉じる ] がありません', start)
+             if self.s[self.i] == ']':
+                 self.i += 1
++                # 中身が空のときは空の添字配列として扱う（PHP でも [] は空配列）
+                 return obj if obj else items
+-            v = self.value()
++            k = self.value()
+             self.ws()
+             if self.s.startswith('=>', self.i):
+                 self.i += 2
+-                obj[v] = self.value()
++                if not isinstance(k, (str, int)):
++                    self.die('キーに使えるのは文字列か整数だけです')
++                key = str(k)
++                if key in obj:
++                    line, _ = self.where()
++                    sys.stderr.write("警告: %s の %d行目あたり: キー '%s' が重複しています"
++                                     "（あとに書いたほうが残ります）\n" % (self.path, line, key))
++                obj[key] = self.value()
+             else:
+-                items.append(v)
++                if obj:
++                    self.die('キーのある要素と無い要素が混ざっています')
++                items.append(k)
+             self.ws()
++            if self.eof():
++                self.die('[ を閉じる ] がありません', start)
+             if self.s[self.i] == ',':
+                 self.i += 1
++            elif self.s[self.i] != ']':
++                self.die('要素のあいだに , がありません')
+ 
+ 
+ def load(path):
+-    s = open(path, encoding='utf-8').read()
+-    p = P(s)
+-    p.i = s.index('return [') + len('return ')
++    with open(path, encoding='utf-8') as f:
++        s = f.read()
++    p = P(s, path)
++    j = s.find('return')
++    if j < 0:
++        raise LangSyntaxError('%s に return がありません' % path)
++    p.i = j + len('return')
++    p.ws()
++    if p.eof() or p.s[p.i] != '[':
++        line, col = p.where()
++        raise LangSyntaxError('%s の %d行目 %d桁: return のうしろが [ ではありません' % (path, line, col))
+     return p.array()
+ 
+ 
++# ---- 言語間でキーがそろっているか ----
++def flat_keys(d, prefix=''):
++    out = []
++    if isinstance(d, dict):
++        for k, v in d.items():
++            out += flat_keys(v, prefix + '.' + str(k))
++    elif isinstance(d, list):
++        for i, v in enumerate(d):
++            out += flat_keys(v, prefix + '[%d]' % i)
++    else:
++        out.append(prefix)
++    return out
++
++
++def main(argv):
++    args = [a for a in argv[1:] if not a.startswith('--')]
++    opts = set(a for a in argv[1:] if a.startswith('--'))
++    paths = []
++    for a in args:
++        paths += sorted(glob.glob(a)) or [a]
++    if not paths:
++        sys.stderr.write(__doc__)
++        return 2
++
++    loaded = {}
++    for p in paths:
++        try:
++            loaded[p] = load(p)
++        except LangSyntaxError as e:
++            sys.stderr.write('読めませんでした:\n%s\n' % e)
++            return 1
++        except OSError as e:
++            sys.stderr.write('開けませんでした: %s\n' % e)
++            return 1
++
++    if '--parity' in opts:
++        base = paths[0]
++        bk = flat_keys(loaded[base])
++        bs = set(bk)
++        print('%s: %d キー' % (base, len(bk)))
++        ng = 0
++        for p in paths[1:]:
++            ks = set(flat_keys(loaded[p]))
++            miss, extra = sorted(bs - ks), sorted(ks - bs)
++            print('%s: 足りない %d / 余分 %d' % (p, len(miss), len(extra)))
++            for k in miss[:20]:
++                print('   - %s' % k)
++            for k in extra[:20]:
++                print('   + %s' % k)
++            ng += len(miss) + len(extra)
++        return 1 if ng else 0
++
++    if '--check' in opts:
++        for p in paths:
++            print('%s: OK (%d キー)' % (p, len(flat_keys(loaded[p]))))
++        return 0
++
++    for p in paths:
++        print(json.dumps(loaded[p], ensure_ascii=False, indent=2))
++    return 0
++
++
+ if __name__ == '__main__':
+-    d = load(sys.argv[1])
+-    print(json.dumps(d, ensure_ascii=False, indent=2))
++    sys.exit(main(sys.argv))

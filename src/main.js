@@ -30,6 +30,8 @@ import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upD
 import { initShares, loadShared, openShare, doShare, unshareSong,
          openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
 import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
+/* メトロノーム（採点ゲームがあった場所）。画面ごと src/metronome.js が受け持つ */
+import { initMetro, stopMetro } from './metronome.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
@@ -422,22 +424,31 @@ on('dockScrim','click', closeDockModal);
 document.querySelectorAll('[data-dkclose]').forEach(b=> b.addEventListener('click', closeDockModal));
 
 /* ===== 採点ゲーム =====
-   課題曲を選ぶ → 開始カウント → メトロノームを聞きながら演奏 → 採点（src/game.js） */
-on('gameSongs','click', e=>{
-  const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;
-  const id=b.dataset.game;
-  if(!id){ toast(tt('msg.soon')); return; }
-  pickGameSong(id);
-});
-on('gameStart','click', startGame);
-on('gameAbort','click', ()=> abortGame());
-on('gresRetry','click', retryGame);
-/* 録音の準備：入力レベルを見てから始める。やめる／✕ ではマイクも閉じる */
-on('gckGo','click', beginRun);
-on('gckCancel','click', cancelGameCheck);
-on('gckClose','click', cancelGameCheck);
-/* スクリムで閉じたときもマイクを閉じる（closeDockModal の配線はそのまま残す） */
-on('dockScrim','click', cancelGameCheck);
+   課題曲を選ぶ → 開始カウント → メトロノームを聞きながら演奏 → 採点（src/game.js）
+   config/app.php の 'game_enabled' が false のあいだは HTML ごと出していないので、
+   要素があるときだけ配線する（無いまま on() を呼ぶとコンソールに警告が出るため）。 */
+if(document.getElementById('gameSongs')){
+  on('gameSongs','click', e=>{
+    const b=e.target.closest('.songbtn'); if(!b || b.disabled) return;
+    const id=b.dataset.game;
+    if(!id){ toast(tt('msg.soon')); return; }
+    pickGameSong(id);
+  });
+  on('gameStart','click', startGame);
+  on('gameAbort','click', ()=> abortGame());
+  on('gresRetry','click', retryGame);
+  /* 録音の準備：入力レベルを見てから始める。やめる／✕ ではマイクも閉じる */
+  on('gckGo','click', beginRun);
+  on('gckCancel','click', cancelGameCheck);
+  on('gckClose','click', cancelGameCheck);
+  /* スクリムで閉じたときもマイクを閉じる（closeDockModal の配線はそのまま残す） */
+  on('dockScrim','click', cancelGameCheck);
+}
+
+/* ===== メトロノーム =====
+   つまみを動かしたら設定として保存する。metronome.js から drawer.js を直接呼ぶと
+   読み込みの輪ができるので、知らせ（CustomEvent）を受けてここで保存する。 */
+window.addEventListener('gs:metrochanged', ()=> saveSettings());
 
 /* ===== ゲーム / チューナー ===== */
 on('micSw','click', async ()=>{
@@ -613,9 +624,13 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
   });
   /* ログイン状態は描画に関係しないので、初期描画の後で取りに行く */
   initAccount();
-  /* 練習時間の計測。ST.playing を1秒ごとに見るだけなので、他の処理には触らない */
+  /* 練習時間の計測。ST.playing / ST.metroOn を1秒ごとに見るだけなので、他の処理には触らない */
   initPractice();
   initPracticeUI();
+  /* メトロノーム。札の組み立てとボタンの配線（設定を読んだあとに呼ぶ） */
+  initMetro();
 })();
+/* ページを離れるときはメトロノームを止める（練習時間が増えたままにならないように） */
+window.addEventListener('pagehide', ()=> stopMetro());
 window.addEventListener('orientationchange', ()=> setTimeout(applyZoom, 250));
 window.addEventListener('resize', centerBoardH);          /* はみ出しぶんは常に中央に置く */

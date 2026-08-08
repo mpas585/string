@@ -91,6 +91,8 @@ return [
     'mode_tuner_s'   => 'Detección de afinación en tiempo real',
     'mode_game'      => 'Juego de puntuación',
     'mode_game_s'    => 'Toca una pieza y recibe tu puntuación',
+    'mode_metro'     => 'Metrónomo',
+    'mode_metro_s'   => 'Elige tempo y compás',
 
     'fab_aria'       => 'Reproducir / Detener',
     'cue_aria'       => 'Volver al inicio',
@@ -127,6 +129,30 @@ return [
     'seg_score'      => '🎼 Piezas',
     'seg_tuner'      => '🎯 Afinador',
     'seg_game'       => '🎮 Puntuar',
+    'seg_metro'      => '⏱ Metrónomo',
+
+    /* ===== Metrónomo (src/metronome.js) ===== */
+    'metro_bpm'          => 'BPM',
+    'metro_sig'          => 'Compás',
+    'metro_beat'         => 'Ritmo',
+    'metro_drum'         => 'Sonar con batería',
+    'metro_start'        => 'Empezar',
+    'metro_stop'         => 'Parar',
+    'metro_tap'          => 'Tempo por toques',
+    'metro_tap_note'     => 'Toca cuatro veces a la velocidad que quieras y el tempo la seguirá',
+    'metro_dn'           => 'Más lento',
+    'metro_up'           => 'Más rápido',
+    'metro_today'        => 'Hoy',
+    'metro_total'        => 'Total',
+    'metro_note'         => 'Mientras suena, el tiempo se suma a tu registro de práctica',
+    'metro_drawer_note'  => 'El tempo, el compás y el ritmo están en el centro de la pantalla',
+    'metro_beat_names'   => [
+      'eight'   => 'Ritmo de 8',
+      'sixteen' => 'Ritmo de 16',
+      'four'    => 'Bombo a negras',
+      'shuffle' => 'Shuffle',
+      'waltz'   => 'Vals',
+    ],
 
     'mic'            => 'Micrófono',
     'mic_sw'         => 'Detectar la afinación con el micrófono',
@@ -400,7 +426,7 @@ return [
     'lead'  => 'Una aplicación web que muestra el diapasón del %s en la pantalla del móvil para comprobar la posición, el número de dedo y la afinación mientras practicas. No hay que instalar nada: funciona en el navegador.',
     'items' => [
       ['🎼', 'Practicar una pieza', 'Elige una de las piezas incluidas o carga MusicXML / MIDI y obtendrás la partitura con digitación. Puedes corregirla tocando la nota.'],
-      ['🎮', 'Juego de puntuación', 'Toca siguiendo el metrónomo: la app escucha por el micrófono, puntúa sobre 100 y te dice cómo han ido la afinación y el ritmo.'],
+      ['⏱', 'Metrónomo',           'Elige tempo y compás y déjalo sonar. Puedes cambiarlo a un patrón de batería, y el tiempo se suma a tu registro de práctica.'],
       ['🎵', 'Práctica de escalas', 'Dentro de la práctica de piezas, elige tonalidad y número de octavas y la escala aparece en el diapasón y en el pentagrama, con acompañamiento y metrónomo.'],
       ['🎯', 'Afinador',            'Detecta la altura por el micrófono y muestra en el diapasón dónde está la nota que suena.'],
     ],
@@ -411,7 +437,7 @@ return [
       'Se pueden cargar partituras en MusicXML (.xml / .musicxml / .mxl) y MIDI (.mid). En MIDI se elige automáticamente la pista más cercana al registro, y luego puedes cambiar de pista.',
       'La digitación se cambia tocando la nota y se guarda sola. También puedes exportarla y llevarla a otro dispositivo.',
       'Admite cambio de tempo, un compás de preparación y reproducción en bucle sobre los compases que indiques.',
-      'En el juego de puntuación, el micrófono recoge lo que tocas y lo puntúa sobre 100, y se guarda tu mejor marca de cada pieza.',
+      'El metrónomo suena con el tempo, el compás y el ritmo que elijas. El tempo se puede fijar con el número, con el deslizador o tocando a la velocidad que quieras.',
       'Las piezas que te gusten se marcan con el corazón de la esquina superior izquierda del diapasón, y la lista puede filtrarse por favoritos.',
       'Una partitura cargada puede publicarse en «Piezas de todos», y las publicadas por otras personas aparecen en la misma lista. Puedes retirar la tuya cuando quieras.',
       'El tiempo practicado queda registrado en un calendario, con el total del mes y los días practicados.',
@@ -423,20 +449,20 @@ return [
     'use_title' => 'Cómo se usa',
     'steps' => [
       'Elige arriba cómo quieres practicar. Si has iniciado sesión, la próxima vez se abrirá directamente la lista de piezas.',
-      'Para practicar una pieza elige una pieza o un archivo de partitura; para el juego de puntuación elige una pieza propuesta. Las escalas están dentro de la práctica de piezas.',
+      'Para practicar una pieza elige una pieza o un archivo de partitura. Las escalas están dentro de la práctica de piezas. Para el metrónomo basta con el tempo y el compás.',
       'Al reproducir suena la música y la posición de la nota actual se marca en el diapasón.',
     ],
     'faq_title' => 'Preguntas frecuentes',
     'faqs' => [
       ['¿Hay que instalar algo?', 'No. Basta con abrirlo en el navegador. Si lo añades a la pantalla de inicio, se abre como una aplicación.'],
-      ['¿Hace falta iniciar sesión?', 'No. El diapasón, la práctica de piezas, el juego de puntuación y el afinador funcionan sin cuenta. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo.'],
+      ['¿Hace falta iniciar sesión?', 'No. El diapasón, la práctica de piezas, el metrónomo y el afinador funcionan sin cuenta. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo.'],
       ['El micrófono no responde', 'El micrófono solo funciona con https:// o en localhost. No funcionará si has abierto el archivo con file:// ni si no le has dado permiso al navegador.'],
       ['¿Qué archivos de partitura puedo usar?', 'MusicXML (.xml / .musicxml / .mxl) y MIDI (.mid).'],
       ['¿Puedo corregir la digitación?', 'Toca una nota y aparecerán las alternativas. Lo que elijas se guarda solo, y la digitación puede exportarse e importarse.'],
-      ['¿Se guarda la grabación del juego?', 'No. El sonido del micrófono se usa solo para puntuar y se borra en cuanto termina el cálculo.'],
+      ['¿Puedo usar solo el metrónomo?', 'Sí. Desde “Metrónomo” en la pantalla de inicio suena sin necesidad de cargar ninguna partitura, y el tiempo se suma igualmente a tu registro de práctica.'],
       ['¿Puedo retirar una pieza publicada?', 'Sí: usa [Dejar de publicar] en tu propia pieza dentro de la lista. Los titulares de derechos pueden pedir la retirada desde el menú de ajustes, en Contacto: elige «Solicitud de retirada» y envía el título y el motivo.'],
     ],
-    'note'  => 'Mostrar el diapasón, cargar partituras y editar digitaciones ocurre todo en tu dispositivo. Solo cuando inicias sesión se guardan en el servidor los ajustes, las digitaciones, los favoritos, el registro de práctica y las piezas publicadas. El sonido del micrófono del juego y del afinador no sale del dispositivo.',
+    'note'  => 'Mostrar el diapasón, cargar partituras y editar digitaciones ocurre todo en tu dispositivo. Solo cuando inicias sesión se guardan en el servidor los ajustes, las digitaciones, los favoritos, el registro de práctica y las piezas publicadas. El sonido del micrófono del afinador no sale del dispositivo.',
   ],
 
   /* ===== Guía de problemas de práctica (entrada a los artículos GEO/SEO) =====
@@ -495,7 +521,7 @@ return [
     'prev'      => 'Instrumento anterior',
     'next'      => 'Instrumento siguiente',
     'about_t'   => 'Qué es GEN strings',
-    'about'     => 'Convierte la pantalla del móvil en un diapasón para comprobar la posición, el número de dedo y la afinación mientras practicas. Incluye práctica de piezas (MusicXML / MIDI), práctica de escalas, un juego de puntuación que escucha por el micrófono, afinador y calendario de práctica. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo. No hace falta instalar nada: funciona en el navegador.',
+    'about'     => 'Convierte la pantalla del móvil en un diapasón para comprobar la posición, el número de dedo y la afinación mientras practicas. Incluye práctica de piezas (MusicXML / MIDI), práctica de escalas, metrónomo, afinador y calendario de práctica. Al iniciar sesión, los ajustes, las digitaciones, los favoritos y el registro de práctica pasan a otro dispositivo. No hace falta instalar nada: funciona en el navegador.',
   ],
 
   /* ===== Cuentas (correo + contraseña / inicio con Google).

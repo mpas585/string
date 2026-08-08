@@ -50,6 +50,8 @@ export function saveSettings(){
     volProfiles:ST.volProfiles, volBump:VOL_BUMP, countIn:ST.countIn, countBeats:ST.countBeats, keepAwake:ST.keepAwake,
     lite:ST.lite,
     tempo:ST.tempo, enjoy:ST.enjoy, loop:ST.loop, lang:ST.lang,
+    metro:ST.metro,
+
     keyRoot:ST.keyRoot, scaleType:ST.scaleType, scaleOct:ST.scaleOct
   }));
   settingsChanged();          /* 保存番号があればサーバへも上書き。無ければ作成を尋ねる */
@@ -65,6 +67,14 @@ export function loadSettings(){
     if(typeof j.zoom==='number') ST.zoom=j.zoom;
     if(j.octave!=null) ST.octave=j.octave;
     if(j.pref) ST.pref=j.pref;
+    /* メトロノーム。知っているキーだけを拾う（古い保存や壊れた値で画面が崩れないように） */
+    if(j.metro && typeof j.metro==='object'){
+      const m=j.metro;
+      if(typeof m.bpm==='number' && m.bpm>=30 && m.bpm<=260) ST.metro.bpm=Math.round(m.bpm);
+      if(typeof m.sig==='string' && /^\d+\/\d+$/.test(m.sig)) ST.metro.sig=m.sig;
+      if(typeof m.drum==='boolean') ST.metro.drum=m.drum;
+      if(typeof m.beat==='string') ST.metro.beat=m.beat;
+    }
     if(j.volProfiles){
       if(j.volProfiles.scale) Object.assign(ST.volProfiles.scale, j.volProfiles.scale);
       if(j.volProfiles.score) Object.assign(ST.volProfiles.score, j.volProfiles.score);

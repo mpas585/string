@@ -15,11 +15,12 @@ export const DEFAULT_VOL = {
   score: {master:0.80, lead:0.90, drum:0.65, bass:0.65, chord:0.60, metro:0.55}
 };
 export const VOL_KEYS=['master','lead','drum','bass','chord','metro'];
-export function volProfileKey(){ return (ST.mode==='scale') ? 'scale' : 'score'; }
+/* メトロノームはスケール練習と同じ配分（クリックが大きくメロディが小さい）を使う */
+export function volProfileKey(){ return (ST.mode==='scale' || ST.mode==='metro') ? 'scale' : 'score'; }
 
 /* ===== 状態 ===== */
 export const ST = {
-  mode: null,            // null | 'score' | 'game' | 'tuner'
+  mode: null,            // null | 'score' | 'game' | 'metro' | 'tuner'
   events: [],
   measures: [],          // [{num, start, end}] 単位=4分音符
   beatsPerMeasure: 4,    // 4分音符=1 換算の1小節の長さ（MusicXML も beats*(4/beat-type) で正規化）
@@ -45,6 +46,10 @@ export const ST = {
   keyRoot: 0,
   scaleType: 'pop',
   scaleOct: 2,
+  /* メトロノーム（src/metronome.js）。設定と一緒に保存される（drawer.js の saveSettings） */
+  metro: {bpm:80, sig:'4/4', drum:false, beat:'eight'},
+  /* 鳴らしているあいだ true。練習時間に足すかどうかの判断に使う（src/practice.js） */
+  metroOn: false,
   /* チューナーモード */
   tunerMidi: null,
   tunerCents: 0,

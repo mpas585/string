@@ -57,6 +57,15 @@ function init() {
   addEventListener('resize', () => layout(false));
 
   /* ---- 指・マウス ---- */
+  /* 札は <a> と <img> でできているので、マウスで押したまま動かすと
+     ブラウザがリンク／画像のドラッグを始めてしまい、pointermove がそちらへ取られて回らない。
+     ドラッグそのものを断って、指のときと同じ経路（pointer events）だけを通す。 */
+  stage.addEventListener('dragstart', e => e.preventDefault());
+  cards.forEach(c => {
+    c.setAttribute('draggable', 'false');
+    c.querySelectorAll('img').forEach(im => im.setAttribute('draggable', 'false'));
+  });
+
   stage.addEventListener('pointerdown', e => {
     if (e.button != null && e.button !== 0) return;
     dragging = true; moved = 0; lastDX = 0;
@@ -76,7 +85,10 @@ function init() {
     moved  = Math.max(moved, Math.abs(dx));
     /* 8px を越えて はじめて「回している」とみなし、そこで初めて捕まえる。
        ただ押しただけのときは捕まえないので、click がそのまま <a> に届く（PCのクリック対策）。 */
-    if (!wasDrag && moved > 8) { try { stage.setPointerCapture(e.pointerId); } catch (err) {} }
+    if (!wasDrag && moved > 8) {
+      try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+      stage.classList.add('grabbing');       /* マウスのときだけ見た目が変わる */
+    }
     /* 指の動きに追いてまわす */
     cur = startCur - dx / stepPx();      /* 一周するので、どこまで回しても止めない */
     layout(false);
@@ -86,6 +98,7 @@ function init() {
   const endDrag = () => {
     if (!dragging) return;
     dragging = false;
+    stage.classList.remove('grabbing');
     /* 勢いよく払ったときはひとつ先まで送る */
     const flick = Math.abs(lastDX) > 6 ? -Math.sign(lastDX) : 0;
     go(Math.round(cur) + flick);

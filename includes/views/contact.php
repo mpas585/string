@@ -12,6 +12,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <!doctype html>
 <html lang="<?= h($T['html_lang']) ?>" class="home">
 <head>
+<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
+<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#15110c">

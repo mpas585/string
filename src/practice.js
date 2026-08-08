@@ -2,7 +2,7 @@
   practice.js — 練習した時間を数えて、日ごとに残す。
 
   数え方は「実際に鳴っていた時間」。
-    ・再生中だけ増える。止めているあいだ・一時停止中は増えない
+    ・再生中（またはメトロノームを鳴らしているあいだ）だけ増える。止めているあいだは増えない
     ・同じ小節を繰り返し練習すれば、その回数ぶん増える
     ・巻き戻しても減らない（かけた時間そのものを数えるため）
 
@@ -103,7 +103,9 @@ function tick() {
   const now = Date.now();
   const gap = now - last;
   last = now;
-  if (!ST.playing) return;
+  /* 譜面の再生（ST.playing）と、メトロノーム（ST.metroOn）のどちらでも数える。
+     メトロノームは譜面を読み込まずに使えるので、ST.playing だけ見ていると数え落とす。 */
+  if (!ST.playing && !ST.metroOn) return;
   if (gap <= 0 || gap > MAXGAP) return;   /* 端末が眠っていた・タブが止まっていた */
 
   const d = load();

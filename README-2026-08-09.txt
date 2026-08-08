@@ -1,0 +1,42 @@
+GEN strings 更新 2026-08-09（8件バッチ）
+=========================================
+
+■ 展開のしかた
+  プロジェクトルート（genstrings.sakura.ne.jp の公開ディレクトリ直下）で
+  そのまま上書きしてください。ディレクトリ構造を含めてあります。
+  改行コードは全ファイル CRLF です。
+
+■ 入っているファイル（21）
+  includes/bootstrap.php
+  includes/lang/{ja,en,es,zh}.php
+  includes/views/{app,home,guide,contact,legal,terms}.php
+  src/styles.css
+  src/{state,practice,drawer,modes,main,home-gallery}.js
+  src/metronome.js              ← 新規
+  tools/langjson.py
+  sw.js                          ← VER を gs-v16 → gs-v17 に上げてあります
+
+■ 上書きしていないファイル（意図的）
+  config/app.php
+      サーバ側の実ファイルには Google OAuth の client_id / secret や
+      mail_from が入っており、GitHub 版は空のままです。上書きすると
+      Google ログインが止まるので、今回は同梱していません。
+      採点ゲームを復活させたくなったときだけ、config/app.php の配列に
+          'game_enabled' => true,
+      の1行を足してください（既定は false ＝ 出さない）。
+
+  src/account.js, src/audio/scheduler.js
+      本番サーバのものが GitHub 版より新しかったため、今回は触っていません。
+
+■ 反映後に確認したいこと
+  1. /ja/ と /ja/cello/ のソースに gtag が1つ出ているか
+  2. 指板の左上が「ハート（上）／公開・非公開（下）」の順になっているか
+  3. トップの楽器カルーセルがマウス左ボタン押しっぱなしで回るか
+  4. 入口に「⏱ メトロノーム」が出て、採点ゲームがどこにも出ていないか
+  5. メトロノームを鳴らして、歯車 →「累計練習時間」が増えるか
+
+■ tools/langjson.py の使い方（追加分）
+  python tools/langjson.py includes/lang/ja.php            JSON を出力
+  python tools/langjson.py includes/lang/ja.php --check     読めるかだけ確かめる
+  python tools/langjson.py includes/lang/*.php --parity     4言語のキーがそろっているか
+  読めないときは「何行目の何が読めないか」を出して止まります。

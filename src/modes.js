@@ -25,6 +25,8 @@ import { closeDrawer, openDrawer, saveSettings, saveFingering, loadFingering, sy
 import { loadSample, renderTracks, midiFile, setMidiFile } from './songs.js';
 /* 採点ゲーム。モードの出入りで課題曲一覧を作り直し、録音中に抜けたら止める */
 import { abortGame, renderGameSongs, syncStartBtn, maybeShowGameIntro } from './game.js';
+/* メトロノーム。モードを離れるときは必ず止める（裏で鳴り続けないように） */
+import { enterMetro, stopMetro } from './metronome.js';
 /* お気に入り（指板の左上のハート）。曲が変わるたびに出し入れする */
 import { syncFavBtn } from './favorites.js';
 
@@ -42,6 +44,16 @@ export function render(){
     return;
   }
   picker.style.display='none';
+
+  /* メトロノーム → 指板も譜面も使わない。#metroView が画面をまるごと受け持つ
+     （出し入れは applyMode の data-m）。ここでは下の「譜面がありません」を出さないようにする */
+  if(ST.mode==='metro'){
+    emptyEl.style.display='none';
+    renderBoard(null);
+    setNowLine(tt('ui.mode_metro_s'));
+    renderLegend(); updateTransport(); updateChrome();
+    return;
+  }
 
   /* チューナーモード → 譜面なしで指板＋検出表示 */
   if(ST.mode==='tuner'){
@@ -75,7 +87,7 @@ export function render(){
 }
 export function renderLegend(){
   const lg=document.getElementById('legend');
-  if(!ST.mode || ST.mode==='tuner' || !ST.events.length){ lg.style.display='none'; return; }
+  if(!ST.mode || ST.mode==='tuner' || ST.mode==='metro' || !ST.events.length){ lg.style.display='none'; return; }
   lg.style.display='flex';
   const chordItem = (ST.mode==='score') ? `<span><i class="dot chord"></i>${tt('msg.lg_chord')}</span>` : '';
   lg.innerHTML = '<span><i class="dot lead"></i>' + (ST.mode==='score' ? tt('msg.lg_lead') : tt('msg.lg_press')) + '</span>'
@@ -96,6 +108,9 @@ export function applyMode(){
 export function setMode(mode, keepDrawer){
   warmAudio();
   if(ST.mode===mode) return;
+  /* メトロノームは stopPlay より先に止める。stopPlay が音のバスを外してしまうと、
+     鳴っていないのに ST.metroOn だけ立ったままになり、練習時間が増え続けるため。 */
+  stopMetro();
   stopPlay();
 
   /* チューナーモードを離れる → マイクとシートを必ず閉じる */
@@ -107,6 +122,11 @@ export function setMode(mode, keepDrawer){
   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
   ST.lastScrollId=null; ST.scoreName=''; ST.scoreTitle='';
   renderScoreTitle();
+  /* 譜面を手放したので、指板の左上のハートと、公開/非公開・削除も引っ込める。
+     メトロノームは画面をまるごと覆うので、ここに古いボタンが浮いたままだと押せてしまう。
+     公開/非公開・削除の出し入れは uploads.js が この知らせを受けて行う。 */
+  syncFavBtn();
+  try{ window.dispatchEvent(new CustomEvent('gs:scorechanged')); }catch(e){}
   setMidiFile(null); renderTracks();
   applyMode();
   ST.vol = ST.volProfiles[volProfileKey()];      /* モード別の音量プロファイル */
@@ -135,6 +155,14 @@ export function setMode(mode, keepDrawer){
     render();
     toast(tt('msg.hint_game'));
     maybeShowGameIntro();                   /* 初めて開いたときだけ説明を出す */
+
+  } else if(mode==='metro'){
+    /* メトロノームは譜面を持たない。伴奏も使わないので必ずOFFに戻す */
+    ST.enjoy=false;
+    document.getElementById('enjoySw').classList.remove('on');
+    if(!keepDrawer) closeDrawer();       /* 操作は画面のまん中にあるのでドロワーは閉じる */
+    render();
+    enterMetro();
 
   } else if(mode==='tuner'){
     ST.enjoy=false;
@@ -240,10 +268,13 @@ export function renderEdit(ev){
   if(!ev){ el.innerHTML=tt('msg.edit_empty_html'); return; }
   const lead=ev.pitches[ev.leadIdx];
 
-  let cur=`<div class="cur">`;
+  /* 音名は .cur-n でひとまとめにする。こうしておくと .cur を flex にしたときに
+     音名の並び（和音のときの空白区切り）を崩さずに、ボタンだけ右端へ寄せられる。 */
+  let cur=`<div class="cur"><span class="cur-n">`;
   ev.pitches.forEach((p,i)=>{
     cur += `<span class="${i===ev.leadIdx?'lead':'oth'}">${p.name}</span>${i<ev.pitches.length-1?' ':''}`;
   });
+  cur += `</span>`;
   cur += `<button type="button" class="reset-one-btn" data-action="reset-one">${tt('msg.fing_reset_one')}</button>`;
   cur+=`</div>`;
 

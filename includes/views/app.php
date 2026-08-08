@@ -11,6 +11,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <!doctype html>
 <html lang="<?= h($T['html_lang']) ?>">
 <head>
+<?php /* GA4 の計測タグ。測定IDは config/app.php の 'ga_id' 1か所だけ */ ?>
+<?php require APP_ROOT . '/includes/views/analytics.php'; ?>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#15110c">
@@ -72,12 +74,13 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
 <!-- 全画面 指板 -->
 <div class="board-full">
-  <!-- 公開/非公開（左上・ハートの上）。自分がアップロードした譜面を開いているときだけ出る。
+  <!-- 公開/非公開（左上・ハートの下）。自分がアップロードした譜面を開いているときだけ出る。
        出し入れと文言の切り替えは src/uploads.js の syncShareDeleteBtns。公開中は青くなる。 -->
   <button id="shareBtn" class="sharebtn" hidden aria-pressed="false" aria-label="<?php e('ui.share_btn_private') ?>">
     <span class="sb-ic" aria-hidden="true">🔗</span><span class="sb-t"><?php e('ui.share_btn_private') ?></span>
   </button>
-  <!-- お気に入り。曲を読み込んでいるときだけ出る（出し入れは src/favorites.js の syncFavBtn）。
+  <!-- お気に入り（左上のいちばん上）。曲を読み込んでいるときだけ出る
+       （出し入れは src/favorites.js の syncFavBtn）。
        .fab と同じく位置は画面に対して固定なので、指板を動かしても左上に残る。 -->
   <button id="favBtn" class="favbtn" hidden aria-pressed="false" aria-label="<?php e('ui.fav_add') ?>">♡</button>
   <!-- アップロードした譜面の削除（右上）。自分の譜面を開いているときだけ出る -->
@@ -366,8 +369,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <button class="pk-card pk-main" data-mode="score">
     <span class="pk-ic">🎼</span><span class="pk-b"><?php e('ui.mode_score') ?><small><?php e('ui.mode_score_s') ?></small></span>
   </button>
+<?php if (APP_GAME_ENABLED): ?>
   <button class="pk-card" data-mode="game">
     <span class="pk-ic">🎮</span><span class="pk-b"><span class="pk-b-title"><?php e('ui.mode_game') ?><span class="beta-badge">β</span></span><small><?php e('ui.mode_game_s') ?></small></span>
+  </button>
+<?php endif; ?>
+  <!-- 採点ゲームがあった場所。中身は src/metronome.js -->
+  <button class="pk-card" data-mode="metro">
+    <span class="pk-ic">⏱</span><span class="pk-b"><?php e('ui.mode_metro') ?><small><?php e('ui.mode_metro_s') ?></small></span>
   </button>
   <button class="pk-card" data-mode="tuner">
     <span class="pk-ic">🎯</span><span class="pk-b"><?php e('ui.mode_tuner') ?><small><?php e('ui.mode_tuner_s') ?></small></span>
@@ -724,6 +733,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
 </div>
 
+<?php if (APP_GAME_ENABLED): ?>
 <!-- 採点ゲーム：録音の準備。マイクの入力レベルを見せてから始める。
      ✕・「やめる」・スクリムはどれも src/game.js の cancelGameCheck()（マイクも閉じる）。 -->
 <div id="mGameReady" class="dkmodal gready" role="dialog" aria-modal="true">
@@ -807,6 +817,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
   <div class="sub"><?php e('ui.game_intro_note') ?></div>
 </div>
+<?php endif; /* APP_GAME_ENABLED */ ?>
 
 <!-- アップロードした楽譜：同じ譜面っぽいものがあるとき、上書きか新規追加かを尋ねる
      （中身まで同じときは尋ねずに何もしない。判定は src/uploads.js の findSimilar） -->
@@ -875,7 +886,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
     <div class="seg" id="modeSeg" role="tablist">
       <button data-mode="score"><?php e('ui.seg_score') ?></button>
+<?php if (APP_GAME_ENABLED): ?>
       <button data-mode="game"><?php e('ui.seg_game') ?><span class="beta-badge">β</span></button>
+<?php endif; ?>
+      <button data-mode="metro"><?php e('ui.seg_metro') ?></button>
       <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
     </div>
   </div>
@@ -948,6 +962,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     </div>
   </div>
 
+<?php if (APP_GAME_ENABLED): ?>
   <!-- ========== 採点ゲームモード ==========
        課題曲の一覧は「曲を練習する」と同じ public/songs/manifest.json から作る
        （中身を入れるのは src/game.js の renderGameSongs）。 -->
@@ -964,6 +979,16 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <div class="row controls gstart-bar">
       <button id="gameStart" class="primary" style="flex:1; justify-content:center; min-height:46px"><?php e('ui.game_start') ?></button>
     </div>
+  </div>
+<?php endif; /* APP_GAME_ENABLED */ ?>
+
+  <!-- ========== メトロノームモード ==========
+       画面のまん中に大きく出すほうが使いやすいので、操作そのものは
+       ドロワーではなく #metroView（下のほう）に置いてある。
+       ここはドロワーを開いたときの案内だけ。 -->
+  <div data-m="metro">
+    <div class="seclbl"><?php e('ui.mode_metro') ?></div>
+    <div class="sub"><?php e('ui.metro_drawer_note') ?></div>
   </div>
 
   <!-- ========== 共通：推奨ポジション ==========
@@ -1064,12 +1089,66 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <!-- 小節フラッシュ（シークバーで小節を移動した時に一瞬だけ出す） -->
 <div id="mflash" class="mflash" aria-hidden="true"></div>
 
+<?php if (APP_GAME_ENABLED): ?>
 <!-- 採点ゲーム：録音中の表示（中身は src/game.js が書き換える） -->
 <div id="gameRec" class="grec" aria-live="polite">
   <span class="gr-dot"></span>
   <span class="gr-t"><?php e('ui.game_rec') ?></span>
   <span id="gameRecPos" class="gr-pos">1</span>
   <button id="gameAbort" class="ghost"><?php e('ui.game_abort') ?></button>
+</div>
+<?php endif; /* APP_GAME_ENABLED */ ?>
+
+<!-- ========== メトロノーム（画面本体）==========
+     data-m="metro" なので、モードが metro のときだけ出る（src/modes.js の applyMode）。
+     ・まん中の数字がテンポ。＋−・スライダー・タップのどれでも変えられる
+     ・拍子とビートの札は src/metronome.js が辞書（window.T）から作る
+     ・鳴らしているあいだは練習時間に足す（ST.metroOn を src/practice.js が見ている） -->
+<div id="metroView" class="mtv m-hide" data-m="metro">
+  <div class="mt-in">
+
+    <div class="mt-lbl"><?php e('ui.metro_sig') ?></div>
+    <div id="mtSig" class="mt-chips" role="group" aria-label="<?php e('ui.metro_sig') ?>"></div>
+
+    <!-- 拍のランプ（いま何拍目か）。数は拍子に合わせて作り直す -->
+    <div id="mtLamps" class="mt-lamps" aria-hidden="true"></div>
+
+    <!-- ど真ん中：テンポ -->
+    <div class="mt-dial">
+      <button type="button" id="mtDown" class="mt-step" aria-label="<?php e('ui.metro_dn') ?>">−</button>
+      <div class="mt-bpm"><b id="mtBpm">80</b><span>BPM</span></div>
+      <button type="button" id="mtUp" class="mt-step" aria-label="<?php e('ui.metro_up') ?>">＋</button>
+    </div>
+    <input id="mtRange" class="mt-range" type="range" min="30" max="260" step="1" value="80"
+           aria-label="<?php e('ui.metro_bpm') ?>">
+
+    <div class="mt-row">
+      <button type="button" id="mtTap" class="ghost mt-tap"><?php e('ui.metro_tap') ?></button>
+      <button type="button" id="mtPlay" class="primary mt-play" aria-label="<?php e('ui.metro_start') ?>">
+        <span class="p-play">▶</span><span class="p-stop">■</span>
+      </button>
+    </div>
+    <div class="mt-sub"><?php e('ui.metro_tap_note') ?></div>
+
+    <hr class="sep">
+
+    <!-- ドラムモード。ONのあいだはクリックではなくドラムのパターンで鳴らす -->
+    <div id="mtDrumSw" class="sw" role="switch" aria-checked="false" tabindex="0">
+      <span><?php e('ui.metro_drum') ?></span><span class="knob"></span>
+    </div>
+    <div id="mtBeatWrap" class="mt-beatwrap">
+      <div class="mt-lbl"><?php e('ui.metro_beat') ?></div>
+      <div id="mtBeat" class="mt-chips" role="group" aria-label="<?php e('ui.metro_beat') ?>"></div>
+    </div>
+
+    <!-- 練習時間（練習カレンダーと同じ数字。鳴らしているあいだ増える） -->
+    <div class="mt-time">
+      <div><span><?php e('ui.metro_today') ?></span><b id="mtToday">–</b></div>
+      <div><span><?php e('ui.metro_total') ?></span><b id="mtTotal">–</b></div>
+    </div>
+    <div class="mt-sub"><?php e('ui.metro_note') ?></div>
+
+  </div>
 </div>
 
 <div id="toast" class="toast"></div>

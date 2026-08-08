@@ -33,6 +33,11 @@ if (!defined('APP_NAME')) {
      突き合わせは小文字にそろえてから行う（users.email は小文字で持っている） */
   define('APP_ADMIN_EMAIL',        strtolower(trim((string)($APP_CFG['admin_email'] ?? ''))));
   define('APP_GA_ID',              $APP_CFG['ga_id'] ?? '');
+  /* 採点ゲームを画面に出すか。views/app.php が見ている。
+     既定は false（出さない）。config/app.php に 'game_enabled' => true, の1行を足すと復活する。
+     src/game.js と辞書 ui.game_* はそのまま残してあるので、消したのは導線だけ。
+     ※ 戻すときは includes/lang/*.php の intro / home の文言も採点ゲーム側へ戻すこと。 */
+  define('APP_GAME_ENABLED',       (bool)($APP_CFG['game_enabled'] ?? false));
   define('APP_DB_PATH',            $APP_CFG['db_path']);
   /* アカウント（includes/account.php / api/account.php / oauth/google.php で使う） */
   define('APP_SITE_URL',           rtrim((string)($APP_CFG['site_url'] ?? ''), '/'));
