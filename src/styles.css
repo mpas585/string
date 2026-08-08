@@ -379,14 +379,15 @@
   .delbtn{
     position:fixed; z-index:5; right:calc(12px + env(safe-area-inset-right));
     top:calc(62px + env(safe-area-inset-top));
-    width:40px; height:40px; min-height:0; padding:0; border-radius:50%;
+    width:44px; height:44px; min-height:0; padding:0; border-radius:50%;
     display:inline-flex; align-items:center; justify-content:center;
-    font-size:17px; line-height:1;
-    background:var(--panel2); border:1px solid var(--line); color:var(--muted);
+    background:var(--panel2); border:1px solid var(--line); color:#e2607a;
     box-shadow:0 3px 10px rgba(0,0,0,.42); cursor:pointer;
   }
   .delbtn[hidden]{display:none}
-  .delbtn:active{transform:translateY(1px); color:var(--danger); border-color:#7a3345}
+  /* 中身は線画のSVG。絵文字より輪郭がはっきりするので小さくても意味が伝わる */
+  .delbtn svg{width:23px; height:23px; display:block}
+  .delbtn:active{transform:translateY(1px); background:#2a171c; border-color:#7a3345}
   .songbtn{position:relative}
   .songbtn.hasfav{padding-right:32px}
   .songbtn .fav{

@@ -81,7 +81,16 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
        .fab と同じく位置は画面に対して固定なので、指板を動かしても左上に残る。 -->
   <button id="favBtn" class="favbtn" hidden aria-pressed="false" aria-label="<?php e('ui.fav_add') ?>">♡</button>
   <!-- アップロードした譜面の削除（右上）。自分の譜面を開いているときだけ出る -->
-  <button id="delBtn" class="delbtn" hidden aria-label="<?php e('ui.uploads_delete') ?>" title="<?php e('ui.uploads_delete') ?>">🗑</button>
+  <!-- 絵文字の🗑は小さく潰れて何のアイコンか分からないので、線画のSVGにしてある -->
+  <button id="delBtn" class="delbtn" hidden aria-label="<?php e('ui.uploads_delete') ?>" title="<?php e('ui.uploads_delete') ?>">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M4 6.5h16"/>
+      <path d="M9.5 6.5V4.8a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.7"/>
+      <path d="M6.4 6.5l.8 12.1a1.6 1.6 0 0 0 1.6 1.5h6.4a1.6 1.6 0 0 0 1.6-1.5l.8-12.1"/>
+      <path d="M10.2 10.3v6.2M13.8 10.3v6.2"/>
+    </svg>
+  </button>
   <div id="fbsvg" class="fbsvg"></div>
   <div id="staffview" class="staffview"></div>
 </div>

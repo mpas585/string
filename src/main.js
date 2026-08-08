@@ -530,13 +530,9 @@ on('skipStart','click', skipToStart);
 on('trackBack','click', ()=> setScoreSub('load'));
 
 /* ===== アップロードした楽譜（保存番号に紐づく一覧） ===== */
+/* 名前の変更は上部バーの曲名から、シェアと削除は指板の左上・右上へ移したので、
+   ここに残る操作は「トラック」と行そのもの（＝開く）の2つ。 */
 on('upList','click', e=>{
-  const del=e.target.closest('.ud');
-  if(del){ deleteUpload(del.dataset.id); return; }     /* 削除が先（行のタップより優先） */
-  const ren=e.target.closest('.ur');
-  if(ren){ openRename(ren.dataset.id, ren.dataset.name); return; }   /* 一覧に出す名前を変える */
-  const shr=e.target.closest('.us');
-  if(shr){ openShare(shr.dataset.id); return; }                      /* みんなの曲として公開する */
   const trk=e.target.closest('.ut');
   if(trk){ openUpload(trk.dataset.id, true); return; } /* 開いてトラック選択の面を出す */
   const row=e.target.closest('.uprow');

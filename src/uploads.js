@@ -139,16 +139,12 @@ export function renderUploads() {
       const trk = it.hassrc
         ? '<button type="button" class="ubtn ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
         : '';
-      /* 操作は行の下段にまとめる（細い画面でも譜面の名前を押しつぶさないようにする
-         ＝MIDIトラック一覧と同じ作り）。削除は指板の右上へ移したのでここには出さない。
-         data-name は、押したときに名前を出し直すために持たせている（配線は main.js）。 */
+      /* 行に残す操作は「トラック」だけ（元のMIDIを預かっている行のみ）。
+         名前の変更は上部バーの曲名から、シェアと削除は指板の左上・右上へ移したので、
+         同じ操作を2箇所に置かず、一覧は「曲を選ぶ」と同じく開くための一覧に徹する。 */
       return '<div class="uprow' + on + '" data-id="' + it.id + '">'
         + '<span class="un">' + esc(it.name) + '<small>' + esc(sub) + '</small></span>'
-        + '<span class="ub">'
-        +   '<button type="button" class="ubtn ur" data-id="' + it.id + '" data-name="' + esc(it.name) + '">' + esc(tt('share.rename')) + '</button>'
-        +   trk
-        +   '<button type="button" class="ubtn us" data-id="' + it.id + '" data-name="' + esc(it.name) + '">' + esc(tt('share.btn')) + '</button>'
-        + '</span>'
+        + (trk ? '<span class="ub">' + trk + '</span>' : '')
         + '</div>';
     }).join('');
   }
@@ -169,10 +165,12 @@ export async function refreshUploads() {
    いま画面に出ている譜面が自分のアップロードのどれかに対応するときだけ、
    items の中からその1件を返す（対応しなければ null＝ボタンは隠す）。 */
 export function curUploadItem() {
-  if (!curId) return null;
+  if (!curId || !curScore) return null;
   /* 別の曲（用意した曲・みんなの曲・読み込んだだけのファイル）に移っていたら対象外。
-     curId は開き直すまで残るので、いま出ている譜面と一致するかを必ず見る。 */
-  if (ST.scoreName !== curScore) return null;
+     curId は開き直すまで残るので、いま出ている譜面と一致するかを必ず見る。
+     譜面を閉じると ST.scoreName は '' になる。curScore も空なら両方 '' で一致してしまい、
+     何も開いていないのにボタンが出てしまうため、空でないことを先に確かめる。 */
+  if (!ST.scoreName || ST.scoreName !== curScore) return null;
   return items.find(it => it.id === curId) || null;
 }
 
@@ -354,7 +352,9 @@ export async function openUpload(id, showTracks) {
     setTempo(Math.round((r.data && r.data.tempo) || ST.tempo));
     curId = r.id;
     curScore = 'up:' + r.id;
-    setScore(parsed, curScore);                 /* 運指の保存キーは件ごとに固定 */
+    /* 第3引数＝上部バーに出す表示名。curScore は 'up:12' という内部IDなので、
+       これを渡さないと曲名の欄が空のままになる。 */
+    setScore(parsed, curScore, r.name);         /* 運指の保存キーは件ごとに固定 */
 
     /* 保存してあった運指を当てる。当てたぶんは localStorage にも書いて、
        次はオフラインでも同じ運指で開けるようにする（送り返しは applying で止める） */
