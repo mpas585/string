@@ -466,8 +466,7 @@
      ここでは .songbtn に無い差分（＝選択中の強調と［トラック］ボタン）だけを足す。
      div なのは中に［トラック］ボタンを入れるため（button は入れ子にできない）。 */
   .uplist{display:flex; flex-direction:column; gap:7px; margin-bottom:8px}
-  /* 曲名は .songbtn と同じ太字（下の説明だけ .songbtn small で 400 に戻る） */
-  .uprow{cursor:pointer; font-weight:700}
+  .uprow{cursor:pointer}
   /* いま開いている1件。曲一覧の .songbtn.on と同じ強調（枠と文字色だけ）にそろえる */
   .uprow.on{border-color:var(--accent); color:var(--accent)}
   .uprow small{display:block}
@@ -764,13 +763,16 @@
       radial-gradient(700px 420px at 8% 108%, #1a2430 0%, transparent 60%),
       var(--bg);
   }
-  /* ボタン：立体感 */
-  button, label.filebtn{
+  /* ボタン：立体感。.uprow（アップロードした楽譜の行）は中に［トラック］ボタンを
+     入れる都合で div だが、「曲を選ぶ」の .songbtn と同じ見た目にするため一緒に当てる。 */
+  button, label.filebtn, .uprow{
     background:linear-gradient(180deg, #302719, #241d14);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 2px 0 rgba(0,0,0,.35);
     font-weight:600;
   }
-  button:active, label.filebtn:active{box-shadow:inset 0 2px 5px rgba(0,0,0,.45); transform:translateY(2px)}
+  button:active, label.filebtn:active, .uprow:active{box-shadow:inset 0 2px 5px rgba(0,0,0,.45); transform:translateY(2px)}
+  /* 中のボタンは押されても親ごと沈ませない（二重に動くと分かりにくいため） */
+  .uprow .ubtn:active{transform:none}
   button.primary{
     background:linear-gradient(180deg, #ffd977, var(--accent) 55%, #c98f2c);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 3px 0 #7d5d1c, var(--glow);

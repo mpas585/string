@@ -200,3 +200,36 @@ markup 側で `.uprow` に `.songbtn` を併せ持たせ、CSSは差分だけを
 | 「Zwei Stucke fur Violoncello - Two Pieces…」（519px幅／枠318px） | マーキーする（-209px / 11.6秒）✓ |
 
 一覧のデザイン一致もスクリーンショットで確認済み。JavaScript エラー：**0件**
+
+---
+
+# 【修正】一覧の行にボタンのグラデが当たっていなかった件
+
+## 原因
+ボタンの地色は基底規則（`button, label.filebtn`）の `background:var(--panel2)` ではなく、
+後方の **「ボタン：立体感」** ブロックで上書きされていました。
+
+```css
+button, label.filebtn{
+  background:linear-gradient(180deg, #302719, #241d14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 2px 0 rgba(0,0,0,.35);
+  font-weight:600;
+}
+```
+
+`.uprow` は `div` なのでこのブロックに入らず、**グラデーション・立体の影・太字（600）を全部取りこぼして**
+基底のべた塗りだけになっていました。
+
+（前回この差に気づけなかったのは、`getComputedStyle().backgroundColor` で比べていたためです。
+グラデーションは `background-image` 側に入るので、色の層は透明のままになり差が出ませんでした。）
+
+## 対処
+値を書き写さず、**このブロックのセレクタに `.uprow` を加えて同じ規則を共有**するようにしました。
+前回手当てしていた `font-weight:700` は、本体が 600 なので削除しています。
+`:active` の沈み込みも同じ規則に含めたうえで、中の［トラック］ボタンを押したときに
+親ごと二重に沈まないよう `.uprow .ubtn:active{transform:none}` を足しました。
+
+## 検証
+`#songBtns` の中に実物の `.songbtn` と `.uprow` を並べて計算値を比較し、
+**backgroundImage / boxShadow / fontWeight / borderRadius / borderColor / padding / minHeight / fontSize
+すべてが完全一致**することを確認しました（差分ゼロ）。
