@@ -45,7 +45,9 @@
     background:transparent; border:1px solid transparent; border-radius:8px;
     padding:6px 8px; min-height:0;
   }
-  .scoretitle:empty{display:none}
+  /* 空でも場所は残す（display:none にすると ⚙ が ☰ の隣まで寄ってしまう）。
+     枠と ✎ が出るのは .editable のときだけなので、空でも見た目には何も出ない。 */
+  .scoretitle:empty{border-color:transparent; background:transparent}
   /* 押せないとき（用意した曲・みんなの曲・読み込んだだけのファイル）はただの見出し */
   .scoretitle:disabled{opacity:1; cursor:default}
   /* 押せるときは鉛筆を添えて、名前を変えられることが分かるようにする */

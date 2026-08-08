@@ -12,7 +12,7 @@
   ※ modes は Batch5 後半で作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST } from './state.js';
-import { OPEN, STRNAME, midiName, fingerHint, strFingerText, tt } from './util.js';
+import { OPEN, STRNAME, midiName, fingerHint, strFingerText, tt, setNowLine } from './util.js';
 import { FB, yOf, optionsFor, pluckString } from './fingerboard.js';
 import { chimeOK, midiFreq } from './audio/synth.js';
 import { toast } from './dom.js';
@@ -325,7 +325,7 @@ export function updateTunerUI(f){
     if(ST.mode==='tuner' && ST.tunerMidi!=null){
       ST.tunerMidi=null; ST.tunerCents=0;
       paintTunerDots(null, 0);
-      document.getElementById('nowline').textContent=tt('msg.tuner_on_hint');
+      setNowLine(tt('msg.tuner_on_hint'));
     }
     return;
   }
@@ -386,8 +386,7 @@ export function updateTunerUI(f){
     const where = opts.length
       ? opts.map(o=> strFingerText(o.str, o.off, o.finger)).join(' / ')
       : tt('msg.out_of_range');
-    document.getElementById('nowline').innerHTML =
-      `<b>${midiName(det)}</b> ${(ST.tunerCents>0?'+':'')+ST.tunerCents}¢ · ${where}`;
+    setNowLine(`<b>${midiName(det)}</b> ${(ST.tunerCents>0?'+':'')+ST.tunerCents}¢ · ${where}`, true);
   }
 }
 

@@ -14,7 +14,7 @@
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey } from './state.js';
-import { fracOf, midiName, zoneOf, fingerHint, strFingerText, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH } from './util.js';
+import { fracOf, midiName, zoneOf, fingerHint, strFingerText, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH, setNowLine } from './util.js';
 import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
 import { renderStaff } from './notation.js';
 import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
@@ -37,7 +37,7 @@ export function render(){
     picker.style.display='flex';
     emptyEl.style.display='none';
     renderBoard(null);
-    document.getElementById('nowline').textContent=tt('msg.pick_mode');
+    setNowLine(tt('msg.pick_mode'));
     renderLegend(); updateTransport(); updateChrome();
     return;
   }
@@ -47,7 +47,7 @@ export function render(){
   if(ST.mode==='tuner'){
     emptyEl.style.display='none';
     renderBoard(null);
-    document.getElementById('nowline').textContent = TUN.on ? tt('msg.tuner_on_hint') : tt('msg.tuner_off_hint');
+    setNowLine(TUN.on ? tt('msg.tuner_on_hint') : tt('msg.tuner_off_hint'));
     paintTunerDots(ST.tunerMidi, ST.tunerCents);
     renderLegend(); updateTransport(); updateChrome();
     return;
@@ -57,8 +57,7 @@ export function render(){
     emptyEl.style.display='flex';
     emptyEl.innerHTML = (ST.mode==='game') ? tt('msg.empty_game_html') : tt('msg.empty_score_html');
     renderBoard(null);
-    document.getElementById('nowline').textContent =
-      (ST.mode==='game') ? tt('msg.nowline_game') : tt('ui.nowline');
+    setNowLine((ST.mode==='game') ? tt('msg.nowline_game') : tt('ui.nowline'));
     document.getElementById('edit').innerHTML=tt('msg.edit_empty_html');
     renderLegend(); updateTransport(); updateChrome();
     return;
@@ -211,11 +210,9 @@ export function renderScoreTitle(){
   if(el) el.textContent = ST.scoreTitle || '';
 }
 export function renderNow(ev){
-  const el=document.getElementById('nowline');
-  if(!el) return;                      /* 上部バーは曲名だけにしたので、この行は無いことがある */
-  if(!ev || !ev.fing){ el.textContent=''; return; }
+  if(!ev || !ev.fing){ setNowLine(''); return; }
   const lead=ev.pitches[ev.leadIdx];
-  el.innerHTML = `<b>${lead.name}</b> · ${strFingerText(ev.fing.str, ev.fing.off, ev.fing.finger)} · ${ev.fing.zone}`;
+  setNowLine(`<b>${lead.name}</b> · ${strFingerText(ev.fing.str, ev.fing.off, ev.fing.finger)} · ${ev.fing.zone}`, true);
 }
 
 export function renderEdit(ev){

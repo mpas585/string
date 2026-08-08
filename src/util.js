@@ -110,3 +110,12 @@ export function strFingerText(strIdx, off, finger){
   if(finger==null || finger==='') return tt('msg.str_only', name);
   return tt('msg.str_finger', name, finger);
 }
+
+/* 上部バーの「押さえる音」の行（#nowline）に書き込む。
+   上部バーを曲名だけにした際にこの行を外したので、要素が無いことがある。
+   書き込み側が7箇所あり、素で触ると null 参照で起動処理ごと止まるため必ずここを通す。 */
+export function setNowLine(text, asHtml){
+  const el=document.getElementById('nowline');
+  if(!el) return;
+  if(asHtml) el.innerHTML=text; else el.textContent=text;
+}

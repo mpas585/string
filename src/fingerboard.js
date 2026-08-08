@@ -11,7 +11,7 @@
   公開API: renderBoard（署名変化時に指板を作り直し＋音符描画）, pluckString/pluckEvent,
            optionsFor/recommend, applyZoom/zoomFit/zoomFitPositions, scrollBoardToActive, yOf/offOfY, FB。
 */
-import { OPEN, STRNAME, NOTE_NAMES, fracOf, midiName, zoneOf, fingerHint, strFingerText, tt } from './util.js';
+import { OPEN, STRNAME, NOTE_NAMES, fracOf, midiName, zoneOf, fingerHint, strFingerText, tt, setNowLine } from './util.js';
 import { ST } from './state.js';
 import { toast } from './dom.js';
 import { midiFreq } from './audio/synth.js';
@@ -440,9 +440,8 @@ export function showHoldDot(pos){
   dot.setAttribute('cx', FB.strX[pos.str]);
   dot.setAttribute('cy', yOf(pos.off).toFixed(1));
   dot.setAttribute('opacity', '0.95');
-  const el=document.getElementById('nowline');
   const z=zoneOf(pos.off);
-  el.innerHTML=`<b>${midiName(pos.midi)}</b> · ${strFingerText(pos.str, pos.off)} · ${z.zone}`;
+  setNowLine(`<b>${midiName(pos.midi)}</b> · ${strFingerText(pos.str, pos.off)} · ${z.zone}`, true);
 }
 export function hideHoldDot(str){
   if(str==null){
