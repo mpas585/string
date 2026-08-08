@@ -39,11 +39,28 @@
   /* 上部バーの中央は譜面名だけ（押さえる音は指板の上に出るので、ここでは重ねない）。
      自分がアップロードした譜面のときだけ押せる状態(.editable)になり、名前を変えられる。 */
   .scoretitle{
-    flex:1; min-width:0; display:block; text-align:left;
+    flex:1; min-width:0; display:flex; align-items:center; text-align:left;
     font-size:14px; line-height:1.3; font-weight:700; color:var(--ink);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; overflow:hidden;
     background:transparent; border:1px solid transparent; border-radius:8px;
     padding:6px 8px; min-height:0;
+  }
+  /* 曲名の本体。収まるうちは通常どおり末尾を … で省略する */
+  .scoretitle .st-in{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  /* 収まらないときだけ流す（判定と移動量は src/modes.js の renderScoreTitle）。
+     … は出さずに全文を見せる。端で少し止まるよう、動く区間を真ん中に寄せてある。 */
+  .scoretitle.marquee{overflow:hidden}
+  .scoretitle.marquee .st-in{
+    text-overflow:clip; overflow:visible; flex:0 0 auto;
+    animation:mqscroll var(--mq-time,10s) ease-in-out infinite alternate;
+  }
+  @keyframes mqscroll{
+    0%, 14%   {transform:translateX(0)}
+    86%, 100% {transform:translateX(var(--mq-shift,0))}
+  }
+  /* 動きが苦手な人の設定を尊重する（端末側で「視差効果を減らす」がONのとき） */
+  @media (prefers-reduced-motion:reduce){
+    .scoretitle.marquee .st-in{animation:none; text-overflow:ellipsis; overflow:hidden}
   }
   /* 空でも場所は残す（display:none にすると ⚙ が ☰ の隣まで寄ってしまう）。
      枠と ✎ が出るのは .editable のときだけなので、空でも見た目には何も出ない。 */
@@ -51,8 +68,15 @@
   /* 押せないとき（用意した曲・みんなの曲・読み込んだだけのファイル）はただの見出し */
   .scoretitle:disabled{opacity:1; cursor:default}
   /* 押せるときは鉛筆を添えて、名前を変えられることが分かるようにする */
-  .scoretitle.editable{border-color:var(--line); background:var(--panel2); cursor:pointer}
-  .scoretitle.editable::after{content:'✎'; margin-left:6px; font-size:12px; color:var(--muted)}
+  .scoretitle.editable{border-color:var(--line); background:var(--panel2); cursor:pointer;
+    position:relative; padding-right:24px}
+  /* ✎ は右端に貼り付ける。並びの最後に置くと、曲名が流れているとき一緒に押し出されてしまう。
+     背景を敷いて、流れてきた文字が下をくぐるようにしている。 */
+  .scoretitle.editable::after{
+    content:'✎'; position:absolute; right:7px; top:50%; transform:translateY(-50%);
+    font-size:12px; color:var(--muted); padding-left:14px;
+    background:linear-gradient(90deg, rgba(40,32,25,0), var(--panel2) 70%);
+  }
   .scoretitle.editable:active{transform:translateY(1px)}
   .nowbar{flex:1; min-width:0; font-family:var(--mono); font-size:13px; color:var(--muted);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -61,13 +85,15 @@
   .stepper{display:flex; gap:6px}
   .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
   .controls{margin-bottom:10px; gap:6px}
-  button, label.filebtn{
+  /* .uprow は中に［トラック］ボタンを入れる都合で div だが、
+     「曲を選ぶ」の一覧（.songbtn）と同じ見た目にするのでボタンと同じ地色・枠を当てる。 */
+  button, label.filebtn, .uprow{
     font-family:var(--jp); font-size:13px; color:var(--ink);
     background:var(--panel2); border:1px solid var(--line); border-radius:8px;
     padding:8px 11px; min-height:38px; cursor:pointer; transition:.12s; user-select:none;
     display:inline-flex; align-items:center; gap:6px;
   }
-  button:active{transform:translateY(1px)}
+  button:active, .uprow:active{transform:translateY(1px)}
   button.primary{background:var(--accent); color:#241a08; border-color:var(--accent); font-weight:700}
   button.primary:disabled{opacity:.4; background:var(--panel2); color:var(--muted); border-color:var(--line); font-weight:400}
   button.ghost{background:transparent}
@@ -436,29 +462,23 @@
   }
 
   /* ---- アップロードした楽譜（保存番号に紐づく。上限99件） ----
-     見栄えは「曲を選ぶ」の一覧（.songlist / .songbtn）にそろえてある。
-     同じ「曲を開く」ための一覧なのに、間隔も角の丸みも字の大きさも違っていたため。
-     削除は指板の右上へ移したので、行に並ぶ操作は 名前・トラック・シェア の3つ。 */
+     見た目は「曲を選ぶ」の一覧と完全に同じにするため、markup 側で .songbtn を併せ持たせ、
+     ここでは .songbtn に無い差分（＝選択中の強調と［トラック］ボタン）だけを足す。
+     div なのは中に［トラック］ボタンを入れるため（button は入れ子にできない）。 */
   .uplist{display:flex; flex-direction:column; gap:7px; margin-bottom:8px}
-  .uprow{
-    display:flex; flex-wrap:wrap; align-items:center; gap:8px; cursor:pointer;
-    min-height:52px; padding:10px 12px; border-radius:11px; line-height:1.3;
-    background:var(--panel2); border:1px solid var(--line);
-  }
-  .uprow.on{border-color:var(--accent); background:#332813}
-  /* 曲名＝.songbtn と同じ 14px、その下の説明＝同じ 11px の --muted */
-  .uprow .un{flex:1; min-width:0; font-size:14px; display:flex; flex-direction:column; gap:2px;
-    line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .uprow .un small{font-family:var(--jp); font-size:11px; color:var(--muted); font-weight:400}
+  /* 曲名は .songbtn と同じ太字（下の説明だけ .songbtn small で 400 に戻る） */
+  .uprow{cursor:pointer; font-weight:700}
+  /* いま開いている1件。曲一覧の .songbtn.on と同じ強調（枠と文字色だけ）にそろえる */
+  .uprow.on{border-color:var(--accent); color:var(--accent)}
+  .uprow small{display:block}
   .upempty{font-size:11px; color:var(--faint); line-height:1.6; padding:2px 0}
-  /* 操作は行の下段にまとめる。MIDIトラック一覧（.trow .tb）と同じ作り */
-  .uprow .ub{flex:0 0 100%; display:flex; gap:6px}
+  /* ［トラック］は説明の下に小さく置く。横いっぱいに広げると行が重たく見えるため */
+  .uprow .ub{display:flex; gap:6px; margin-top:7px}
   .uprow .ubtn{
-    flex:1; justify-content:center; min-height:30px; min-width:0; padding:0 6px;
-    font-size:11px; border-radius:7px; box-shadow:none; white-space:nowrap;
-    background:transparent; border:1px solid var(--line); color:var(--muted);
+    min-height:26px; padding:0 10px; font-size:11px; font-weight:400;
+    border-radius:7px; box-shadow:none; white-space:nowrap;
+    background:transparent; border:1px solid #4a3a1c; color:var(--accent);
   }
-  .uprow .ubtn.ut{color:var(--accent); border-color:#4a3a1c}
   .uprow .ubtn:active{transform:none; opacity:.6}
 
   /* ---- 楽譜を共有する画面（#mShare） ----

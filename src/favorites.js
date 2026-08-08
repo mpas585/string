@@ -54,11 +54,13 @@ export function toggleFav(key){
    曲一覧のキー（src/songs.js の songEntries）と同じ形に揃える。
      'song:sakura' → 'sakura'      … あらかじめ用意した曲
      'share:12'    → 'sh:12'       … みんなの曲
+     'up:12'       → 'up:12'       … 自分がアップロードした譜面（そのまま使う）
    読み込んだファイルなど、一覧に無いものは対象外（null を返す＝ハートを出さない）。 */
 export function favKeyOfScore(scoreName){
   const s = String(scoreName || '');
   if(s.indexOf('song:')  === 0) return s.slice(5);
   if(s.indexOf('share:') === 0) return 'sh:' + s.slice(6);
+  if(s.indexOf('up:')    === 0) return s;
   return null;
 }
 

@@ -36,6 +36,7 @@ import { isSignedIn, isAdminUser, getCsrf, setSaveWatcher } from './account.js';
 import { setScore, renderScoreTitle } from './modes.js';
 import { setTempo, stopPlay } from './audio/scheduler.js';
 import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher, setScoreSub } from './drawer.js';
+import { isFav } from './favorites.js';
 import { recommend } from './fingerboard.js';
 import { setMidiFile, renderTracks, parseMidi, base64ToBytes } from './songs.js';
 
@@ -139,11 +140,17 @@ export function renderUploads() {
       const trk = it.hassrc
         ? '<button type="button" class="ubtn ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
         : '';
-      /* 行に残す操作は「トラック」だけ（元のMIDIを預かっている行のみ）。
-         名前の変更は上部バーの曲名から、シェアと削除は指板の左上・右上へ移したので、
-         同じ操作を2箇所に置かず、一覧は「曲を選ぶ」と同じく開くための一覧に徹する。 */
-      return '<div class="uprow' + on + '" data-id="' + it.id + '">'
-        + '<span class="un">' + esc(it.name) + '<small>' + esc(sub) + '</small></span>'
+      /* 見た目は「曲を選ぶ」の .songbtn とそろえる（同じ「曲を開く」ための一覧なので）。
+         中に［トラック］ボタンを入れる都合で button の入れ子にできないため、
+         div に .songbtn を併せ持たせて同じ CSS を当てている。
+         行に残す操作は「トラック」だけ（元のMIDIを預かっている行のみ）。名前の変更は
+         上部バーの曲名から、シェアと削除は指板の左上・右上へ移した。 */
+      const fav = isFav('up:' + it.id)
+        ? '<span class="fav" aria-hidden="true">\u2764</span>' : '';
+      const fc  = isFav('up:' + it.id) ? ' hasfav' : '';
+      return '<div class="uprow songbtn' + fc + on + '" data-id="' + it.id + '">'
+        + esc(it.name) + '<small>' + esc(sub) + '</small>'
+        + fav
         + (trk ? '<span class="ub">' + trk + '</span>' : '')
         + '</div>';
     }).join('');

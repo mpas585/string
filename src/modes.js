@@ -207,7 +207,27 @@ export function micUnavailableReason(){
    下段の押さえる音の情報（renderNow）とは別の行なので、演奏中も消えない。 */
 export function renderScoreTitle(){
   const el=document.getElementById('scoretitle');
-  if(el) el.textContent = ST.scoreTitle || '';
+  if(!el) return;
+  const t = ST.scoreTitle || '';
+  /* 曲名が無いときは中身ごと空にする（:empty で枠と ✎ を消しているため） */
+  if(!t){ el.textContent=''; el.classList.remove('marquee'); return; }
+  /* 収まらないときだけ流す。中身を span で包み、はみ出す幅ぶんだけ動かす。
+     同じ文言を2つ並べて隙間なくつなげる方式は、短い曲名だと不自然に見えるのでとらない。 */
+  el.classList.remove('marquee');
+  el.innerHTML = '<span class="st-in"></span>';
+  const inner = el.firstChild;
+  inner.textContent = t;
+  /* 直後だとレイアウトが確定していないことがあるので、1フレーム待ってから測る */
+  requestAnimationFrame(()=>{
+    if(!el.isConnected || inner.textContent !== (ST.scoreTitle||'')) return;
+    const over = inner.scrollWidth - el.clientWidth;
+    if(over > 4){
+      /* 端で少し止めたいので、動く量とかける時間から往復の割合を決める */
+      el.style.setProperty('--mq-shift', (-(over + 8)) + 'px');
+      el.style.setProperty('--mq-time', Math.max(6, (over + 8) / 18).toFixed(1) + 's');
+      el.classList.add('marquee');
+    }
+  });
 }
 export function renderNow(ev){
   if(!ev || !ev.fing){ setNowLine(''); return; }
