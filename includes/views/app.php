@@ -881,7 +881,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div class="drawer-top">
     <div class="drawer-head">
       <span class="accentbar"></span>
-      <div class="dh-t"><button id="instBtn" class="instbtn" aria-haspopup="dialog"><?= h($INST['label']) ?><span class="cv">▾</span></button></div>
+      <div class="dh-t"><button id="instBtn" class="instbtn" aria-haspopup="dialog"><?= h($LANG === 'ja' ? $INST_NAME : $INST['label']) ?><span class="cv">▾</span></button></div>
       <button id="drawerClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
     </div>
     <div class="seg" id="modeSeg" role="tablist">
@@ -1141,11 +1141,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <div id="mtBeat" class="mt-chips" role="group" aria-label="<?php e('ui.metro_beat') ?>"></div>
     </div>
 
-    <!-- 練習時間（練習カレンダーと同じ数字。鳴らしているあいだ増える） -->
-    <div class="mt-time">
-      <div><span><?php e('ui.metro_today') ?></span><b id="mtToday">–</b></div>
-      <div><span><?php e('ui.metro_total') ?></span><b id="mtTotal">–</b></div>
-    </div>
+    <!-- 練習時間の数字はここには出さない（歯車 →「累計練習時間」の練習カレンダーで見る）。
+         鳴らしているあいだ加算されること自体は下の一行で伝える。 -->
     <div class="mt-sub"><?php e('ui.metro_note') ?></div>
 
   </div>

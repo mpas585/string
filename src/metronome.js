@@ -21,7 +21,8 @@ import { tt } from './util.js';
 import { audio, makeBuses, NOISEBUF } from './audio/context.js';
 import { metroClick, drKick, drSnare, drHat } from './audio/synth.js';
 import { acquireWake, releaseWake } from './audio/scheduler.js';
-import { load as loadPractice, totalSec, daySec, dayKey, fmt } from './practice.js';
+/* 練習時間の数字はメトロノーム画面には出さない（練習カレンダーで見る）。
+   加算そのものは src/practice.js が ST.metroOn を見て行うので、ここでは何もしない。 */
 
 /* 選べる拍子。数字は「1小節あたりの拍数 / 拍の音符」 */
 const SIGS = ['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '9/8', '12/8'];
@@ -36,7 +37,6 @@ const TICK = 25;      /* ms：予約を足しに行く間隔 */
 
 /* 動いているあいだだけ持つもの */
 let pumpTimer = 0;    /* 予約を足すタイマー */
-let timeTimer = 0;    /* 練習時間の表示を更新するタイマー */
 let raf = 0;          /* ランプの点灯 */
 let nextT = 0;        /* 次に鳴らす時刻（AudioContext の時計） */
 let idx = 0;          /* 通し拍数。小節内の位置は idx % beats() */
@@ -202,15 +202,6 @@ function syncChips() {
   if (wrap) wrap.classList.toggle('off', !m.drum);
 }
 
-/* 練習時間の表示。鳴らしているあいだは1秒ごとに追いかける */
-export function refreshMetroTime() {
-  const a = $('mtToday'), b = $('mtTotal');
-  if (!a && !b) return;
-  const d = loadPractice();
-  if (a) a.textContent = fmt(daySec(dayKey(), d));
-  if (b) b.textContent = fmt(totalSec(d));
-}
-
 /* 設定の保存。つまみを動かすたびに書くと重いので、少し待ってからまとめて1回だけ書く */
 let saveTimer = 0;
 function saveLater() {
@@ -237,7 +228,6 @@ export function startMetro() {
   pump();
   pumpTimer = setInterval(pump, TICK);
   if (!raf) raf = requestAnimationFrame(tickLamps);
-  timeTimer = setInterval(refreshMetroTime, 1000);
   acquireWake();
   syncPlayBtn();
 }
@@ -246,7 +236,6 @@ export function stopMetro() {
   if (!ST.metroOn) { syncPlayBtn(); return; }
   ST.metroOn = false;
   if (pumpTimer) { clearInterval(pumpTimer); pumpTimer = 0; }
-  if (timeTimer) { clearInterval(timeTimer); timeTimer = 0; }
   if (raf) { cancelAnimationFrame(raf); raf = 0; }
   lamps = [];
   clearLamps();
@@ -264,7 +253,6 @@ export function stopMetro() {
   }
   ST.buses = null; ST.master = null;
   releaseWake();
-  refreshMetroTime();
   syncPlayBtn();
 }
 
@@ -282,7 +270,6 @@ export function enterMetro() {
   syncChips();
   buildLamps();
   setBpm(M().bpm, true);
-  refreshMetroTime();
   syncPlayBtn();
 }
 
@@ -306,7 +293,6 @@ export function initMetro() {
   buildChips();
   buildLamps();
   setBpm(M().bpm, true);
-  refreshMetroTime();
   syncPlayBtn();
 
   const sig = $('mtSig');

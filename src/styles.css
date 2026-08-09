@@ -30,6 +30,9 @@
     background:linear-gradient(180deg,#1a140e,#15110c); border-bottom:1px solid var(--line);
   }
   .iconbtn{
+    /* 上部バーでは曲名（.scoretitle が flex:1）と並ぶ。既定の flex-shrink:1 のままだと
+       長い曲名に押されて幅が潰れ、☰ と ⚙ が押せなくなるので縮まないようにする。 */
+    flex:0 0 auto;
     width:40px; height:40px; padding:0; justify-content:center; font-size:18px;
     background:var(--panel2); border:1px solid var(--line); border-radius:9px; color:var(--ink);
     display:inline-flex; align-items:center; cursor:pointer;

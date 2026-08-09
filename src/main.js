@@ -46,7 +46,9 @@ on('fab','click', ()=>{
    seekTo は再生中なら組み直し、止まっていれば次の ▶ の開始位置だけを動かす。 */
 on('cue','click', ()=>{
   if(!ST.events.length) return;
-  seekTo(playRange().sB);
+  /* 頭出しは「もう一度そこから弾き直す」操作なので、設定がONなら開始カウントを鳴らす
+     （withCount=true。再生していないときは次の ▶ で鳴る）。 */
+  seekTo(playRange().sB, true);
 });
 on('menu','click', openDrawer);
 on('drawerClose','click', closeDrawer);

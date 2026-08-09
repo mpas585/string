@@ -14,8 +14,8 @@
   次バッチで作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST, volProfileKey } from './state.js';
-import { fracOf, midiName, zoneOf, fingerHint, strFingerText, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH, setNowLine } from './util.js';
-import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions } from './fingerboard.js';
+import { fracOf, midiName, zoneOf, fingerHint, strFingerText, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH, setNowLine, ZONES } from './util.js';
+import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions, FB } from './fingerboard.js';
 import { renderStaff } from './notation.js';
 import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
 import { paintTunerDots, startTuner, stopTuner, TUN } from './tuner.js';
@@ -160,7 +160,9 @@ export function setMode(mode, keepDrawer){
     /* メトロノームは譜面を持たない。伴奏も使わないので必ずOFFに戻す */
     ST.enjoy=false;
     document.getElementById('enjoySw').classList.remove('on');
-    if(!keepDrawer) closeDrawer();       /* 操作は画面のまん中にあるのでドロワーは閉じる */
+    /* 操作は画面のまん中にあるので、ドロワー内のタブから入った時（keepDrawer）も必ず閉じる。
+       開いたままだとテンポの数字も拍のランプも隠れてしまうため。 */
+    closeDrawer();
     render();
     enterMetro();
 
@@ -405,12 +407,48 @@ export function playableCount(shift){
   }
   return ok;
 }
-/* 自動：全音が演奏可能になる最小のシフト（0を優先） */
+/* 試すシフトの並び。左にあるものほど優先する（原曲のオクターブを最優先） */
+const OCT_SHIFTS=[0,-1,1,-2,2];
+/* ロー〜ミドルポジションの上限（開放弦からの半音数）。
+   ZONES は楽器ごとに config/{楽器}.php から降りてくるので、klass が 'high' になる
+   ひとつ手前の帯の maxOff を採る（チェロ13 / ヴァイオリン・ヴィオラ12 / コントラバス11）。 */
+export function comfortMaxOff(){
+  let m=0;
+  for(const z of ZONES){
+    if(z.klass==='high') break;
+    if(z.maxOff==null) return FB.maxOff;
+    m=Math.max(m, z.maxOff);
+  }
+  return m || FB.maxOff;
+}
+/* そのシフトで「ロー〜ミドルで押さえられる」音の数。
+   どれか1本の弦で comfortMaxOff 以内に収まれば、その音は数に入れる。 */
+export function comfortCount(shift){
+  const lim=comfortMaxOff();
+  let ok=0;
+  for(const ev of ST.parsed.events){
+    for(const p of ev.pitches){
+      if(optionsFor(p.midi+12*shift).some(o=> o.off<=lim)){ ok++; break; }
+    }
+  }
+  return ok;
+}
+/* ハイポジションに追い出してよい割合。これを超えるならもう1オクターブ下げる */
+const COMFORT_TOL=0.15;
+/* 自動：指板に収まるシフトのうち、ロー〜ミドルが基準になるものを選ぶ。
+   ・まず「全音が指板に収まる」シフトだけに絞る（従来どおり）
+   ・その中から、ハイポジション送りの音が1割5分以下に収まる最初のものを採る
+     （並びは原曲＝0 に近い順なので、必要なぶんだけ下げた結果になる）
+   ・どれも収まらなければ、いちばんロー〜ミドルに入るものを採る
+   例）チェロの「白鳥」は原曲のままだと8割がハイポジションになるため -1 が選ばれる。 */
 export function autoShift(){
   const total=ST.parsed.events.length;
-  for(const sh of [0,-1,1,-2,2]){ if(playableCount(sh)===total) return sh; }
-  let best=0, bestN=-1;
-  for(const sh of [0,-1,1,-2,2]){ const n=playableCount(sh); if(n>bestN){bestN=n; best=sh;} }
+  if(!total) return 0;
+  const fit=OCT_SHIFTS.filter(sh=> playableCount(sh)===total);
+  const list=fit.length ? fit : OCT_SHIFTS.slice();
+  for(const sh of list){ if(total-comfortCount(sh) <= total*COMFORT_TOL) return sh; }
+  let best=list[0], bestN=-1;
+  for(const sh of list){ const n=comfortCount(sh); if(n>bestN){ bestN=n; best=sh; } }
   return best;
 }
 /* そのシフトで全音が演奏可能か */
@@ -421,6 +459,9 @@ export function shiftOK(sh){
 }
 export function applyOctave(){
   if(!ST.parsed) return;
+  /* 前の曲で選んだオクターブが、この曲では指板に収まらないことがある。
+     押せないボタン（下で disabled にする）が選ばれたまま残らないよう「自動」へ戻す。 */
+  if(ST.octave!=='auto' && !shiftOK(parseInt(ST.octave,10)||0)) ST.octave='auto';
   const sh = (ST.octave==='auto') ? autoShift() : (parseInt(ST.octave,10)||0);
   ST.octShift=sh;
   ST.events = ST.parsed.events.map((e,i)=>{
@@ -437,12 +478,14 @@ export function applyOctave(){
       ? `${lbl}${ST.octave==='auto'?tt('msg.oct_auto_suffix'):''}` + (out? tt('msg.oct_out', out) : tt('msg.oct_all_ok'))
       : '';
   }
-  /* 全音が収まらないボタンは非アクティブに */
+  /* 全音が指板に収まらないオクターブは押せなくする（音域外の音を含む譜面を作らない）。
+     選択中の印も付け直す（上で「自動」へ戻した場合に、古い印が残らないように）。 */
   document.querySelectorAll('.oct').forEach(b=>{
     const v=b.dataset.oct;
-    if(v==='auto'){ b.disabled=false; return; }
-    b.disabled = !shiftOK(parseInt(v,10));
+    b.disabled = (v==='auto') ? false : !shiftOK(parseInt(v,10));
+    b.classList.toggle('on', String(v)===String(ST.octave));
   });
+  syncDock();
 }
 export function setOctave(v){
   ST.octave = (v==='auto') ? 'auto' : parseInt(v,10);
