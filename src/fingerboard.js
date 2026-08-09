@@ -9,7 +9,7 @@
   ※ setZoom（L3448–3454）は saveSettings 依存のため Batch5 へ。
   ※ render（全体統括, L1338）・fbsvg配線（L3600–）は tuner/notation/edit 依存のため Batch5 へ。
   公開API: renderBoard（署名変化時に指板を作り直し＋音符描画）, pluckString/pluckEvent,
-           optionsFor/recommend, applyZoom/zoomFit/zoomFitPositions, scrollBoardToActive, yOf/offOfY, FB。
+           optionsFor/optionsForAll/recommend, applyZoom/zoomFit/zoomFitPositions, scrollBoardToActive, yOf/offOfY, FB。
 */
 import { OPEN, STRNAME, NOTE_NAMES, fracOf, midiName, zoneOf, fingerHint, strFingerText, tt, setNowLine } from './util.js';
 import { ST } from './state.js';
@@ -28,6 +28,29 @@ export function optionsFor(midi){
       out.push({str:i, off, frac:fracOf(off), zone:z.zone, klass:z.klass, finger:fingerHint(off)});
     }
   }
+  return out;
+}
+/* 運指編集シート用：1〜4弦すべてから候補を出す。
+   optionsFor() は「その高さがそのまま押さえられる弦」しか返さないので、
+   音域の端の音では1〜2本しか出てこない（例：チェロのA線しか出ない高い音）。
+   ここでは同じ音名（1・2オクターブ上下）の位置も候補に入れて、どの弦でも
+   選べるようにする。oct は元の高さからの半音差（0 / ±12 / ±24）。
+   鳴る音は譜面のままで、変わるのは指板に出る押さえる位置だけ。 */
+const OCT_TRY=[0,-12,12,-24,24];
+export function optionsForAll(midi){
+  const out=[];
+  for(let i=0;i<4;i++){
+    for(const oc of OCT_TRY){
+      const off = (midi+oc) - OPEN[i];
+      if(off<0 || off>FB.maxOff) continue;
+      const z = zoneOf(off);
+      out.push({str:i, oct:oc, off, frac:fracOf(off), zone:z.zone, klass:z.klass, finger:fingerHint(off)});
+    }
+  }
+  /* 並びは弦ごとのまとまりで、4弦→1弦（太い弦から細い弦へ＝OPEN の順）。
+     その中は開放に近いほうから（ロー→ミドル→ハイ）。
+     OCT_TRY の順（0→−1oct→+1oct…）のままだと、弦の中でハイが先に出てしまう。 */
+  out.sort((a,b)=> (a.str-b.str) || (a.off-b.off));
   return out;
 }
 /* 推奨ポジ設定に応じて1つ選ぶ。
@@ -193,10 +216,14 @@ export function paintNotes(ev){
   const parts=[];
   const lead=ev.pitches[ev.leadIdx];
   const f=ev.fing;
-  optionsFor(lead.midi).forEach(o=>{
-    if(f && o.str===f.str) return;
+  /* 別の押さえ方の候補○。運指編集シートの札（optionsForAll）と同じ並びを出す＝
+     シートに出ている候補は必ず指板にも○で見える。oct が付いているものは
+     同じ音名で1・2オクターブ違う位置なので、破線＋薄めにして地の候補と分ける。 */
+  optionsForAll(lead.midi).forEach(o=>{
+    if(f && o.str===f.str && o.off===f.off) return;   /* いま選ばれている位置には出さない */
     const x=FB.strX[o.str], y=yOf(o.off);
-    parts.push(`<circle class="opt" data-str="${o.str}" cx="${x}" cy="${y.toFixed(1)}" r="12" fill="transparent" stroke="var(--alt)" stroke-width="2"/>`);
+    const dash = o.oct ? ' stroke-dasharray="3 3" opacity="0.65"' : '';
+    parts.push(`<circle class="opt" data-str="${o.str}" data-oct="${o.oct}" cx="${x}" cy="${y.toFixed(1)}" r="12" fill="transparent" stroke="var(--alt)" stroke-width="2"${dash}/>`);
   });
   ev.pitches.forEach((p,idx)=>{
     if(idx===ev.leadIdx) return;
@@ -288,7 +315,10 @@ export function vibLoop(){
 }
 
 /* ===== アクティブ音までスクロール ===== */
-export function scrollBoardToActive(){
+/* force=true のときは「同じ音だからもう動かさない」の判定を飛ばす。
+   運指編集で弦やポジションを変えたときは、音は同じままオレンジ●だけが
+   遠くへ移るので、飛ばさないと画面の外に出たままになる。 */
+export function scrollBoardToActive(force){
   const wrap=document.querySelector('.board-full');
   const svg=document.querySelector('#fbsvg svg');
   if(!wrap || !svg) return;
@@ -296,12 +326,16 @@ export function scrollBoardToActive(){
   if(id==null) return;
   const ev=ST.events[id];
   if(!ev || !ev.fing) return;
-  if(ST.lastScrollId===id) return;
+  if(!force && ST.lastScrollId===id) return;
   ST.lastScrollId=id;
   const h=svg.getBoundingClientRect().height;
   if(!h) return;
+  /* 運指編集シートが開いているあいだは画面の下半分がシートで隠れる。
+     まん中（0.45）に寄せると●がシートの裏に入るので、上寄りに置く。 */
+  const sheet=document.getElementById('editSheet');
+  const ratio=(sheet && sheet.classList.contains('open')) ? 0.22 : 0.45;
   const yPx = yOf(ev.fing.off) * (h/FB.vbH);
-  const target = yPx - wrap.clientHeight*0.45;
+  const target = yPx - wrap.clientHeight*ratio;
   wrap.scrollTo({top: Math.max(0, target), behavior:'smooth'});
 }
 

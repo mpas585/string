@@ -242,6 +242,13 @@ return [
     'uploads_tracks'   => 'Tracks',
     'uploads_delete'   => 'Delete',
 
+    /* ダウンロード（アップロードした楽譜の一覧の ⤓ から） */
+    'download'         => 'Download',
+    'm_download'       => '⤓ Download',
+    'dl_midi'          => 'Save as MIDI (.mid)',
+    'dl_musicxml'      => 'Save as MusicXML (.musicxml)',
+    'dl_note'          => 'Exports the notes of the score (fingerings are not included). The octave setting is not applied; pitches are exported as they were loaded.',
+
     'pref'           => 'Preferred position',
 
     'fing_save'      => 'Saved fingering',
@@ -322,7 +329,7 @@ return [
     'lg_chord'             => 'other chord tones',
     'lg_lead'              => 'lead',
     'lg_press'             => 'note to stop',
-    'lg_alt'               => 'other string (tap to change)',
+    'lg_alt'               => 'other positions (tap to change)',
     'hint_game'      => 'Pick a piece, then press “Record and score”',
     'nowline_game'   => 'Pick a piece',
     'empty_game_html'=> '<b>Pick a piece</b><div>Choose one from <span class="kbd">☰</span></div>',
@@ -360,6 +367,9 @@ return [
     'grp_finger'           => 'Finger (a guide; you can change it)',
     'sel_note'             => 'Selected note',
     'edit_hint'            => 'You can also change the string by tapping the ○ marks on the fingerboard. Position names and fingers are a guide, so adjust them to the fingering you actually use.',
+    'edit_oct_hint'        => 'Chips are shown for all four strings. Chips marked “+1oct” and the like are the same note name one or two octaves away (the sounding pitch stays as written; only the position shown on the fingerboard changes).',
+    'dl_done'              => 'Exported: %s',
+    'dl_fail'              => 'Could not export: %s',
     'out_of_range'         => 'out of range',
     'oct_orig'             => 'As written',
     'oct_up'               => '+%s octave(s)',

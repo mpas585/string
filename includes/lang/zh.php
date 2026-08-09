@@ -242,6 +242,13 @@ return [
     'uploads_tracks'   => '音轨',
     'uploads_delete'   => '删除',
 
+    /* ダウンロード（アップロードした楽譜の一覧の ⤓ から） */
+    'download'         => '下载',
+    'm_download'       => '⤓ 下载',
+    'dl_midi'          => '保存为 MIDI（.mid）',
+    'dl_musicxml'      => '保存为 MusicXML（.musicxml）',
+    'dl_note'          => '导出乐谱的音符排列（不含指法）。八度设置不会反映，音高按读取时的高度导出。',
+
     'pref'           => '推荐把位',
 
     'fing_save'      => '指法保存',
@@ -322,7 +329,7 @@ return [
     'lg_chord'             => '和弦其他音',
     'lg_lead'              => '旋律',
     'lg_press'             => '要按的音',
-    'lg_alt'               => '其他弦候选（点击切换）',
+    'lg_alt'               => '其他把位候选（点击切换）',
     'hint_game'      => '选择课题曲后，按“录音并评分”',
     'nowline_game'   => '请选择课题曲',
     'empty_game_html'=> '<b>请选择课题曲</b><div>从 <span class="kbd">☰</span> 选择课题曲</div>',
@@ -360,6 +367,9 @@ return [
     'grp_finger'           => '指法（参考，可修改）',
     'sel_note'             => '选中的音符',
     'edit_hint'            => '也可以点击指板上的 ○ 来更换弦。把位名称与指法仅供参考，请按实际演奏的指法修改。',
+    'edit_oct_hint'        => '四根弦的按键都会显示。带有「+1oct」等标记的是同名音高一或两个八度的位置（发出的音仍按乐谱，只有指板上显示的位置改变）。',
+    'dl_done'              => '已导出：%s',
+    'dl_fail'              => '导出失败：%s',
     'out_of_range'         => '超出音域',
     'oct_orig'             => '按原调',
     'oct_up'               => '+%s 个八度',

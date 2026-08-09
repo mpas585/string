@@ -39,6 +39,7 @@ import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher
 import { isFav } from './favorites.js';
 import { recommend } from './fingerboard.js';
 import { setMidiFile, renderTracks, parseMidi, base64ToBytes } from './songs.js';
+import { buildMidi, buildMusicXML, downloadBlob, safeName } from './export.js';
 
 const API  = new URL('../api/scores.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
@@ -140,6 +141,12 @@ export function renderUploads() {
       const trk = it.hassrc
         ? '<button type="button" class="ubtn ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
         : '';
+      /* ダウンロード（トラックの左）。MIDI / MusicXML はこのあと小窓で選ぶ。
+         元のMIDIを預かっていない行（MusicXMLから読んだもの）にも出す＝
+         書き出しは預かっている「音の並び」から作るため、元ファイルは要らない。 */
+      const dl = '<button type="button" class="ubtn ud" data-id="' + it.id + '"'
+               + ' data-name="' + esc(it.name) + '" aria-label="' + esc(tt('ui.download')) + '"'
+               + ' title="' + esc(tt('ui.download')) + '">\u2913</button>';
       /* 見た目は「曲を選ぶ」の .songbtn とそろえる（同じ「曲を開く」ための一覧なので）。
          中に［トラック］ボタンを入れる都合で button の入れ子にできないため、
          div に .songbtn を併せ持たせて同じ CSS を当てている。
@@ -151,7 +158,7 @@ export function renderUploads() {
       return '<div class="uprow songbtn' + fc + on + '" data-id="' + it.id + '">'
         + esc(it.name) + '<small>' + esc(sub) + '</small>'
         + fav
-        + (trk ? '<span class="ub">' + trk + '</span>' : '')
+        + '<span class="ub">' + dl + trk + '</span>'
         + '</div>';
     }).join('');
   }
@@ -379,6 +386,44 @@ export async function openUpload(id, showTracks) {
     toast(tt('msg.up_loaded', r.name));
   } catch (e) {
     toast(tt('msg.up_err', e.message));
+  } finally {
+    busy = false;
+  }
+}
+
+/* ===== ダウンロード（#mDownload） =====
+   預かっている「音の並び」から MIDI / MusicXML を作って書き出す。
+   元のファイルをそのまま返すのではない（MusicXMLは元ファイルを預かっていないため）。
+   運指は入れない＝譜面の音の並びだけ。 */
+let dlId = 0, dlName = '';
+export function openDownload(id, name){
+  if(!isSignedIn() || !id) return;
+  dlId = Number(id) || 0;
+  dlName = String(name || '');
+  const t = document.getElementById('dlName');
+  if (t) t.textContent = dlName;
+  openDockModal('mDownload');
+}
+export async function doDownload(kind){
+  if(busy || !isSignedIn() || !dlId) return;
+  busy = true;
+  try {
+    const r = await call('load', { id: dlId });
+    if(!r || !r.ok){ toast(tt('msg.dl_fail', (r && r.message) || '')); return; }
+    const score = r.data || {};
+    const nm    = safeName(r.name || dlName);
+    if(kind === 'midi'){
+      downloadBlob(buildMidi(score, r.name || dlName), 'audio/midi', nm + '.mid');
+      closeDockModal();
+      toast(tt('msg.dl_done', nm + '.mid'));
+    } else {
+      downloadBlob(buildMusicXML(score, r.name || dlName),
+                   'application/vnd.recordare.musicxml+xml', nm + '.musicxml');
+      closeDockModal();
+      toast(tt('msg.dl_done', nm + '.musicxml'));
+    }
+  } catch(e) {
+    toast(tt('msg.dl_fail', e.message));
   } finally {
     busy = false;
   }

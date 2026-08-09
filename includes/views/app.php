@@ -849,6 +849,23 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
 </div>
 
+<!-- ===== ダウンロード（アップロードした楽譜の一覧の ⤓ から開く。処理は src/uploads.js）=====
+     預かっている「音の並び」から作るので、元がMusicXMLでもMIDIでも同じように書き出せる。 -->
+<div id="mDownload" class="dkmodal" role="dialog" aria-modal="true">
+  <div class="dk-head">
+    <span class="dk-tt"><?php e('ui.m_download') ?></span>
+    <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
+  </div>
+  <div id="dlName" class="dl-name"></div>
+  <div class="row controls">
+    <button type="button" id="dlMidi" class="ghost" style="flex:1; justify-content:center"><?php e('ui.dl_midi') ?></button>
+  </div>
+  <div class="row controls">
+    <button type="button" id="dlXml" class="ghost" style="flex:1; justify-content:center"><?php e('ui.dl_musicxml') ?></button>
+  </div>
+  <div class="sub"><?php e('ui.dl_note') ?></div>
+</div>
+
 <!-- 読み込んだ楽譜を「みんなの曲」として公開する（一覧の「シェア」から開く。処理は src/shares.js）。
      利用規約への同意（#shAgree）が入っていないと公開できない。
      チェックは画面とサーバ（api/shares.php の agree）の両方で見ている。 -->
@@ -862,8 +879,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <input id="shAgree" type="checkbox">
     <span><?php e('share.agree') ?></span>
   </label>
-  <div class="sub">
-    <a href="<?= h($rootPath . '/' . $LANG . '/terms/') ?>" target="_blank" rel="noopener"><?php e('share.terms_link') ?></a>
+  <!-- 同意チェックのすぐ下に細い青字で置いていたため、見つけにくく押しにくかった。
+       上下に間を空け、枠のあるボタン風にして指で押せる大きさにする（.termsrow / .termslink）。 -->
+  <div class="termsrow">
+    <a class="termslink" href="<?= h($rootPath . '/' . $LANG . '/terms/') ?>" target="_blank" rel="noopener"><?php e('share.terms_link') ?> ↗</a>
   </div>
   <div class="row controls">
     <button id="shGo" class="primary" style="flex:1; justify-content:center"><?php e('share.go') ?></button>
@@ -1068,7 +1087,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div id="tunHint" class="tun-hint"></div>
 </div>
 
-<!-- 運指編集（ボトムシート） -->
+<!-- 運指編集（ボトムシート）
+     開いているあいだは指板を暗くする（#editScrim）。他のドロワーと同じで、
+     黒い所をタップしても閉じる（配線は src/main.js の closeEditSheet）。 -->
+<div id="editScrim" class="escrim" aria-hidden="true"></div>
 <div id="editSheet" class="sheet edit-sheet">
   <div class="sheet-head">
     <span class="t"><?php e('ui.edit_t') ?></span>

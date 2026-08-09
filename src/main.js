@@ -25,7 +25,8 @@ import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, s
          doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin, askLogin, askSkip,
          setSaveApply, armSave, setSaveWatcher } from './account.js';
 import { openContact, sendContact, syncKind } from './contact.js';
-import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename, curUploadItem, syncShareDeleteBtns } from './uploads.js';
+import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename, curUploadItem, syncShareDeleteBtns,
+         openDownload, doDownload } from './uploads.js';
 /* みんなの曲（利用者が共有した楽譜）。一覧に混ぜて出す／公開する／削除依頼／管理 */
 import { initShares, loadShared, openShare, doShare, unshareSong,
          openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
@@ -39,6 +40,8 @@ import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」�
 on('file','change', e=>{ if(e.target.files[0]) loadScoreFile(e.target.files[0]); e.target.value=''; });
 on('fab','click', ()=>{
   if(ST.playing){ stopPlay(); return; }
+  /* 運指編集シートが開いていると指板が暗幕で暗いまま。弾き始めるときは閉じる */
+  closeEditSheet();
   startPlay();
 });
 /* 頭出し（▶ の上）。いま再生する範囲の先頭へ戻す。
@@ -152,7 +155,7 @@ on('seek','pointercancel', ()=>{ seeking=false; });
 /* 編集パネルのタップ（委譲） */
 on('edit','click', e=>{
   const lead=e.target.closest('.lead-pick'); if(lead){ setLead(+lead.dataset.idx); return; }
-  const str=e.target.closest('.str-pick');   if(str){ setStringForSelected(+str.dataset.str); return; }
+  const str=e.target.closest('.str-pick');   if(str){ setStringForSelected(+str.dataset.str, +(str.dataset.oct||0)); return; }
   const fin=e.target.closest('.fing-pick');  if(fin){ setFinger(fin.dataset.fin); return; }
   const one=e.target.closest('.reset-one-btn'); if(one){ resetSelectedFingering(); return; }
 });
@@ -162,7 +165,7 @@ on('fbsvg','click', e=>{
   /* 再生を止めた直後は selected も current も null になり、○を押しても無反応だった。
      指板に描いている音符（render の focusId と同じ規則）を対象にする。 */
   if(ST.selected==null) ST.selected = (ST.current!=null) ? ST.current : (ST.events.length ? 0 : null);
-  if(ST.selected!=null) setStringForSelected(+c.dataset.str);
+  if(ST.selected!=null) setStringForSelected(+c.dataset.str, +(c.dataset.oct||0));
 });
 
 /* ===== 指板：押している間だけ鳴らす（複数指・複数弦対応） =====
@@ -217,12 +220,19 @@ on('fbsvg','pointercancel', endHold);
 on('fbsvg','pointerleave', endHold);
 
 /* ===== 運指編集シート ===== */
+/* 開いているあいだは指板の上に黒い暗幕（#editScrim）を出す。
+   左ドロワー（.scrim）・歯車（.gscrim）と同じ作法で、暗幕をタップしても閉じる。 */
 function openEditSheet(){
   if(ST.mode!=='score' || !ST.events.length) return;
   document.getElementById('editSheet').classList.add('open');
+  const sc=document.getElementById('editScrim'); if(sc) sc.classList.add('show');
 }
-function closeEditSheet(){ document.getElementById('editSheet').classList.remove('open'); }
+function closeEditSheet(){
+  document.getElementById('editSheet').classList.remove('open');
+  const sc=document.getElementById('editScrim'); if(sc) sc.classList.remove('show');
+}
 on('editClose','click', closeEditSheet);
+on('editScrim','click', closeEditSheet);
 on('editResetAll','click', ()=>{
   if(!ST.events.length) return;
   if(!confirm(tt('msg.fing_reset_all_confirm'))) return;
@@ -546,11 +556,16 @@ on('trackBack','click', ()=> setScoreSub('load'));
 /* 名前の変更は上部バーの曲名から、シェアと削除は指板の左上・右上へ移したので、
    ここに残る操作は「トラック」と行そのもの（＝開く）の2つ。 */
 on('upList','click', e=>{
+  const dl=e.target.closest('.ud');
+  if(dl){ openDownload(dl.dataset.id, dl.dataset.name); return; }  /* 形式を選ぶ小窓を出す */
   const trk=e.target.closest('.ut');
   if(trk){ openUpload(trk.dataset.id, true); return; } /* 開いてトラック選択の面を出す */
   const row=e.target.closest('.uprow');
   if(row) openUpload(row.dataset.id);
 });
+/* ダウンロード（#mDownload）：MIDI / MusicXML のどちらで書き出すかを選ぶ */
+on('dlMidi','click', ()=> doDownload('midi'));
+on('dlXml','click',  ()=> doDownload('musicxml'));
 /* 名前の変更（#mUpName）と、みんなの曲として公開（#mShare） */
 on('upNameGo','click', doRename);
 on('upName','keydown', e=>{ if(e.key==='Enter') doRename(); });

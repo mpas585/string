@@ -15,7 +15,7 @@
 */
 import { ST, volProfileKey } from './state.js';
 import { fracOf, midiName, zoneOf, fingerHint, strFingerText, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH, setNowLine, ZONES } from './util.js';
-import { applyZoom, optionsFor, recommend, renderBoard, scrollBoardToActive, zoomFitPositions, FB } from './fingerboard.js';
+import { applyZoom, optionsFor, optionsForAll, recommend, renderBoard, scrollBoardToActive, zoomFitPositions, FB } from './fingerboard.js';
 import { renderStaff } from './notation.js';
 import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
 import { paintTunerDots, startTuner, stopTuner, TUN } from './tuner.js';
@@ -288,10 +288,16 @@ export function renderEdit(ev){
       + `</div></div>`;
   }
 
-  /* 弦選択 */
-  const opts = optionsFor(lead.midi);
+  /* 弦選択：1〜4弦すべて。同じ音名なら1・2オクターブ上下の位置も候補に出す
+     （音域の端の音でも、どの弦のどのポジションで押さえるかを選べるようにするため）。 */
+  const opts = optionsForAll(lead.midi);
+  const octBadge = oc => oc ? `<i class="oc">${oc>0?'+':'−'}${Math.abs(oc)/12}oct</i>` : '';
   const strGrp = `<div class="grp"><div class="lbl">${tt('msg.grp_str')}</div><div class="chips">`
-    + opts.map(o=>`<div class="chip str-pick ${ev.fing&&ev.fing.str===o.str?'on':''}" data-str="${o.str}">${tt('msg.str_chip', STRNAME[o.str])}<small>${o.zone}</small></div>`).join('')
+    + opts.map(o=>{
+        const on = (ev.fing && ev.fing.str===o.str && ev.fing.off===o.off) ? 'on' : '';
+        return `<div class="chip str-pick ${on}${o.oct?' alt-oct':''}" data-str="${o.str}" data-oct="${o.oct}">`
+             + `${tt('msg.str_chip', STRNAME[o.str])}${octBadge(o.oct)}<small>${o.zone}</small></div>`;
+      }).join('')
     + `</div></div>`;
 
   /* 指の目安 */
@@ -301,7 +307,7 @@ export function renderEdit(ev){
     + `</div></div>`;
 
   el.innerHTML = `<h3>${tt('msg.sel_note')}</h3>${cur}${leadGrp}${strGrp}${fingGrp}`
-    + `<div class="hint">${tt('msg.edit_hint')}</div>`;
+    + `<div class="hint">${tt('msg.edit_hint')}<br>${tt('msg.edit_oct_hint')}</div>`;
 }
 export let stripSig='';
 export function stripSignature(){
@@ -361,17 +367,25 @@ export function setLead(idx){
   ev.fing=recommend(ev.pitches[idx].midi);
   saveFingering();
   render();
+  scrollBoardToActive(true);
 }
-export function setStringForSelected(strIdx){
+export function setStringForSelected(strIdx, oct){
   if(ST.selected==null) return;
   const ev=ST.events[ST.selected];
   const midi=ev.pitches[ev.leadIdx].midi;
-  const off=midi-OPEN[strIdx];
+  /* oct は元の高さからの半音差（0 / ±12 / ±24）。指板に出す位置だけを動かす
+     （鳴る音は譜面のまま＝ev.pitches は触らない）。 */
+  const oc=(typeof oct==='number' && !isNaN(oct)) ? oct : 0;
+  const off=(midi+oc)-OPEN[strIdx];
+  if(off<0 || off>FB.maxOff) return;
   const z=zoneOf(off);
   /* 弦を変えるとポジションが変わり、押さえる指も変わる。番号は入れずに選び直してもらう */
   ev.fing={str:strIdx, off, frac:fracOf(off), zone:z.zone, klass:z.klass, finger:null, manual:true};
   saveFingering();
   render();
+  /* 押さえる位置が遠くへ移ることがある（別の弦・別のオクターブ）。
+     同じ音のままなので force を立てないとスクロールが省かれる。 */
+  scrollBoardToActive(true);
 }
 export function setFinger(fn){
   if(ST.selected==null) return;
@@ -390,6 +404,7 @@ export function resetSelectedFingering(){
   ev.fing=recommend(ev.pitches[ev.leadIdx].midi);
   saveFingering();
   render();
+  scrollBoardToActive(true);
   toast(tt('msg.fing_reset_one_done'));
 }
 export function setPref(p){

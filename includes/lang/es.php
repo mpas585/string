@@ -245,6 +245,13 @@ return [
     'uploads_tracks'   => 'Pistas',
     'uploads_delete'   => 'Eliminar',
 
+    /* ダウンロード（アップロードした楽譜の一覧の ⤓ から） */
+    'download'         => 'Descargar',
+    'm_download'       => '⤓ Descargar',
+    'dl_midi'          => 'Guardar como MIDI (.mid)',
+    'dl_musicxml'      => 'Guardar como MusicXML (.musicxml)',
+    'dl_note'          => 'Exporta las notas de la partitura (sin la digitación). El ajuste de octava no se aplica: las alturas salen tal como se cargaron.',
+
     'pref'           => 'Posición recomendada',
 
     'fing_save'      => 'Digitación guardada',
@@ -325,7 +332,7 @@ return [
     'lg_chord'             => 'otras notas del acorde',
     'lg_lead'              => 'melodía',
     'lg_press'             => 'nota a pisar',
-    'lg_alt'               => 'otra cuerda (toca para cambiar)',
+    'lg_alt'               => 'otras posiciones (toca para cambiar)',
     'hint_game'      => 'Elige una pieza y pulsa “Grabar y puntuar”',
     'nowline_game'   => 'Elige una pieza',
     'empty_game_html'=> '<b>Elige una pieza</b><div>Selecciona una desde <span class="kbd">☰</span></div>',
@@ -363,6 +370,9 @@ return [
     'grp_finger'           => 'Dedo (orientativo; puedes cambiarlo)',
     'sel_note'             => 'Nota seleccionada',
     'edit_hint'            => 'También puedes cambiar de cuerda tocando las marcas ○ del diapasón. Los nombres de posición y los dedos son orientativos: ajústalos a la digitación que uses.',
+    'edit_oct_hint'        => 'Se muestran fichas para las cuatro cuerdas. Las marcadas con «+1oct» y similares son la misma nota una o dos octavas más arriba o abajo (el sonido sigue siendo el de la partitura; solo cambia la posición en el diapasón).',
+    'dl_done'              => 'Exportado: %s',
+    'dl_fail'              => 'No se pudo exportar: %s',
     'out_of_range'         => 'fuera de registro',
     'oct_orig'             => 'Como en el original',
     'oct_up'               => '+%s octava(s)',

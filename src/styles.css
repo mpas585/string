@@ -224,6 +224,12 @@
     display:inline-flex; flex-direction:column; align-items:center; line-height:1.15;
   }
   .chip small{font-family:var(--jp); font-size:10px; color:var(--muted)}
+  /* 同じ音名で1・2オクターブ違う位置の札。押さえる場所だけが変わることが分かるよう
+     地の色を落として区別する（鳴る音は譜面のまま） */
+  .chip .oc{font-style:normal; font-size:9px; color:var(--alt); letter-spacing:.02em; margin-top:1px}
+  .chip.alt-oct{background:transparent; border-style:dashed}
+  .chip.alt-oct.on{background:#332813; border-style:solid}
+  .chip.on .oc{color:var(--accent)}
   .chip.on{border-color:var(--accent); background:#332813}
   .chip.on small{color:var(--accent)}
   .hint{font-size:11px; color:var(--faint); margin-top:8px}
@@ -510,12 +516,25 @@
     width:min(340px, calc(100vw - 32px));
     max-height:calc(100vh - 32px); overflow-y:auto;
   }
+  /* ---- ダウンロード（#mDownload） ---- */
+  .dl-name{font-size:13px; font-weight:700; color:var(--ink); margin:0 0 10px; word-break:break-word}
+
   .shwarn{
     margin:2px 0 10px; padding:9px 11px; border-radius:9px; line-height:1.7; font-size:11px;
     background:#2a1f12; border:1px solid #4a3a1c; color:var(--muted);
   }
   .agree{display:flex; align-items:flex-start; gap:9px; margin:0 0 8px; font-size:12px; line-height:1.6; cursor:pointer}
   .agree input{flex:0 0 auto; width:18px; height:18px; margin:1px 0 0; accent-color:var(--accent)}
+  /* 「利用規約を読む」。細い青字のままだと見つけにくく、指でも押しにくかったので
+     上下に間を空け、枠のあるボタン風にして押せる高さ（44px）を確保する。 */
+  .termsrow{margin:12px 0 14px}
+  .termslink{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    min-height:44px; padding:0 14px; border-radius:9px;
+    border:1px solid #4a3a1c; background:var(--panel2);
+    color:var(--accent); font-size:13px; font-weight:700; text-decoration:none;
+  }
+  .termslink:active{opacity:.6}
 
   /* ---- 歯車パネル（指板の表示設定） ---- */
   /* 右上の歯車パネルの暗幕。左ドロワーの .scrim と同じ濃さ・同じ出方にそろえてある
@@ -756,6 +775,10 @@
   .gearpanel > :last-child{margin-bottom:4px}
 
   /* ---- 運指編集シート ---- */
+  /* 開いているあいだ指板を暗くする幕。左ドロワーの .scrim（40）・歯車の .gscrim（36）と
+     同じ濃さ・同じ出方にそろえ、z-index はシート（.sheet＝35）のすぐ下に置く。 */
+  .escrim{position:fixed; inset:0; z-index:34; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:.2s}
+  .escrim.show{opacity:1; pointer-events:auto}
   .edit-sheet .edit{background:transparent; border:none; padding:0}
   .edit-sheet{max-height:70vh; overflow-y:auto}
   body.has-tp .edit-sheet{bottom:calc(112px + env(safe-area-inset-bottom))}

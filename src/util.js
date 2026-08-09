@@ -15,6 +15,8 @@ const APPC = (typeof window!=='undefined' && window.APP) ? window.APP : {};
 
 /* 楽器ID。保存キーの名前空間などに使う */
 export const INSTRUMENT_ID = INST.id || 'cello';
+/* 音部記号（'treble' | 'alto' | 'bass'）。MusicXML の書き出しで使う */
+export const INST_CLEF = INST.clef || 'bass';
 
 /* 開放弦 (チェロ: C2 G2 D3 A3) */
 export const OPEN = INST.open || [36, 43, 50, 57];
