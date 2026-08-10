@@ -443,6 +443,10 @@
   .delbtn:active{transform:translateY(1px); background:#2a171c; border-color:#7a3345}
   .songbtn{position:relative}
   .songbtn.hasfav{padding-right:32px}
+  /* アップ曲リスト行のお気に入りトグル（♡/❤）。押しても行は開かない（main.js が .uf を先に拾う） */
+  .ubtn.uf{font-size:15px; line-height:1; color:var(--muted); padding:6px 8px}
+  .ubtn.uf.on{color:#e2607a}
+  .ubtn.uf:active{transform:translateY(1px)}
   .songbtn .fav{
     position:absolute; right:11px; top:50%; transform:translateY(-50%);
     font-size:14px; line-height:1; color:#e2607a;

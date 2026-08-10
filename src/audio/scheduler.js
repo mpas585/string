@@ -493,7 +493,9 @@ export function pumpQueue(){
       /* メトロノーム：伴奏OFF時は常に。スケール練習は伴奏ONでも鳴らす（練習の基準） */
       if(!acc || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats, ST.beatUnit);
     } else if(it.kind==='end'){
-      ST.timers.push(setTimeout(()=>stopPlay(true), Math.max(0,(it.t - ctx.currentTime)*1000)));
+      /* 曲末は focus なしで止める。末尾へ強制スクロールや playhead 移動をすると、
+         「最後まで寄ってから冒頭へ戻る」不自然な動きになるため（手動■のときだけ位置合わせする）。 */
+      ST.timers.push(setTimeout(stopPlay, Math.max(0,(it.t - ctx.currentTime)*1000)));
     }
   }
   if(ST.queue.length > 6000) ST.queue.length = 3000;

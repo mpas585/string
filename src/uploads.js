@@ -152,13 +152,17 @@ export function renderUploads() {
          div に .songbtn を併せ持たせて同じ CSS を当てている。
          行に残す操作は「トラック」だけ（元のMIDIを預かっている行のみ）。名前の変更は
          上部バーの曲名から、シェアと削除は指板の左上・右上へ移した。 */
-      const fav = isFav('up:' + it.id)
-        ? '<span class="fav" aria-hidden="true">\u2764</span>' : '';
-      const fc  = isFav('up:' + it.id) ? ' hasfav' : '';
-      return '<div class="uprow songbtn' + fc + on + '" data-id="' + it.id + '">'
+      /* お気に入りトグル（リスト行内）。押すと up: の曲を付け外しできる。
+         ボタン自身が ♡/❤ で状態も示すので、右端の印は別に出さない。 */
+      const favOn = isFav('up:' + it.id);
+      const uf = '<button type="button" class="ubtn uf' + (favOn ? ' on' : '') + '"'
+               + ' data-id="' + it.id + '" aria-pressed="' + (favOn ? 'true' : 'false') + '"'
+               + ' aria-label="' + esc(tt(favOn ? 'ui.fav_del' : 'ui.fav_add')) + '"'
+               + ' title="' + esc(tt(favOn ? 'ui.fav_del' : 'ui.fav_add')) + '">'
+               + (favOn ? '\u2764' : '\u2661') + '</button>';
+      return '<div class="uprow songbtn' + on + '" data-id="' + it.id + '">'
         + esc(it.name) + '<small>' + esc(sub) + '</small>'
-        + fav
-        + '<span class="ub">' + dl + trk + '</span>'
+        + '<span class="ub">' + uf + dl + trk + '</span>'
         + '</div>';
     }).join('');
   }

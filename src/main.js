@@ -15,7 +15,7 @@ import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, to
 import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
          renderSongList, setFavFilter, favFilterOn } from './songs.js';
 /* お気に入り（指板の左上のハート／曲一覧の絞り込み） */
-import { toggleFavCurrent, syncFavBtn, syncFavFilterBtn, reloadFavs } from './favorites.js';
+import { toggleFav, toggleFavCurrent, syncFavBtn, syncFavFilterBtn, reloadFavs } from './favorites.js';
 import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { tt } from './util.js';
@@ -26,7 +26,7 @@ import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, s
          setSaveApply, armSave, setSaveWatcher } from './account.js';
 import { openContact, sendContact, syncKind } from './contact.js';
 import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename, curUploadItem, syncShareDeleteBtns,
-         openDownload, doDownload } from './uploads.js';
+         openDownload, doDownload, renderUploads } from './uploads.js';
 /* みんなの曲（利用者が共有した楽譜）。一覧に混ぜて出す／公開する／削除依頼／管理 */
 import { initShares, loadShared, openShare, doShare, unshareSong,
          openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
@@ -580,6 +580,8 @@ on('trackBack','click', ()=> setScoreSub('load'));
 /* 名前の変更は上部バーの曲名から、シェアと削除は指板の左上・右上へ移したので、
    ここに残る操作は「トラック」と行そのもの（＝開く）の2つ。 */
 on('upList','click', e=>{
+  const fv=e.target.closest('.uf');
+  if(fv){ toggleFav('up:'+fv.dataset.id); renderUploads(); syncFavBtn(); return; }  /* お気に入り付け外し（行は開かない） */
   const dl=e.target.closest('.ud');
   if(dl){ openDownload(dl.dataset.id, dl.dataset.name); return; }  /* 形式を選ぶ小窓を出す */
   const trk=e.target.closest('.ut');
