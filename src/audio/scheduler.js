@@ -153,7 +153,7 @@ export function seekPreview(beat){
   scrollBoardToActive();
   if(ST.view==='staff'){ updateStaffActive(); scrollStaffToActive(); }
 }
-export function seekTo(beat){
+export function seekTo(beat, withCount){
   if(!ST.events.length) return;
   let idx=0, best=Infinity;
   ST.events.forEach((ev,i)=>{
@@ -162,7 +162,9 @@ export function seekTo(beat){
   });
   ST.playhead=beat;                    /* ★ 次の ▶ はここから始める */
   if(ST.playing){
-    startPlay(beat, true);
+    /* 頭出し（withCount=true）は再生中でも開始カウントを鳴らす（force=true）。
+       シークバーのドラッグ（withCount なし）はカウントなしで組み直すだけ。 */
+    startPlay(beat, !withCount, !!withCount);
   } else {
     ST.selected=idx; ST.current=null;
     render();
@@ -387,7 +389,7 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState==='visible' && ST.playing) acquireWake();
 });
 
-export function startPlay(fromBeat, noCount){
+export function startPlay(fromBeat, noCount, force){
   if(!ST.events.length) return;
   clearFabLed();          /* 押してもらえたので、▶ の点滅はここで消す */
   const wasPlaying=ST.playing;
@@ -407,7 +409,9 @@ export function startPlay(fromBeat, noCount){
   from=Math.max(ST.range.sB, Math.min(from, ST.range.eB - 0.001));
 
   const lead = wasPlaying ? 0.10 : 0.16;
-  const doCount = ST.countIn && !noCount && !wasPlaying;
+  /* 通常、再生中の組み直し（範囲変更・テンポ変更など）ではカウントを鳴らさない（!wasPlaying）。
+     ただし頭出し（cue）だけは force=true で、再生中でもカウントインを鳴らす。 */
+  const doCount = ST.countIn && !noCount && (force || !wasPlaying);
   /* カウント数は設定（4 / 8）。譜面の拍子ではなく利用者が選んだ数を使う */
   const countN = (ST.countBeats===8) ? 8 : 4;
   /* カウントの間隔も本編と同じ「1拍」にそろえる（8分の曲でカウントだけ4分になるのを防ぐ） */
