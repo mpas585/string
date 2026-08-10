@@ -779,8 +779,22 @@
      同じ濃さ・同じ出方にそろえ、z-index はシート（.sheet＝35）のすぐ下に置く。 */
   .escrim{position:fixed; inset:0; z-index:34; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:.2s}
   .escrim.show{opacity:1; pointer-events:auto}
-  .edit-sheet .edit{background:transparent; border:none; padding:0}
+  .edit-sheet .edit{background:transparent; border:none; padding:0 34px}
   .edit-sheet{max-height:70vh; overflow-y:auto}
+  /* 前後の音へのナビゲーション。シート（#editSheet）自身は position:fixed で、
+     .edit の中身がスクロールしても高さ自体は max-height で頭打ちになるので、
+     top:50% で置けば中身のスクロールにつられず edge に留まる。 */
+  .edit-nav{
+    position:absolute; top:50%; transform:translateY(-50%); z-index:2;
+    width:32px; height:52px; padding:0; font-size:20px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(21,17,12,.72); border:1px solid var(--line); border-radius:10px;
+    color:var(--ink); box-shadow:none;
+  }
+  .edit-nav:active{transform:translateY(-50%) scale(.94)}
+  .edit-nav:disabled{opacity:.28; pointer-events:none}
+  .edit-nav-l{left:4px}
+  .edit-nav-r{right:4px}
   body.has-tp .edit-sheet{bottom:calc(112px + env(safe-area-inset-bottom))}
   .sheet-head .t{color:var(--accent); font-size:13px; text-transform:none; letter-spacing:0; font-weight:700}
 

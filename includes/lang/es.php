@@ -283,6 +283,8 @@ return [
     'tun_in_ok'      => 'Correcto',
     'tun_in_hi'      => 'Alto',
     'edit_t'         => '👇 Puedes cambiar la digitación',
+    'edit_prev'      => 'Nota anterior',
+    'edit_next'      => 'Nota siguiente',
     'edit_empty'     => 'Selecciona una nota para editar su digitación',
     /* ===== Panel de ajustes: cuenta (arriba) / contacto (abajo) ===== */
     'acc'            => '👤 Cuenta',

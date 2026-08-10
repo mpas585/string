@@ -233,6 +233,18 @@ function closeEditSheet(){
 }
 on('editClose','click', closeEditSheet);
 on('editScrim','click', closeEditSheet);
+/* ドロワー端の ＜ ＞ ：隣の音へ。disabled と行き先（data-id）は src/modes.js の
+   renderEdit→syncEditNav が毎回書き直しているので、ここは読むだけでよい。 */
+on('editPrev','click', ()=>{
+  const b=document.getElementById('editPrev');
+  const id=+b.dataset.id;
+  if(!isNaN(id) && id>0) selectEvent(id-1);
+});
+on('editNext','click', ()=>{
+  const b=document.getElementById('editNext');
+  const id=+b.dataset.id;
+  if(!isNaN(id) && id<ST.events.length-1) selectEvent(id+1);
+});
 on('editResetAll','click', ()=>{
   if(!ST.events.length) return;
   if(!confirm(tt('msg.fing_reset_all_confirm'))) return;

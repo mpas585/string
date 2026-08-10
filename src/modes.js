@@ -70,7 +70,7 @@ export function render(){
     emptyEl.innerHTML = (ST.mode==='game') ? tt('msg.empty_game_html') : tt('msg.empty_score_html');
     renderBoard(null);
     setNowLine((ST.mode==='game') ? tt('msg.nowline_game') : tt('ui.nowline'));
-    document.getElementById('edit').innerHTML=tt('msg.edit_empty_html');
+    renderEdit(null);
     renderLegend(); updateTransport(); updateChrome();
     return;
   }
@@ -265,8 +265,22 @@ export function renderNow(ev){
   setNowLine(`<b>${lead.name}</b> · ${strFingerText(ev.fing.str, ev.fing.off, ev.fing.finger)} · ${ev.fing.zone}`, true);
 }
 
+/* 運指編集シートの端の ＜ ＞ ：前後の音（ST.events の隣の要素）へ移す。
+   disabled にするかどうかと、押したときにどの音へ行くかは、いま出ている音の
+   ev.id（＝ ST.events の添字。src/songs.js が振っているのでそのまま使える）を
+   ボタンの data-id に持たせておき、src/main.js のクリック配線から読む。 */
+function syncEditNav(ev){
+  const prevBtn=document.getElementById('editPrev');
+  const nextBtn=document.getElementById('editNext');
+  if(!prevBtn || !nextBtn) return;
+  const has = !!ev && ST.events.length>1;
+  prevBtn.disabled = !has || ev.id<=0;
+  nextBtn.disabled = !has || ev.id>=ST.events.length-1;
+  if(ev){ prevBtn.dataset.id=ev.id; nextBtn.dataset.id=ev.id; }
+}
 export function renderEdit(ev){
   const el=document.getElementById('edit');
+  syncEditNav(ev);
   if(!ev){ el.innerHTML=tt('msg.edit_empty_html'); return; }
   const lead=ev.pitches[ev.leadIdx];
 

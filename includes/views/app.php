@@ -1097,6 +1097,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <button id="editResetAll" class="iconbtn" aria-label="<?php e('ui.fing_reset_all') ?>" title="<?php e('ui.fing_reset_all') ?>">⟲</button>
     <button id="editClose" class="iconbtn" aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
+  <!-- 前後の音へ移動。押している間はシートを開いたまま、選ぶ音（ST.selected）だけ差し替える
+       （src/modes.js の renderEdit が毎回 disabled と data-id を書き直す）。 -->
+  <button type="button" id="editPrev" class="edit-nav edit-nav-l" aria-label="<?php e('ui.edit_prev') ?>">‹</button>
+  <button type="button" id="editNext" class="edit-nav edit-nav-r" aria-label="<?php e('ui.edit_next') ?>">›</button>
   <div id="edit" class="edit">
     <div class="empty-edit"><?php e('ui.edit_empty') ?></div>
   </div>

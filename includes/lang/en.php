@@ -280,6 +280,8 @@ return [
     'tun_in_ok'      => 'Good',
     'tun_in_hi'      => 'High',
     'edit_t'         => '👇 You can change the fingering',
+    'edit_prev'      => 'Previous note',
+    'edit_next'      => 'Next note',
     'edit_empty'     => 'Select a note to edit its fingering',
     /* ===== Gear panel: account (top) / contact (bottom) ===== */
     'acc'            => '👤 Account',
