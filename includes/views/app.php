@@ -966,7 +966,11 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
       <!-- ===== アップロードした楽譜（保存番号があるときだけサーバに残る。上限99件）=====
            一覧の中身・保存・削除は src/uploads.js。PHP 側では枠だけ出す。 -->
-      <div class="seclbl"><?php e('ui.uploads') ?></div>
+      <!-- 見出しの右端に絞り込み（曲を選ぶ側の #favOnly と同じ作り）。押すとお気に入りだけに絞る。 -->
+      <div class="seclbl seclbl-row">
+        <span><?php e('ui.uploads') ?></span>
+        <button type="button" id="upFavOnly" class="favfilter" aria-pressed="false">❤ <?php e('ui.fav_only') ?></button>
+      </div>
       <div id="upList" class="uplist"></div>
       <div id="upNote" class="sub"><?php e('ui.uploads_note', 3) ?></div>
 

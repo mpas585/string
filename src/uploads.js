@@ -121,6 +121,12 @@ function packFing() {
 }
 
 /* ===== 一覧の表示 ===== */
+/* 「譜面を読み込む」タブのお気に入り絞り込み。状態はここが持ち、押されたら一覧を作り直す
+   （見た目の切り替えは main.js。曲を選ぶ側の favOnly と同じ考え方）。 */
+let upFavOnly = false;
+export function upFavFilterOn(){ return upFavOnly; }
+export function setUpFavFilter(v){ upFavOnly = !!v; renderUploads(); }
+
 export function renderUploads() {
   const box  = document.getElementById('upList');
   const note = document.getElementById('upNote');
@@ -131,10 +137,13 @@ export function renderUploads() {
     if (note) note.textContent = tt('ui.uploads_note', maxItems());
     return;
   }
+  const shown = upFavOnly ? items.filter(it => isFav('up:' + it.id)) : items;
   if (!items.length) {
     box.innerHTML = '<div class="upempty">' + esc(tt('ui.uploads_none')) + '</div>';
+  } else if (!shown.length) {
+    box.innerHTML = '<div class="upempty">' + esc(tt('ui.fav_none')) + '</div>';
   } else {
-    box.innerHTML = items.map(it => {
+    box.innerHTML = shown.map(it => {
       const on = (it.id === curId) ? ' on' : '';
       const sub = tt('msg.track_count', it.notes) + (it.sub ? ' · ' + it.sub : '');
       /* 元のMIDIを預かっている行だけ、トラックを選び直せる */
@@ -152,17 +161,14 @@ export function renderUploads() {
          div に .songbtn を併せ持たせて同じ CSS を当てている。
          行に残す操作は「トラック」だけ（元のMIDIを預かっている行のみ）。名前の変更は
          上部バーの曲名から、シェアと削除は指板の左上・右上へ移した。 */
-      /* お気に入りトグル（リスト行内）。押すと up: の曲を付け外しできる。
-         ボタン自身が ♡/❤ で状態も示すので、右端の印は別に出さない。 */
-      const favOn = isFav('up:' + it.id);
-      const uf = '<button type="button" class="ubtn uf' + (favOn ? ' on' : '') + '"'
-               + ' data-id="' + it.id + '" aria-pressed="' + (favOn ? 'true' : 'false') + '"'
-               + ' aria-label="' + esc(tt(favOn ? 'ui.fav_del' : 'ui.fav_add')) + '"'
-               + ' title="' + esc(tt(favOn ? 'ui.fav_del' : 'ui.fav_add')) + '">'
-               + (favOn ? '\u2764' : '\u2661') + '</button>';
-      return '<div class="uprow songbtn' + on + '" data-id="' + it.id + '">'
+      /* お気に入りの印（右端。曲を選ぶの一覧とそろえる。付け外しは指板左上の♡） */
+      const fav = isFav('up:' + it.id)
+        ? '<span class="fav" aria-hidden="true">\u2764</span>' : '';
+      const fc  = isFav('up:' + it.id) ? ' hasfav' : '';
+      return '<div class="uprow songbtn' + fc + on + '" data-id="' + it.id + '">'
         + esc(it.name) + '<small>' + esc(sub) + '</small>'
-        + '<span class="ub">' + uf + dl + trk + '</span>'
+        + fav
+        + '<span class="ub">' + dl + trk + '</span>'
         + '</div>';
     }).join('');
   }
