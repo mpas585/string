@@ -7,7 +7,7 @@
 */
 import { ST, volProfileKey, DEFAULT_VOL } from './state.js';
 import { on, toast } from './dom.js';
-import { applyZoom, centerBoardH, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
+import { applyZoom, centerBoardH, chirpEvent, hideHoldDot, holdActive, holdStart, holdStop, holdUpdate, pluckString, pointToPos, scrollBoardToActive, showHoldDot, zoomFit } from './fingerboard.js';
 import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave, setStringForSelected, setZoom, syncLayoutClass, syncLoopUI, setLoopRange, resetLoop, resetSelectedFingering } from './modes.js';
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
@@ -33,13 +33,15 @@ import { initShares, loadShared, openShare, doShare, unshareSong,
 import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
 /* メトロノーム（採点ゲームがあった場所）。画面ごと src/metronome.js が受け持つ */
 import { initMetro, stopMetro } from './metronome.js';
+/* 譜面編集（item6）。自分のアップ曲だけ編集できる（ボタンは src/uploads.js が出し入れ） */
+import { openScoreEditor, closeScoreEditor, seNav, seBodyClick, seSave } from './editor.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
 /* --- 取りこぼしていた基本配線（元 L3509–3520。fab=再生ボタン等） --- */
 on('file','change', e=>{ if(e.target.files[0]) loadScoreFile(e.target.files[0]); e.target.value=''; });
 on('fab','click', ()=>{
-  if(ST.playing){ stopPlay(); return; }
+  if(ST.playing){ stopPlay(true); return; }   /* 停止位置にフォーカス＋小節表示（item1/2） */
   /* 運指編集シートが開いていると指板が暗幕で暗いまま。弾き始めるときは閉じる */
   closeEditSheet();
   startPlay();
@@ -224,6 +226,8 @@ on('fbsvg','pointerleave', endHold);
    左ドロワー（.scrim）・歯車（.gscrim）と同じ作法で、暗幕をタップしても閉じる。 */
 function openEditSheet(){
   if(ST.mode!=='score' || !ST.events.length) return;
+  /* 譜面編集シート（item6）が開いているあいだは、運指シートを重ねない */
+  const se=document.getElementById('scoreEdit'); if(se && se.classList.contains('open')) return;
   document.getElementById('editSheet').classList.add('open');
   const sc=document.getElementById('editScrim'); if(sc) sc.classList.add('show');
 }
@@ -238,18 +242,26 @@ on('editScrim','click', closeEditSheet);
 on('editPrev','click', ()=>{
   const b=document.getElementById('editPrev');
   const id=+b.dataset.id;
-  if(!isNaN(id) && id>0) selectEvent(id-1);
+  if(!isNaN(id) && id>0){ selectEvent(id-1); chirpEvent(ST.events[id-1]); }   /* 次の音を鳴らす（item5） */
 });
 on('editNext','click', ()=>{
   const b=document.getElementById('editNext');
   const id=+b.dataset.id;
-  if(!isNaN(id) && id<ST.events.length-1) selectEvent(id+1);
+  if(!isNaN(id) && id<ST.events.length-1){ selectEvent(id+1); chirpEvent(ST.events[id+1]); }   /* 次の音を鳴らす（item5） */
 });
 on('editResetAll','click', ()=>{
   if(!ST.events.length) return;
   if(!confirm(tt('msg.fing_reset_all_confirm'))) return;
   resetFingering();
 });
+
+/* ===== 譜面編集シート（item6）===== */
+on('editScoreBtn','click', openScoreEditor);
+on('seClose','click', ()=> closeScoreEditor());
+on('seSave','click',  ()=> seSave());
+on('sePrev','click',  ()=> seNav(-1));
+on('seNext','click',  ()=> seNav(1));
+on('seBody','click',  seBodyClick);
 
 /* ===== 設定（歯車） ===== */
 on('viewSeg','click', e=>{

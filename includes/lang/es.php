@@ -286,6 +286,17 @@ return [
     'edit_prev'      => 'Nota anterior',
     'edit_next'      => 'Nota siguiente',
     'edit_empty'     => 'Selecciona una nota para editar su digitación',
+    /* ===== 譜面編集（item6） src/editor.js ／ app.php ===== */
+    'se_btn' => 'Editar partitura',
+    'se_title' => 'Editar partitura',
+    'se_pitch' => 'Altura',
+    'se_len' => 'Duración',
+    'se_ins_note' => 'Insertar nota',
+    'se_ins_rest' => 'Insertar silencio',
+    'se_del' => 'Eliminar nota',
+    'se_audition' => 'Escuchar',
+    'se_save' => 'Guardar',
+    'se_cancel' => 'Cerrar',
     /* ===== Panel de ajustes: cuenta (arriba) / contacto (abajo) ===== */
     'acc'            => '👤 Cuenta',
     'acc_none'       => 'Sin iniciar sesión',
@@ -302,6 +313,13 @@ return [
 
   /* ===== JS 側の文言（src/*.js から tt('msg.xxx') で引く） ===== */
   'msg' => [
+    /* ===== 譜面編集（item6）の通知 ===== */
+    'se_saved' => 'Partitura guardada',
+    'se_save_fail' => 'No se pudo guardar',
+    'se_need_own' => 'Solo puedes editar partituras que hayas subido',
+    'se_discard' => '¿Descartar los cambios y cerrar?',
+    'se_rest' => 'Silencio',
+    'se_pos' => '%s / %s',
     /* Favoritos (el corazón de la esquina superior izquierda del diapasón) */
     'fav_on'         => '❤ Añadido a favoritos',
     'fav_off'        => 'Quitado de favoritos',

@@ -5,7 +5,7 @@
     --board-edge:#3a2e22; --wood:#6b4a2b;
     --string:#e4e0da; --ink:#f5f3f0; --muted:#bdb8b1; --faint:#8c867e;
     --line:#372f27; --accent:#e7b24b; --accent-dim:#8a6e30;
-    --alt:#7fa0b0; --good:#7fb08a; --danger:#d9694a;
+    --alt:#7fa0b0; --good:#7fb08a; --danger:#d9694a; --open:#5cc8ef;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
     --jp:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
   }
@@ -777,7 +777,9 @@
   /* ---- 運指編集シート ---- */
   /* 開いているあいだ指板を暗くする幕。左ドロワーの .scrim（40）・歯車の .gscrim（36）と
      同じ濃さ・同じ出方にそろえ、z-index はシート（.sheet＝35）のすぐ下に置く。 */
-  .escrim{position:fixed; inset:0; z-index:34; background:rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:.2s}
+  /* ポジション変更（運指編集）中は指板を暗くしない＝位置を見やすく。暗幕は透明のまま
+     残し、外側タップで閉じる動作だけ保つ（item3）。 */
+  .escrim{position:fixed; inset:0; z-index:34; background:transparent; opacity:0; pointer-events:none; transition:.2s}
   .escrim.show{opacity:1; pointer-events:auto}
   .edit-sheet .edit{background:transparent; border:none; padding:0 34px}
   .edit-sheet{max-height:70vh; overflow-y:auto}
@@ -796,6 +798,50 @@
   .edit-nav-l{left:4px}
   .edit-nav-r{right:4px}
   body.has-tp .edit-sheet{bottom:calc(112px + env(safe-area-inset-bottom))}
+  /* ===== 譜面編集（item6）：指板の右上ボタン ＋ ボトムシート ===== */
+  .editscorebtn{
+    position:fixed; z-index:5; right:calc(12px + env(safe-area-inset-right));
+    top:calc(114px + env(safe-area-inset-top));
+    height:34px; padding:0 12px; min-height:0; border-radius:17px;
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--panel2); border:1px solid var(--line); color:var(--accent);
+    box-shadow:0 3px 10px rgba(0,0,0,.42); cursor:pointer; font-size:12px; font-weight:700;
+  }
+  .editscorebtn[hidden]{display:none}
+  .editscorebtn svg{width:18px; height:18px; display:block}
+  .editscorebtn .es-t{white-space:nowrap}
+  .editscorebtn:active{transform:translateY(1px); border-color:var(--accent-dim)}
+
+  .se-sheet{max-height:72vh; overflow-y:auto}
+  .se-sheet .se-save{color:var(--good)}
+  .se-body{padding:0 34px}
+  .se-cur{
+    display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    padding:6px 0 10px; border-bottom:1px solid var(--line); margin-bottom:10px;
+  }
+  .se-cur .se-pos{font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .se-cur .se-name{font-family:var(--mono); font-size:22px; color:var(--ink); flex:1}
+  .se-cur .se-name b{color:var(--accent)}
+  .se-cur .se-name .oth{color:var(--muted); font-size:16px}
+  .se-cur .se-meas{font-family:var(--mono); font-size:11px; color:var(--faint); border:1px solid var(--line); border-radius:6px; padding:1px 7px}
+  .se-row{display:flex; align-items:center; gap:8px; margin-bottom:9px}
+  .se-row .se-lbl{width:46px; flex:none; font-size:11px; color:var(--muted)}
+  .se-btns{display:flex; gap:6px; flex-wrap:wrap; flex:1}
+  .se-b{
+    padding:8px 12px; border-radius:9px; font-size:13px; font-weight:700;
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line); cursor:pointer;
+  }
+  .se-b:active{transform:translateY(1px); border-color:var(--accent-dim); color:var(--accent)}
+  .se-b:disabled{opacity:.32; pointer-events:none}
+  .se-b.se-del{color:var(--danger)}
+  .se-b.se-del:active{border-color:#7a3a2c; color:var(--danger)}
+  .se-chip{
+    padding:8px 11px; border-radius:9px; font-family:var(--mono); font-size:12px;
+    background:var(--panel2); color:var(--muted); border:1px solid var(--line); cursor:pointer;
+  }
+  .se-chip.on{border-color:var(--accent); color:var(--accent); background:#332813}
+  .se-chip:active{transform:translateY(1px)}
+  .se-ops{flex-wrap:wrap; gap:8px; margin-top:4px}
   .sheet-head .t{color:var(--accent); font-size:13px; text-transform:none; letter-spacing:0; font-weight:700}
 
   /* ---- オクターブ ---- */

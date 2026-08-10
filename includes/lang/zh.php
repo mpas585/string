@@ -283,6 +283,17 @@ return [
     'edit_prev'      => '上一个音',
     'edit_next'      => '下一个音',
     'edit_empty'     => '选择音符后可编辑指法',
+    /* ===== 譜面編集（item6） src/editor.js ／ app.php ===== */
+    'se_btn' => '编辑乐谱',
+    'se_title' => '编辑乐谱',
+    'se_pitch' => '音高',
+    'se_len' => '时值',
+    'se_ins_note' => '插入音符',
+    'se_ins_rest' => '插入休止符',
+    'se_del' => '删除此音',
+    'se_audition' => '试听',
+    'se_save' => '保存',
+    'se_cancel' => '关闭',
     /* ===== 设置面板：账号（最上）/ 联系我们（最下） ===== */
     'acc'            => '👤 账户',
     'acc_none'       => '未登录',
@@ -299,6 +310,13 @@ return [
 
   /* ===== JS 側の文言（src/*.js から tt('msg.xxx') で引く） ===== */
   'msg' => [
+    /* ===== 譜面編集（item6）の通知 ===== */
+    'se_saved' => '乐谱已保存',
+    'se_save_fail' => '无法保存',
+    'se_need_own' => '只能编辑自己上传的乐谱',
+    'se_discard' => '放弃编辑并关闭吗？',
+    'se_rest' => '休止符',
+    'se_pos' => '%s / %s',
     /* 收藏（指板左上角的爱心） */
     'fav_on'         => '❤ 已加入收藏',
     'fav_off'        => '已取消收藏',

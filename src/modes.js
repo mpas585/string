@@ -324,6 +324,9 @@ export function renderEdit(ev){
     + `<div class="hint">${tt('msg.edit_hint')}<br>${tt('msg.edit_oct_hint')}</div>`;
 }
 export let stripSig='';
+/* 譜面編集（item6）で音程だけ変えたときは stripSignature が変わらず nchip が古いまま
+   残るので、外から署名を消して強制再構築できるようにする。 */
+export function invalidateStrip(){ stripSig=''; }
 export function stripSignature(){
   return [ST.events.length, ST.scoreName, ST.octShift,
           ST.events.map(e=> e.fing ? (e.fing.str+''+(e.fing.finger ?? '')) : '-').join(',')].join('|');

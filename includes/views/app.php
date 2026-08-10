@@ -94,6 +94,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <path d="M10.2 10.3v6.2M13.8 10.3v6.2"/>
     </svg>
   </button>
+  <!-- 譜面編集（item6）。自分がアップロードした曲を score モードで開いているときだけ出る
+       （出し入れは src/uploads.js の syncShareDeleteBtns、本体は src/editor.js）。 -->
+  <button id="editScoreBtn" class="editscorebtn" hidden aria-label="<?php e('ui.se_btn') ?>" title="<?php e('ui.se_btn') ?>">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M4 20h4l10-10a2 2 0 0 0-3-3L5 17z"/>
+      <path d="M13.5 6.5l3 3"/>
+    </svg><span class="es-t"><?php e('ui.se_btn') ?></span>
+  </button>
   <div id="fbsvg" class="fbsvg"></div>
   <div id="staffview" class="staffview"></div>
 </div>
@@ -1104,6 +1112,19 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div id="edit" class="edit">
     <div class="empty-edit"><?php e('ui.edit_empty') ?></div>
   </div>
+</div>
+
+<!-- 譜面編集シート（item6）。自分のアップ曲だけ。指板は暗くしない＝位置を見ながら直せる。
+     中身（現在の音・音程/長さ/挿入/削除ボタン）は src/editor.js が書き換える。 -->
+<div id="scoreEdit" class="sheet se-sheet">
+  <div class="sheet-head">
+    <span class="t"><?php e('ui.se_title') ?></span>
+    <button id="seSave" class="iconbtn se-save" aria-label="<?php e('ui.se_save') ?>" title="<?php e('ui.se_save') ?>">💾</button>
+    <button id="seClose" class="iconbtn" aria-label="<?php e('ui.se_cancel') ?>">✕</button>
+  </div>
+  <button type="button" id="sePrev" class="edit-nav edit-nav-l" aria-label="<?php e('ui.edit_prev') ?>">‹</button>
+  <button type="button" id="seNext" class="edit-nav edit-nav-r" aria-label="<?php e('ui.edit_next') ?>">›</button>
+  <div id="seBody" class="se-body"></div>
 </div>
 
 <!-- 冒頭カウント＝1小節ぶん（凡例はカウントダウンの下だけに出す＝カウントが終われば消える） -->

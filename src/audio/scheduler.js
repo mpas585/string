@@ -272,7 +272,26 @@ export function playRange(){
 export const LOOKAHEAD = 0.85;   /* 秒：メインスレッドが数百ms止まっても音が途切れない */
 export const SCHED_TICK = 50;    /* ms */
 
-export function stopPlay(){
+/* 停止した位置に印を移し、何小節目かを一瞬出す（item1/2）。ST.current（鳴っていた音符）が
+   無ければ拍からいちばん近い音符を選ぶ。呼び出し側（stopPlay の直後）で render する。 */
+function focusStopped(id, beat){
+  if(!ST.events.length) return;
+  if(id==null){
+    for(let i=ST.events.length-1;i>=0;i--){ if(ST.events[i].onset <= beat+1e-6){ id=ST.events[i].id; break; } }
+    if(id==null) id=0;
+  }
+  const ev=ST.events[id];
+  if(!ev) return;
+  ST.selected=id;            /* nchip がフォーカス（.on）される＝render の focusId で拾う */
+  ST.playhead=ev.onset;      /* 次の ▶ はこの位置から続けられる */
+  flashMeasure(ev.onset);    /* 何小節目かをパッと表示 */
+}
+/* focus=true のときだけ、止めた位置にフォーカスして小節番号を出す（▶→■ で止めた時／曲末）。
+   曲の読み込みやモード切替からの stopPlay() は focus 無し＝印を動かさない。 */
+export function stopPlay(focus){
+  /* 範囲（ST.range）を消す前に、鳴っていた音符と拍を控える */
+  const _wasId=ST.current;
+  const _wasBeat=(ST.playing && ST.ctx && ST.range) ? currentBeat() : (ST.playhead||0);
   if(ST.schedTimer){ clearInterval(ST.schedTimer); ST.schedTimer=0; }
   if(ST.seekRaf){ cancelAnimationFrame(ST.seekRaf); ST.seekRaf=0; }
   ST.timers.forEach(t=>clearTimeout(t)); ST.timers=[];
@@ -288,7 +307,9 @@ export function stopPlay(){
   ST.buses=null; ST.master=null; ST.range=null; ST.queue=[];
   ST.playing=false; ST.current=null;
   hideCount(); releaseWake();
+  if(focus) focusStopped(_wasId, _wasBeat);
   render();
+  if(focus) requestAnimationFrame(()=>{ try{ updateStripActive(); scrollStripToActive(); scrollBoardToActive(true); }catch(e){} });
 }
 
 /* ===== 冒頭カウント（1小節ぶん） ===== */
@@ -472,7 +493,7 @@ export function pumpQueue(){
       /* メトロノーム：伴奏OFF時は常に。スケール練習は伴奏ONでも鳴らす（練習の基準） */
       if(!acc || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats, ST.beatUnit);
     } else if(it.kind==='end'){
-      ST.timers.push(setTimeout(stopPlay, Math.max(0,(it.t - ctx.currentTime)*1000)));
+      ST.timers.push(setTimeout(()=>stopPlay(true), Math.max(0,(it.t - ctx.currentTime)*1000)));
     }
   }
   if(ST.queue.length > 6000) ST.queue.length = 3000;

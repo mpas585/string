@@ -283,6 +283,17 @@ return [
     'edit_prev'      => 'Previous note',
     'edit_next'      => 'Next note',
     'edit_empty'     => 'Select a note to edit its fingering',
+    /* ===== 譜面編集（item6） src/editor.js ／ app.php ===== */
+    'se_btn' => 'Edit score',
+    'se_title' => 'Edit score',
+    'se_pitch' => 'Pitch',
+    'se_len' => 'Length',
+    'se_ins_note' => 'Insert note',
+    'se_ins_rest' => 'Insert rest',
+    'se_del' => 'Delete note',
+    'se_audition' => 'Preview',
+    'se_save' => 'Save',
+    'se_cancel' => 'Close',
     /* ===== Gear panel: account (top) / contact (bottom) ===== */
     'acc'            => '👤 Account',
     'acc_none'       => 'Not signed in',
@@ -299,6 +310,13 @@ return [
 
   /* ===== JS 側の文言（src/*.js から tt('msg.xxx') で引く） ===== */
   'msg' => [
+    /* ===== 譜面編集（item6）の通知 ===== */
+    'se_saved' => 'Score saved',
+    'se_save_fail' => 'Could not save',
+    'se_need_own' => 'Only scores you uploaded can be edited',
+    'se_discard' => 'Discard your edits and close?',
+    'se_rest' => 'Rest',
+    'se_pos' => '%s / %s',
     /* Favourites (the heart at the top left of the fingerboard) */
     'fav_on'         => '❤ Added to favourites',
     'fav_off'        => 'Removed from favourites',

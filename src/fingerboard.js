@@ -229,14 +229,16 @@ export function paintNotes(ev){
     if(idx===ev.leadIdx) return;
     const r=recommend(p.midi); if(!r) return;
     const x=FB.strX[r.str], y=yOf(r.off);
-    parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="11" fill="var(--accent-dim)" opacity="0.9"/>`);
+    const co=(r.off===0)?'var(--open)':'var(--accent-dim)';   /* 開放弦は水色 */
+    parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="11" fill="${co}" opacity="0.9"/>`);
     parts.push(`<text x="${x}" y="${(y+3.8).toFixed(1)}" fill="#241a08" font-size="11" text-anchor="middle" font-weight="700" font-family="var(--mono)">${r.finger ?? ''}</text>`);
   });
   if(f){
     const x=FB.strX[f.str], y=yOf(f.off);
-    parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="15" fill="var(--accent)"/>`);
+    const open=(f.off===0), col=open?'var(--open)':'var(--accent)';   /* 開放弦は水色（押さえない印） */
+    parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="15" fill="${col}"/>`);
     parts.push(`<text x="${x}" y="${(y+5).toFixed(1)}" fill="#241a08" font-size="13" text-anchor="middle" font-weight="800" font-family="var(--mono)">${f.finger ?? ''}</text>`);
-    parts.push(`<text x="${x}" y="${(y+31).toFixed(1)}" fill="var(--accent)" font-size="12" text-anchor="middle" font-family="var(--mono)">${lead.name}</text>`);
+    parts.push(`<text x="${x}" y="${(y+31).toFixed(1)}" fill="${col}" font-size="12" text-anchor="middle" font-family="var(--mono)">${lead.name}</text>`);
   }
   g.innerHTML=parts.join('');
 }
@@ -295,6 +297,19 @@ export function pluckEvent(ev){
     const r=recommend(p.midi);
     if(r) pluckString(r.str, r.off, 0.65);
   });
+}
+/* ドロワーの ‹ › で音を1つ試聴する（item5）。指板タップと同じ発音源（holdStart/holdStop）を
+   使い、短く鳴らして自動で止める。再生スケジューラとは独立しているので停止中でも鳴らせる。
+   ※ holdStart/holdStop はこの下で宣言しているが、関数宣言なので巻き上げで呼べる。 */
+export function chirpEvent(ev, ms){
+  if(!ev || !ev.pitches || !ev.pitches.length) return;
+  pluckEvent(ev);                                   /* 弦の揺れ（見た目） */
+  const dur=ms||430, used=new Set();
+  const one=(str,midi)=>{ if(str<0||str>3||used.has(str)) return; used.add(str); holdStart(str,midi); setTimeout(()=>holdStop(str), dur); };
+  const lead=ev.pitches[ev.leadIdx];
+  if(ev.fing) one(ev.fing.str, lead.midi);
+  else { const r=recommend(lead.midi); if(r) one(r.str, lead.midi); }
+  ev.pitches.forEach((p,i)=>{ if(i===ev.leadIdx) return; const r=recommend(p.midi); if(r) one(r.str, p.midi); });
 }
 export function vibLoop(){
   const now=performance.now();

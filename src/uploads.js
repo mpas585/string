@@ -211,6 +211,9 @@ export function syncShareDeleteBtns() {
     if (!it || !isSignedIn()) { db.hidden = true; }
     else { db.hidden = false; db.dataset.id = String(it.id); }
   }
+  /* 譜面編集ボタン（item6）：自分のアップ曲を score モードで開いているときだけ出す */
+  const eb = document.getElementById('editScoreBtn');
+  if (eb) eb.hidden = !(it && isSignedIn() && ST.mode === 'score');
   /* 上部バーの曲名。自分の譜面のときだけ押せるようにして、その場で名前を変えられる */
   const tb = document.getElementById('scoretitle');
   if (tb) {
@@ -319,6 +322,22 @@ async function sendUpload(p, quiet) {
     await refreshUploads();
     if (!quiet) toast(tt(r.mode === 'update' ? 'msg.up_overwritten' : 'msg.up_added', p.nm));
   } catch (e) { /* 通信できないときは黙って諦める（本体の読み込みは済んでいる） */ }
+}
+
+/* 譜面編集（item6）の保存。いま開いている自分のアップ曲を、その id のまま上書きする。
+   parsed は編集後の ST.parsed（events/measures/beatsPerMeasure/beatUnit）をそのまま渡す。
+   運指は packFing() が現在値（自動再計算後）を一緒に送る。 */
+export async function saveEditedScore(parsed, tempo) {
+  const it = curUploadItem();
+  if (!it) { toast(tt('msg.se_need_own')); return false; }
+  let packed, data;
+  try { packed = packScore(parsed, tempo || ST.tempo, { trackName: it.sub || '' }); data = JSON.stringify(packed); }
+  catch (e) { toast(tt('msg.se_save_fail')); return false; }
+  if (data.length > MAX_BYTES) { toast(tt('msg.up_err', tt('acc.err.payload'))); return false; }
+  const sig = sigOf(data);
+  await sendUpload({ nm: it.name, sub: it.sub || '', sig: sig, data: data, notes: packed.events.length, id: it.id, src: null }, true);
+  toast(tt('msg.se_saved'));
+  return true;
 }
 
 /* #mUpDup の2つのボタン（配線は main.js）。✕ で閉じたときは保存しない */
