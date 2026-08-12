@@ -173,7 +173,6 @@ export function buildStaff(){
       curM=endM;
     }
   });
-  });
   p.push('</svg>');
   box.innerHTML = `<div class="stf-wrap" id="stfwrap">${p.join('')}</div>`;
   /* 画面の高さいっぱいに拡大（ズーム設定も反映） */

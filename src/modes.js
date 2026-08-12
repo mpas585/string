@@ -370,7 +370,7 @@ export function renderStrip(){
     const noteEnd=ev.onset+ev.dur, mEnd=ev.measure*bpm;
     const firstDur=Math.min(noteEnd, mEnd)-ev.onset;
     /* 幅＝音の長さ×一定値（PPB）。1小節ぶんの合計は常に beatsPerMeasure×PPB＝固定幅になる。
-       極端に短い音だけ潰れないよう最小幅だけ確保する。 */
+       極端に短い音だけ潰れないよう最小幅だけ確保する。 */
     const PPB=56, wOf=d=> Math.max(22, Math.round(d*PPB));
     html += `<div class="nchip${cls}" data-id="${ev.id}" style="width:${wOf(firstDur)}px;min-width:${wOf(firstDur)}px;padding-left:2px;padding-right:2px;overflow:hidden">${chord}<b>${lead.name}</b><small class="${zc}">${sub}</small></div>`;
     /* 小節をまたいで伸びる音（タイ）は、続く小節にも「保持中」チップを出す（表示だけ＝音は鳴らさない）。
