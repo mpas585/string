@@ -539,8 +539,10 @@ export function pumpQueue(){
       const playChords = enjoy && (ST.mode==='scale' || (Array.isArray(ST.songChords) && ST.songChords.length>0));
       const n = it.prog.length;
       if(playChords) scheduleBar(ctx, B, it.t, bs, it.prog[it.bar%n], it.prog[(it.bar+1)%n], it.beats, ST.beatUnit);
-      /* メトロノーム：伴奏OFF時は常に。スケール練習は伴奏ONでも鳴らす（練習の基準） */
-      if(!enjoy || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats, ST.beatUnit);
+      /* メトロノーム：コードの帯を鳴らすとき（スケール／コード曲）以外は常に鳴らす。
+         パート伴奏（accompTracks）のときはコードを鳴らさない＝メトロノームは出す。
+         スケール練習はコードを鳴らしてもメトロノームも併せて鳴らす（練習の基準）。 */
+      if(!playChords || ST.mode==='scale') scheduleMetro(ctx, B.metro, it.t, bs, it.beats, ST.beatUnit);
     } else if(it.kind==='end'){
       /* 曲末は focus なしで止める。末尾へ強制スクロールや playhead 移動をすると、
          「最後まで寄ってから冒頭へ戻る」不自然な動きになるため（手動■のときだけ位置合わせする）。 */

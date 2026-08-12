@@ -350,8 +350,14 @@ export function renderStrip(){
   }
   stripSig=sig;
   let html='', curM=-1;
+  const bpm=ST.beatsPerMeasure||4;
   ST.events.forEach(ev=>{
-    if(ev.measure!==curM){ curM=ev.measure; html+=`<div class="mbar">${curM}</div>`; }
+    if(ev.measure!==curM){
+      /* 長い音符でまたがれて音符が無い小節も、番号だけは飛ばさず出す（1→3 のように飛ばない）。 */
+      const from=(curM<0)?ev.measure:curM+1;
+      for(let mm=from; mm<=ev.measure; mm++) html+=`<div class="mbar">${mm}</div>`;
+      curM=ev.measure;
+    }
     const lead=ev.pitches[ev.leadIdx];
     const f=ev.fing;
     const zc = f ? (f.klass==='low'?'zone-low':f.klass==='mid'?'zone-mid':'zone-high') : '';
@@ -360,6 +366,17 @@ export function renderStrip(){
     const chord = (ev.pitches.length>1) ? '<i class="ch"></i>' : '';
     const cls = (ev.id===ST.selected?' on':'') + (ev.id===ST.current?' playing':'') + (f?'':' out');
     html += `<div class="nchip${cls}" data-id="${ev.id}">${chord}<b>${lead.name}</b><small class="${zc}">${sub}</small></div>`;
+    /* 小節をまたいで伸びる音（タイ）は、続く小節にも「保持中」チップを出す（表示だけ＝音は鳴らさない）。
+       参考の楽譜のように、伸ばしている小節にも音符が見えるようにする。 */
+    const endM=Math.floor((ev.onset+ev.dur-1e-6)/bpm)+1;
+    if(endM>ev.measure){
+      const hcls=(ev.id===ST.selected?' on':'')+(ev.id===ST.current?' playing':'');
+      for(let mm=ev.measure+1; mm<=endM; mm++){
+        html+=`<div class="mbar">${mm}</div>`;
+        html+=`<div class="nchip hold${hcls}" data-id="${ev.id}"><b>${lead.name}</b><small class="tie">‿</small></div>`;
+      }
+      curM=Math.max(curM, endM);
+    }
   });
   el.innerHTML=html;
 }

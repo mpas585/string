@@ -93,7 +93,16 @@ export function buildStaff(){
 
   const NW=34;                                     /* 音符1つの横幅 */
   const LEFT=54;
-  const W = LEFT + ST.events.length*NW + 30;
+  /* スロット数を先に数える（描画ループと同じ規則：音符＋タイで伸びる小節＋休符だけの空小節）。 */
+  const __bpm=ST.beatsPerMeasure||4;
+  let __slots=0, __cur=-1;
+  ST.events.forEach(ev=>{
+    if(ev.measure!==__cur){ if(__cur>=0 && ev.measure>__cur+1) __slots+=(ev.measure-__cur-1); __cur=ev.measure; }
+    __slots++;
+    const em=Math.floor((ev.onset+ev.dur-1e-6)/__bpm)+1;
+    if(em>ev.measure){ __slots+=(em-ev.measure); if(em>__cur) __cur=em; }
+  });
+  const W = LEFT + __slots*NW + 30;
   const p=[];
   p.push(`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`);
   /* 五線 */
@@ -104,14 +113,26 @@ export function buildStaff(){
   /* クレフ */
   p.push(`<text x="12" y="${TOP+4*SPACE+CLEF.dy}" font-size="${CLEF.size}" fill="var(--ink)">${CLEF.glyph}</text>`);
 
-  let curM=-1;
+  let curM=-1, slot=0;
   ST.events.forEach((ev,i)=>{
-    const x=LEFT+i*NW+NW/2;
+    /* 音符が無い小節（長い音符でまたがれた小節）にも枠を1つぶん空け、番号を飛ばさず出す */
+    if(ev.measure!==curM){
+      if(curM>=0 && ev.measure>curM+1){
+        for(let mm=curM+1; mm<ev.measure; mm++){
+          const bx=LEFT+slot*NW;
+          p.push(`<line x1="${bx-4}" y1="${TOP}" x2="${bx-4}" y2="${TOP+4*SPACE}" stroke="var(--line)" stroke-width="1.5"/>`);
+          p.push(`<text x="${bx-2}" y="${TOP-10}" font-size="9" fill="var(--faint)" font-family="var(--mono)">${mm}</text>`);
+          slot++;
+        }
+      }
+    }
+    const x=LEFT+slot*NW+NW/2;
     if(ev.measure!==curM){
       curM=ev.measure;
-      if(i>0) p.push(`<line x1="${x-NW/2-4}" y1="${TOP}" x2="${x-NW/2-4}" y2="${TOP+4*SPACE}" stroke="var(--line)" stroke-width="1.5"/>`);
+      if(slot>0) p.push(`<line x1="${x-NW/2-4}" y1="${TOP}" x2="${x-NW/2-4}" y2="${TOP+4*SPACE}" stroke="var(--line)" stroke-width="1.5"/>`);
       p.push(`<text x="${x-NW/2-2}" y="${TOP-10}" font-size="9" fill="var(--faint)" font-family="var(--mono)">${curM}</text>`);
     }
+    slot++;
     const midi=ev.pitches[ev.leadIdx].midi;
     const di=diatonicIndex(midi);
     const y=lineY(di);
@@ -132,6 +153,23 @@ export function buildStaff(){
     if(ev.fing && ev.fing.finger) p.push(`<text class="nk-fg" data-nid="${ev.id}" x="${x}" y="${up? y-32 : y+38}" font-size="10" text-anchor="middle" fill="${active?'var(--accent)':'var(--muted)'}" font-family="var(--mono)">${ev.fing.finger}</text>`);
     /* タップ領域 */
     p.push(`<rect class="nh" data-id="${ev.id}" x="${x-NW/2}" y="6" width="${NW}" height="${H-12}" fill="transparent"/>`);
+    /* タイ：小節をまたいで伸びる音は、続く小節にも符頭とタイ弧を出す（表示だけ＝参考楽譜と同じ見え方）。 */
+    const bpm=ST.beatsPerMeasure||4;
+    const endM=Math.floor((ev.onset+ev.dur-1e-6)/bpm)+1;
+    if(endM>curM){
+      let prevx=x;
+      for(let mm=curM+1; mm<=endM; mm++){
+        const bx=LEFT+slot*NW;
+        p.push(`<line x1="${bx-4}" y1="${TOP}" x2="${bx-4}" y2="${TOP+4*SPACE}" stroke="var(--line)" stroke-width="1.5"/>`);
+        p.push(`<text x="${bx-2}" y="${TOP-10}" font-size="9" fill="var(--faint)" font-family="var(--mono)">${mm}</text>`);
+        const hx=LEFT+slot*NW+NW/2;
+        const midx=(prevx+hx)/2;
+        p.push(`<path d="M ${prevx} ${y+7} Q ${midx} ${y+15} ${hx} ${y+7}" fill="none" stroke="var(--muted)" stroke-width="1.2" opacity="0.7"/>`);
+        p.push(`<ellipse class="nh nk" data-id="${ev.id}" data-nid="${ev.id}" data-ok="1" cx="${hx}" cy="${y}" rx="5.6" ry="4.3" fill="${col}" opacity="0.5" transform="rotate(-18 ${hx} ${y})"/>`);
+        prevx=hx; slot++;
+      }
+      curM=endM;
+    }
   });
   p.push('</svg>');
   box.innerHTML = `<div class="stf-wrap" id="stfwrap">${p.join('')}</div>`;
