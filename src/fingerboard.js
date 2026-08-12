@@ -244,48 +244,41 @@ export function paintNotes(ev){
   const lead=ev.pitches[ev.leadIdx];
   const f=ev.fing;
 
-  /* このイベントがスラーの中なら、群として扱う（同じ弦で結ぶ）。 */
+  /* このイベントがスラーの中なら、群として扱う（各音の位置を帯で繋いで見せる）。
+     ※ スラーでも移弦はあるので、弦は縛らない。運指は各音そのまま。 */
   const grp = slurGroupOf(ev.id);
-  const grpLeads = grp ? slurLeadMidis(grp) : null;
 
   /* 別の押さえ方の候補○。運指編集シートの札（optionsForAll）と同じ並びを出す＝
      シートに出ている候補は必ず指板にも○で見える。oct が付いているものは
-     同じ音名で1・2オクターブ違う位置なので、破線＋薄めにして地の候補と分ける。
-     スラーの中では、群の全音が同じ弦に収まる候補だけを出す（外れる弦を選べないように）。 */
+     同じ音名で1・2オクターブ違う位置なので、破線＋薄めにして地の候補と分ける。 */
   optionsForAll(lead.midi).forEach(o=>{
     if(f && o.str===f.str && o.off===f.off) return;   /* いま選ばれている位置には出さない */
-    if(grp){
-      const fit = grpLeads.every(m=>{ const off=(m+o.oct)-OPEN[o.str]; return off>=0 && off<=FB.maxOff; });
-      if(!fit) return;                                 /* この弦では群が同じ弦に乗らない＝出さない */
-    }
     const x=FB.strX[o.str], y=yOf(o.off);
     const dash = o.oct ? ' stroke-dasharray="3 3" opacity="0.65"' : '';
     parts.push(`<circle class="opt" data-str="${o.str}" data-oct="${o.oct}" cx="${x}" cy="${y.toFixed(1)}" r="12" fill="transparent" stroke="var(--alt)" stroke-width="2"${dash}/>`);
   });
 
-  /* スラーの帯：群の各音が同じ弦なら、弦に沿って縦の帯で結び、中央に slur と書く。
-     地の音符○より下（先）に描いて、○が帯の上に乗るようにする。 */
+  /* スラーの帯：群の各音の位置（弦をまたいでもよい）を、音の順に1本の帯で繋ぐ。
+     地の音符○より先に描いて、○が帯の上に乗るようにする。帯の中央に slur と書く。 */
   if(grp){
     const mem=[];
-    for(let i=grp[0]; i<=grp[1]; i++){ const m=ST.events[i]; if(m && m.fing) mem.push({id:i, str:m.fing.str, off:m.fing.off, name:m.pitches[m.leadIdx].name}); }
-    if(mem.length>=2 && mem.every(mm=> mm.str===mem[0].str)){
-      const x=FB.strX[mem[0].str];
-      const ys=mem.map(mm=> yOf(mm.off));
-      const yTop=Math.min.apply(null,ys), yBot=Math.max.apply(null,ys);
-      const halfW=15, pad=17;
-      const ry=Math.max(yTop-pad, FB.topY-4);
-      const rh=(yBot+pad)-ry;
-      parts.push(`<rect class="slurband" x="${(x-halfW).toFixed(1)}" y="${ry.toFixed(1)}" width="${(halfW*2).toFixed(1)}" height="${rh.toFixed(1)}" rx="${halfW.toFixed(1)}"/>`);
-      const yc=(Math.max(yTop,ry)+yBot)/2;
-      parts.push(`<text class="slurlbl" x="${x.toFixed(1)}" y="${(yc+3.5).toFixed(1)}">slur</text>`);
+    for(let i=grp[0]; i<=grp[1]; i++){ const m=ST.events[i]; if(m && m.fing) mem.push({id:i, x:FB.strX[m.fing.str], y:yOf(m.fing.off), str:m.fing.str, off:m.fing.off, name:m.pitches[m.leadIdx].name}); }
+    if(mem.length>=2){
+      /* 各位置を結ぶ帯（太い半透明の折れ線） */
+      const d = mem.map((mm,i)=> (i?'L':'M')+mm.x.toFixed(1)+' '+mm.y.toFixed(1)).join(' ');
+      parts.push(`<path class="slurband" d="${d}"/>`);
+      /* ラベルは帯の中ほど（音の並びの真ん中あたり）に、地色のフチ付きで乗せる */
+      const mid=mem[Math.floor((mem.length-1)/2)];
+      const midx=(mem.length%2) ? mid.x : (mid.x+mem[Math.floor(mem.length/2)].x)/2;
+      const midy=(mem.length%2) ? mid.y : (mid.y+mem[Math.floor(mem.length/2)].y)/2;
+      parts.push(`<text class="slurlbl" x="${midx.toFixed(1)}" y="${(midy-15).toFixed(1)}">slur</text>`);
     }
-    /* 群の主音のうち、いま鳴っている音以外も点灯させる（通常は1つ→スラーでは2つ以上）。 */
+    /* 群の音のうち、いま鳴っている音以外も点灯させる（通常は1つ→スラーでは2つ以上）。 */
     for(const mm of mem){
       if(mm.id===ev.id) continue;
-      const x=FB.strX[mm.str], y=yOf(mm.off);
       const open=(mm.off===0), col=open?'var(--open)':'var(--accent-dim)';
-      parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="12" fill="${col}" opacity="0.92"/>`);
-      parts.push(`<text x="${x}" y="${(y+26).toFixed(1)}" fill="${col}" font-size="11" text-anchor="middle" font-family="var(--mono)">${mm.name}</text>`);
+      parts.push(`<circle cx="${mm.x}" cy="${mm.y.toFixed(1)}" r="12" fill="${col}" opacity="0.92"/>`);
+      parts.push(`<text x="${mm.x}" y="${(mm.y+26).toFixed(1)}" fill="${col}" font-size="11" text-anchor="middle" font-family="var(--mono)">${mm.name}</text>`);
     }
   }
 

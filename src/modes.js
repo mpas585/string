@@ -15,7 +15,7 @@
 */
 import { ST, volProfileKey } from './state.js';
 import { fracOf, midiName, zoneOf, fingerHint, strFingerText, OPEN, STRNAME, tt, FINGER_TABLE, FINGER_HIGH, setNowLine, ZONES } from './util.js';
-import { applyZoom, optionsFor, optionsForAll, recommend, renderBoard, scrollBoardToActive, zoomFitPositions, FB, slurGroupOf, slurCommonStrings } from './fingerboard.js';
+import { applyZoom, optionsFor, optionsForAll, recommend, renderBoard, scrollBoardToActive, zoomFitPositions, FB } from './fingerboard.js';
 import { renderStaff } from './notation.js';
 import { currentBeat, startPlay, stopPlay, updateTransport } from './audio/scheduler.js';
 import { paintTunerDots, startTuner, stopTuner, TUN } from './tuner.js';
@@ -391,27 +391,8 @@ export function setStringForSelected(strIdx, oct){
   if(ST.selected==null) return;
   const oc=(typeof oct==='number' && !isNaN(oct)) ? oct : 0;
 
-  /* スラーの中なら、群の全音を同じ弦へ一緒に動かす（スラーは同じ弦、が前提）。
-     群のどれか1音でもその弦・オクターブに乗らないときは動かさない（候補側でも出さない）。 */
-  const grp=slurGroupOf(ST.selected);
-  if(grp){
-    const set=[];
-    for(let i=grp[0]; i<=grp[1]; i++){
-      const ev=ST.events[i]; const midi=ev.pitches[ev.leadIdx].midi;
-      const off=(midi+oc)-OPEN[strIdx];
-      if(off<0 || off>FB.maxOff) return;              /* 群が乗らない＝何もしない */
-      set.push([i, off]);
-    }
-    for(const [i, off] of set){
-      const z=zoneOf(off);
-      ST.events[i].fing={str:strIdx, off, frac:fracOf(off), zone:z.zone, klass:z.klass, finger:null, manual:true};
-    }
-    saveFingering();
-    render();
-    scrollBoardToActive(true);
-    return;
-  }
-
+  /* スラー中の音でも、弦は1音ずつ自由に選べる（スラーでも移弦はある）。
+     群としての束縛はしない。帯は各音の位置をそのまま繋いで見せる。 */
   const ev=ST.events[ST.selected];
   const midi=ev.pitches[ev.leadIdx].midi;
   /* oct は元の高さからの半音差（0 / ±12 / ±24）。指板に出す位置だけを動かす
@@ -440,17 +421,6 @@ export function resetSelectedFingering(){
   if(ST.selected==null) return;
   const ev=ST.events[ST.selected];
   if(!ev) return;
-  const grp=slurGroupOf(ST.selected);
-  if(grp){
-    /* スラーは群ごと自動（同じ弦）へ戻す */
-    for(let i=grp[0]; i<=grp[1]; i++){ const e=ST.events[i]; e.leadIdx=e.pitches.length-1; e.fing=recommend(e.pitches[e.leadIdx].midi); }
-    applySlurStrings();
-    saveFingering();
-    render();
-    scrollBoardToActive(true);
-    toast(tt('msg.fing_reset_one_done'));
-    return;
-  }
   ev.leadIdx=ev.pitches.length-1;
   ev.fing=recommend(ev.pitches[ev.leadIdx].midi);
   saveFingering();
@@ -463,7 +433,6 @@ export function setPref(p){
   document.querySelectorAll('.pref').forEach(b=>b.classList.toggle('on', b.dataset.pref===p));
   saveSettings();
   ST.events.forEach(ev=>{ if(ev.fing && !ev.fing.manual) ev.fing=recommend(ev.pitches[ev.leadIdx].midi); });
-  applySlurStrings();          /* 推奨ポジを変えても、スラー群は同じ弦に揃え直す */
   saveFingering();
   render();
 }
@@ -521,16 +490,8 @@ export function autoShift(){
 /* そのシフトで全音が演奏可能か */
 export function shiftOK(sh){
   if(!ST.parsed) return false;
-  const ok = ST.parsed.events.every(ev=>
+  return ST.parsed.events.every(ev=>
     ev.pitches.some(p=> optionsFor(p.midi+12*sh).length>0));
-  if(!ok) return false;
-  /* スラーの連結成分は「そのオクターブで同じ弦に乗る」ものだけ許す（乗らないオクターブは押せなくする）。 */
-  const comps=mergeSlurs(validSlurs(ST.parsed.slurs, ST.parsed.events.length));
-  for(const [a,b] of comps){
-    const leads=[]; for(let i=a;i<=b;i++){ const ev=ST.parsed.events[i]; leads.push(ev.pitches[ev.leadIdx].midi+12*sh); }
-    if(!slurCommonStrings(leads, 0).length) return false;
-  }
-  return true;
 }
 /* スラー群の妥当性チェック（0<=a<b<n だけ通す）。 */
 function validSlurs(list, n){
@@ -551,37 +512,6 @@ function mergeSlurs(list){
   }
   return out;
 }
-/* 群の中でどの弦を使うか。推奨ポジ設定（ロー/ミドル/ハイ）に合わせて選ぶ。 */
-function pickSlurString(strs, leads){
-  const score=(i)=>{
-    let sc=0;
-    for(const m of leads){ const off=m-OPEN[i];
-      if(ST.pref==='low')       sc+=off;                 /* offが小さいほど良い */
-      else if(ST.pref==='high') sc-=off;                 /* offが大きいほど良い */
-      else                      sc+=Math.abs(off-10);    /* off=10 に近いほど良い */
-    }
-    return sc;
-  };
-  let best=strs[0], bs=score(strs[0]);
-  for(const i of strs){ const sc=score(i); if(sc<bs){ bs=sc; best=i; } }
-  return best;
-}
-/* スラー群の主音を同じ弦へ揃える（手直しでない音だけ）。 */
-function applySlurStrings(){
-  const S=ST.slurComps; if(!S || !S.length) return;
-  for(const g of S){
-    const leads=[]; let anyManual=false;
-    for(let i=g[0]; i<=g[1]; i++){ const ev=ST.events[i]; if(!ev) { leads.length=0; break; } if(ev.fing && ev.fing.manual) anyManual=true; leads.push(ev.pitches[ev.leadIdx].midi); }
-    if(!leads.length || anyManual) continue;          /* 手直しがあれば触らない（人の指定を尊重） */
-    const strs=slurCommonStrings(leads, 0);
-    if(!strs.length) continue;                          /* どの弦にも乗らない＝各音の推奨のまま */
-    const pick=pickSlurString(strs, leads);
-    for(let i=g[0]; i<=g[1]; i++){
-      const ev=ST.events[i]; const off=ev.pitches[ev.leadIdx].midi-OPEN[pick]; const z=zoneOf(off);
-      ev.fing={str:pick, off, frac:fracOf(off), zone:z.zone, klass:z.klass, finger:null, manual:false};
-    }
-  }
-}
 export function applyOctave(){
   if(!ST.parsed) return;
   /* 前の曲で選んだオクターブが、この曲では指板に収まらないことがある。
@@ -595,10 +525,10 @@ export function applyOctave(){
             leadIdx:Math.min(e.leadIdx, pitches.length-1), fing:null};
   });
   ST.events.forEach(ev=>{ ev.fing=recommend(ev.pitches[ev.leadIdx].midi); });
-  /* スラー群を取り込み、群の全音を同じ弦へ揃える（自動運指のときだけ。手直しは loadFingering が後で上書き）。 */
+  /* スラー群を取り込む（帯で結んで見せる用。運指は各音バラバラのまま＝スラーでも移弦あり）。
+     slurComps は入れ子/隣接をまとめた実効の帯。 */
   ST.slurs = validSlurs(ST.parsed.slurs, ST.events.length);
   ST.slurComps = mergeSlurs(ST.slurs);
-  applySlurStrings();
   const el=document.getElementById('octInfo');
   if(el){
     const out=ST.events.filter(e=>!e.fing).length;

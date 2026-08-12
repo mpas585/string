@@ -1857,11 +1857,12 @@
   .hm-card .b{font-weight:800; letter-spacing:.02em}
 /* ===== スラーの帯（指板上・同じ弦の2音以上を結ぶ縦帯） ===== */
 #notes .slurband{
-  fill: var(--accent);
-  opacity: 0.16;
+  fill: none;
   stroke: var(--accent);
-  stroke-width: 1.5;
-  stroke-opacity: 0.55;
+  stroke-width: 7;
+  stroke-opacity: 0.30;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 #notes .slurlbl{
   fill: var(--accent);
