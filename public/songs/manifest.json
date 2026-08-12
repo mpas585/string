@@ -3768,15 +3768,15 @@
     {
       "id": "air_on_the_g_string_duo",
       "title": {
-        "ja": "G線上のアリア（二重奏）",
-        "en": "Air on the G String (duet)",
-        "es": "Aria en la cuerda de Sol (dúo)",
-        "zh": "G弦上的咏叹调（二重奏）"
+        "ja": "G線上のアリア",
+        "en": "Air on the G String",
+        "es": "Aria en la cuerda de Sol",
+        "zh": "G弦上的咏叹调"
       },
       "desc": {
         "ja": "ニ長調・4/4拍子・伴奏つき",
         "en": "D major, 4/4 with accompaniment",
-        "es": "D mayor, 4/4 con acompañamiento",
+        "es": "Re mayor, 4/4 con acompañamiento",
         "zh": "D大调・4/4・带伴奏"
       },
       "level": 2,
