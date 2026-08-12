@@ -365,15 +365,23 @@ export function renderStrip(){
     const sub = f ? (f.finger ? `${STRNAME[f.str]}·${f.finger}` : STRNAME[f.str]) : tt('msg.out_of_range');
     const chord = (ev.pitches.length>1) ? '<i class="ch"></i>' : '';
     const cls = (ev.id===ST.selected?' on':'') + (ev.id===ST.current?' playing':'') + (f?'':' out');
-    html += `<div class="nchip${cls}" data-id="${ev.id}">${chord}<b>${lead.name}</b><small class="${zc}">${sub}</small></div>`;
+    /* チップ幅を音の長さに比例させる（長い音＝広い／短い音＝狭い）。読める最小幅は確保する。
+       小節をまたぐ音は、この小節に入っているぶんだけの長さで幅を決める。 */
+    const noteEnd=ev.onset+ev.dur, mEnd=ev.measure*bpm;
+    const firstDur=Math.min(noteEnd, mEnd)-ev.onset;
+    /* 幅＝音の長さ×一定値（PPB）。1小節ぶんの合計は常に beatsPerMeasure×PPB＝固定幅になる。
+       極端に短い音だけ潰れないよう最小幅だけ確保する。 */
+    const PPB=56, wOf=d=> Math.max(22, Math.round(d*PPB));
+    html += `<div class="nchip${cls}" data-id="${ev.id}" style="width:${wOf(firstDur)}px;min-width:${wOf(firstDur)}px;padding-left:2px;padding-right:2px;overflow:hidden">${chord}<b>${lead.name}</b><small class="${zc}">${sub}</small></div>`;
     /* 小節をまたいで伸びる音（タイ）は、続く小節にも「保持中」チップを出す（表示だけ＝音は鳴らさない）。
-       参考の楽譜のように、伸ばしている小節にも音符が見えるようにする。 */
-    const endM=Math.floor((ev.onset+ev.dur-1e-6)/bpm)+1;
+       参考の楽譜のように、伸ばしている小節にも音符が見え、幅もその小節ぶんの長さになる。 */
+    const endM=Math.floor((noteEnd-1e-6)/bpm)+1;
     if(endM>ev.measure){
       const hcls=(ev.id===ST.selected?' on':'')+(ev.id===ST.current?' playing':'');
       for(let mm=ev.measure+1; mm<=endM; mm++){
+        const segDur=Math.min(noteEnd, mm*bpm)-(mm-1)*bpm;
         html+=`<div class="mbar">${mm}</div>`;
-        html+=`<div class="nchip hold${hcls}" data-id="${ev.id}"><b>${lead.name}</b><small class="tie">‿</small></div>`;
+        html+=`<div class="nchip hold${hcls}" data-id="${ev.id}" style="width:${wOf(segDur)}px;min-width:${wOf(segDur)}px;padding-left:2px;padding-right:2px;overflow:hidden"><b>${lead.name}</b><small class="tie">‿</small></div>`;
       }
       curM=Math.max(curM, endM);
     }
