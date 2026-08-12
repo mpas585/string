@@ -74,6 +74,7 @@ export function parseMusicXML(text){
 
   let divisions = 1, cursor = 0, lastOnset = 0;
   const raw = [];
+  const slurMarks = [];
   const mList = [];
   const measures = part.querySelectorAll(':scope > measure');
   measures.forEach((m, mi)=>{
@@ -92,7 +93,17 @@ export function parseMusicXML(text){
         const onset = isChord ? lastOnset : cursor;
         if(!isRest){
           const pEl = node.querySelector('pitch');
-          if(pEl) raw.push({onset, dur, midi:pitchToMidi(pEl), measure:mi+1});
+          if(pEl){
+            raw.push({onset, dur, midi:pitchToMidi(pEl), measure:mi+1});
+            /* スラー（<notations><slur type="start|stop" number>）を拾う。番号ごとに開始→終了で対にする。
+               まとめ役はイベント（同時刻の音の束）なので、ここでは音の onset とだけ結びつけておく。 */
+            node.querySelectorAll(':scope > notations > slur').forEach(sl=>{
+              const ty=sl.getAttribute('type');
+              if(ty==='start' || ty==='stop'){
+                slurMarks.push({key:Math.round(onset*1000)/1000, type:ty, num:sl.getAttribute('number')||'1'});
+              }
+            });
+          }
         }
         if(!isChord){ cursor += dur; lastOnset = onset; }
         if(cursor > mMax) mMax = cursor;
@@ -129,7 +140,25 @@ export function parseMusicXML(text){
   evs.forEach(e=>{ e.fing = recommend(e.pitches[e.leadIdx].midi); });
 
   if(!evs.length) throw new Error(tt('msg.no_notes'));
-  return {events:evs, tempo, measures:mList, beatsPerMeasure, beatUnit, title};
+
+  /* スラー：音の onset → イベント添字。番号ごとに開始をスタックへ積み、終了で対にする
+     （2音に限らず、開始と終了のあいだの音は全部そのスラーの中）。 */
+  const onsetToIdx = new Map();
+  evs.forEach((e,i)=> onsetToIdx.set(Math.round(e.onset*1000)/1000, i));
+  const openNum = {};
+  const slurs = [];
+  for(const mk of slurMarks){
+    const idx = onsetToIdx.get(mk.key);
+    if(idx==null) continue;
+    if(mk.type==='start'){ (openNum[mk.num] || (openNum[mk.num]=[])).push(idx); }
+    else { const st=(openNum[mk.num]||[]).pop(); if(st!=null && idx>st) slurs.push([st,idx]); }
+  }
+  /* 同じ範囲が重複することがある（和音や多声部で、同じスラーが複数の音符に付く）ので、まとめる。 */
+  const seen=new Set(); const uniqSlurs=[];
+  for(const g of slurs){ const k=g[0]+':'+g[1]; if(!seen.has(k)){ seen.add(k); uniqSlurs.push(g); } }
+  uniqSlurs.sort((a,b)=> a[0]-b[0] || a[1]-b[1]);
+
+  return {events:evs, tempo, measures:mList, beatsPerMeasure, beatUnit, title, slurs:uniqSlurs};
 }
 
 /* MIDI のテキスト（トラック名など）には文字コードの指定が無い。
@@ -802,7 +831,8 @@ export function buildSongFromData(data){
   const measures=[];
   for(let mm=1;mm<=maxM;mm++) measures.push({num:mm, start:(mm-1)*beatsPerMeasure, end:mm*beatsPerMeasure});
   /* beatUnit＝1拍の長さ（4分音符=1）。3/8 など1拍が8分音符の曲は 0.5 を持たせる */
-  return {events:evs, measures, beatsPerMeasure, beatUnit:(data.beatUnit>0 ? data.beatUnit : 1)};
+  return {events:evs, measures, beatsPerMeasure, beatUnit:(data.beatUnit>0 ? data.beatUnit : 1),
+          slurs:(Array.isArray(data.slurs) ? data.slurs.map(g=>[g[0],g[1]]) : [])};
 }
 export async function loadSong(id, quiet){
   const s=SONGS[id];

@@ -67,6 +67,33 @@ export function recommend(midi){
   return {str:c.str, off:c.off, frac:c.frac, zone:c.zone, klass:c.klass, finger:null, manual:false};
 }
 
+/* ===== スラー ===== */
+/* いまのイベント添字が属するスラーの連結成分 [開始,終了] を返す。無ければ null。
+   （入れ子/隣接のスラーはまとめた成分で扱う＝同じ弦がひと続きになる） */
+export function slurGroupOf(id){
+  const S = ST.slurComps;
+  if(!S || !S.length || id==null) return null;
+  for(let k=0;k<S.length;k++){ const g=S[k]; if(id>=g[0] && id<=g[1]) return g; }
+  return null;
+}
+/* 群の主音（各イベントの leadIdx の音）をまとめて返す。 */
+export function slurLeadMidis(g){
+  const out=[];
+  for(let i=g[0]; i<=g[1]; i++){ const ev=ST.events[i]; if(ev) out.push(ev.pitches[ev.leadIdx].midi); }
+  return out;
+}
+/* その半音差(oc)を全音に足したとき、群の全音が1本で押さえられる弦の一覧。 */
+export function slurCommonStrings(midis, oc){
+  const o=(typeof oc==='number' && !isNaN(oc)) ? oc : 0;
+  const out=[];
+  for(let i=0;i<OPEN.length;i++){
+    let ok=true;
+    for(const m of midis){ const off=(m+o)-OPEN[i]; if(off<0 || off>FB.maxOff){ ok=false; break; } }
+    if(ok) out.push(i);
+  }
+  return out;
+}
+
 /* ===== 指板描画 ===== */
 /* 表示する半音数と指板SVGの寸法は config/{楽器}.php（PHPが window.INSTRUMENT に出力）から。
    未注入のときは従来どおりチェロの値。fmax は maxOff に追従させる
@@ -216,15 +243,52 @@ export function paintNotes(ev){
   const parts=[];
   const lead=ev.pitches[ev.leadIdx];
   const f=ev.fing;
+
+  /* このイベントがスラーの中なら、群として扱う（同じ弦で結ぶ）。 */
+  const grp = slurGroupOf(ev.id);
+  const grpLeads = grp ? slurLeadMidis(grp) : null;
+
   /* 別の押さえ方の候補○。運指編集シートの札（optionsForAll）と同じ並びを出す＝
      シートに出ている候補は必ず指板にも○で見える。oct が付いているものは
-     同じ音名で1・2オクターブ違う位置なので、破線＋薄めにして地の候補と分ける。 */
+     同じ音名で1・2オクターブ違う位置なので、破線＋薄めにして地の候補と分ける。
+     スラーの中では、群の全音が同じ弦に収まる候補だけを出す（外れる弦を選べないように）。 */
   optionsForAll(lead.midi).forEach(o=>{
     if(f && o.str===f.str && o.off===f.off) return;   /* いま選ばれている位置には出さない */
+    if(grp){
+      const fit = grpLeads.every(m=>{ const off=(m+o.oct)-OPEN[o.str]; return off>=0 && off<=FB.maxOff; });
+      if(!fit) return;                                 /* この弦では群が同じ弦に乗らない＝出さない */
+    }
     const x=FB.strX[o.str], y=yOf(o.off);
     const dash = o.oct ? ' stroke-dasharray="3 3" opacity="0.65"' : '';
     parts.push(`<circle class="opt" data-str="${o.str}" data-oct="${o.oct}" cx="${x}" cy="${y.toFixed(1)}" r="12" fill="transparent" stroke="var(--alt)" stroke-width="2"${dash}/>`);
   });
+
+  /* スラーの帯：群の各音が同じ弦なら、弦に沿って縦の帯で結び、中央に slur と書く。
+     地の音符○より下（先）に描いて、○が帯の上に乗るようにする。 */
+  if(grp){
+    const mem=[];
+    for(let i=grp[0]; i<=grp[1]; i++){ const m=ST.events[i]; if(m && m.fing) mem.push({id:i, str:m.fing.str, off:m.fing.off, name:m.pitches[m.leadIdx].name}); }
+    if(mem.length>=2 && mem.every(mm=> mm.str===mem[0].str)){
+      const x=FB.strX[mem[0].str];
+      const ys=mem.map(mm=> yOf(mm.off));
+      const yTop=Math.min.apply(null,ys), yBot=Math.max.apply(null,ys);
+      const halfW=15, pad=17;
+      const ry=Math.max(yTop-pad, FB.topY-4);
+      const rh=(yBot+pad)-ry;
+      parts.push(`<rect class="slurband" x="${(x-halfW).toFixed(1)}" y="${ry.toFixed(1)}" width="${(halfW*2).toFixed(1)}" height="${rh.toFixed(1)}" rx="${halfW.toFixed(1)}"/>`);
+      const yc=(Math.max(yTop,ry)+yBot)/2;
+      parts.push(`<text class="slurlbl" x="${x.toFixed(1)}" y="${(yc+3.5).toFixed(1)}">slur</text>`);
+    }
+    /* 群の主音のうち、いま鳴っている音以外も点灯させる（通常は1つ→スラーでは2つ以上）。 */
+    for(const mm of mem){
+      if(mm.id===ev.id) continue;
+      const x=FB.strX[mm.str], y=yOf(mm.off);
+      const open=(mm.off===0), col=open?'var(--open)':'var(--accent-dim)';
+      parts.push(`<circle cx="${x}" cy="${y.toFixed(1)}" r="12" fill="${col}" opacity="0.92"/>`);
+      parts.push(`<text x="${x}" y="${(y+26).toFixed(1)}" fill="${col}" font-size="11" text-anchor="middle" font-family="var(--mono)">${mm.name}</text>`);
+    }
+  }
+
   ev.pitches.forEach((p,idx)=>{
     if(idx===ev.leadIdx) return;
     const r=recommend(p.midi); if(!r) return;

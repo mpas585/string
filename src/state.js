@@ -22,6 +22,8 @@ export function volProfileKey(){ return (ST.mode==='scale' || ST.mode==='metro')
 export const ST = {
   mode: null,            // null | 'score' | 'game' | 'metro' | 'tuner'
   events: [],
+  slurs: [],             // スラー群 [[開始イベント添字, 終了イベント添字], …]（両端含む・同弦で結ぶ）
+  slurComps: [],         // スラーの連結成分（入れ子/隣接をまとめた実効の帯）。運指・帯・編集はこちらを使う
   measures: [],          // [{num, start, end}] 単位=4分音符
   beatsPerMeasure: 4,    // 4分音符=1 換算の1小節の長さ（MusicXML も beats*(4/beat-type) で正規化）
   beatUnit: 1,           // 1拍の長さ（4分音符=1）。3/8 のように1拍が8分音符の譜面は 0.5

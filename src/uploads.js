@@ -98,6 +98,8 @@ export function packScore(parsed, tempo, meta) {
     beatUnit: (parsed.beatUnit > 0) ? parsed.beatUnit : 1,
     events: parsed.events.map(e => [e.onset, e.dur, e.measure, e.pitches.map(p => p.midi), e.leadIdx]),
     measures: (parsed.measures || []).map(m => [m.num, m.start, m.end]),
+    /* スラー群 [[開始イベント添字, 終了イベント添字], …]。無ければ空配列。 */
+    slurs: (Array.isArray(parsed.slurs) ? parsed.slurs.map(g => [g[0], g[1]]) : []),
   };
 }
 export function unpackScore(j) {
@@ -109,8 +111,9 @@ export function unpackScore(j) {
   if (!evs.length) throw new Error(tt('msg.no_notes'));
   evs.forEach(e => { e.fing = recommend(e.pitches[e.leadIdx].midi); });
   const measures = (j.measures || []).map(a => ({ num: a[0], start: a[1], end: a[2] }));
+  const slurs = Array.isArray(j.slurs) ? j.slurs.map(g => [g[0], g[1]]) : [];
   return {
-    events: evs, measures,
+    events: evs, measures, slurs,
     beatsPerMeasure: j.beatsPerMeasure || 4,
     beatUnit: (j.beatUnit > 0) ? j.beatUnit : 1,
   };

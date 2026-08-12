@@ -51,17 +51,29 @@ function isOpen(){ return !!slots && document.getElementById('scoreEdit').classL
 function buildSlots(){
   const evs = (ST.parsed && ST.parsed.events ? ST.parsed.events.slice() : [])
                 .sort((a, b) => a.onset - b.onset);
+  /* スラー群の端（開始/終了イベント）に印を付けておく。編集で音符を足し引きしても、
+     この印が付いたスロットが残っているかどうかで、あとから群を組み直せる（buildSlots は開いた時だけ）。 */
+  const slurs = (ST.parsed && Array.isArray(ST.parsed.slurs)) ? ST.parsed.slurs : [];
+  const startAt = {}, stopAt = {};
+  slurs.forEach((g, idx) => {
+    (startAt[g[0]] || (startAt[g[0]] = [])).push(idx);
+    (stopAt[g[1]]  || (stopAt[g[1]]  = [])).push(idx);
+  });
   const out = [];
-  let prevEnd = 0;
+  let prevEnd = 0, ni = 0;
   for(const e of evs){
     const d = (e.dur > 0) ? e.dur : 0.5;
     const gap = e.onset - prevEnd;
     if(gap > 1e-3) out.push({ rest: true, dur: r4(gap) });
-    out.push({
+    const slot = {
       rest: false, dur: r4(d),
       midis: e.pitches.map(p => p.midi),
       leadIdx: Math.min(e.leadIdx || 0, Math.max(0, e.pitches.length - 1)),
-    });
+    };
+    if(startAt[ni]) slot.slurStart = startAt[ni].slice();
+    if(stopAt[ni])  slot.slurStop  = stopAt[ni].slice();
+    out.push(slot);
+    ni++;
     prevEnd = e.onset + d;
   }
   if(!out.length) out.push({ rest: false, dur: 1, midis: [60], leadIdx: 0 });
@@ -93,6 +105,28 @@ function rebuildParsed(){
   for(let m = 1; m <= maxM; m++) measures.push({ num: m, start: (m - 1) * per, end: m * per });
   ST.parsed.measures = measures;
   ST.measures = measures;          /* totalBeats / シークバーが見るのはこちら */
+
+  /* スラーを組み直す。生き残った印（slurStart/slurStop）の新しい音符番号で開始・終了を取る。
+     ・端の音符が消えた群は落とす。
+     ・スラーの内側に音符を足したら、範囲は自然に広がる（開始と終了のあいだに入るため）。 */
+  const startIdx = {}, stopIdx = {};
+  let ni2 = 0;
+  for(const sl of slots){
+    if(!sl.rest && sl.midis && sl.midis.length){
+      if(sl.slurStart) for(const id of sl.slurStart) startIdx[id] = ni2;
+      if(sl.slurStop)  for(const id of sl.slurStop)  stopIdx[id]  = ni2;
+      ni2++;
+    }
+  }
+  const newSlurs = [];
+  const ids = new Set(Object.keys(startIdx).concat(Object.keys(stopIdx)));
+  for(const id of ids){
+    const a = startIdx[id], b = stopIdx[id];
+    if(a != null && b != null && b > a) newSlurs.push([a, b]);
+  }
+  newSlurs.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  ST.parsed.slurs = newSlurs;
+
   applyOctave();                   /* 移調後の ST.events と運指を作り直す（render はしない） */
 }
 
