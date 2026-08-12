@@ -7,6 +7,7 @@
     "zh": "C大调音阶"
   },
   "key": "C",
+  "octave": { "cello": -2 },
   "tempo": 80,
   "beatsPerMeasure": 4,
   "chords": [

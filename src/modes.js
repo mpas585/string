@@ -505,6 +505,10 @@ const COMFORT_TOL=0.15;
 export function autoShift(){
   const total=ST.parsed.events.length;
   if(!total) return 0;
+  /* 曲データに楽器別の推奨オクターブ（octaveHint）があり、全音が指板に収まるなら、それを優先する。
+     例：課題曲『Cメジャースケール』はチェロだと -2（ローポジション）を既定にする。 */
+  const hint=ST.parsed.octaveHint;
+  if(Number.isInteger(hint) && shiftOK(hint)) return hint;
   const fit=OCT_SHIFTS.filter(sh=> playableCount(sh)===total);
   const list=fit.length ? fit : OCT_SHIFTS.slice();
   for(const sh of list){ if(total-comfortCount(sh) <= total*COMFORT_TOL) return sh; }

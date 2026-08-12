@@ -80,17 +80,30 @@ on('tempoReset','click', ()=>{ setTempo(ST.tempoOrig || 80, true); saveSettings(
    ST.pref / setPref() は modes.js に残してあるので、戻すときはここも戻す。 */
 
 /* ===== 運指ストリップ：スワイプ＋タップ選択 ===== */
-let sDrag=null, sMoved=false;
+let sDrag=null, sMoved=false, sHoldTimer=0, sLong=false;
 on('strip','pointerdown', e=>{
   const el=document.getElementById('strip');
   sDrag={x:e.clientX, y:e.clientY, left:el.scrollLeft, mouse:(e.pointerType==='mouse')};
-  sMoved=false;
+  sMoved=false; sLong=false;
+  /* 長押し＝編集ドロワー展開。タップは「この位置を選ぶ」だけにするので、編集はここで開く。
+     押している間にスワイプしたら（pointermove で >5px）長押しは取り消す。 */
+  clearTimeout(sHoldTimer); sHoldTimer=0;
+  const chip=e.target.closest('.nchip');
+  if(chip && !ST.playing){
+    const id=+chip.dataset.id;
+    sHoldTimer=setTimeout(()=>{
+      sHoldTimer=0; sLong=true;
+      selectEvent(id); scrollBoardToActive();
+      if(ST.mode==='score') openEditSheet();
+    }, 500);
+  }
 });
 on('strip','pointermove', e=>{
   if(!sDrag) return;
   const dx=isRotated() ? (e.clientY - sDrag.y) : (e.clientX - sDrag.x);
   if(Math.abs(dx)>5){
     sMoved=true;
+    if(sHoldTimer){ clearTimeout(sHoldTimer); sHoldTimer=0; }   /* 動いた＝長押しは取り消す */
     ST.stripHold=Date.now();                      /* 手動操作中は自動追従を止める */
     if(sDrag.mouse){                              /* マウスはブラウザが慣性スクロールしないので手動 */
       const el=document.getElementById('strip');
@@ -100,12 +113,13 @@ on('strip','pointermove', e=>{
     }
   }
 });
-function endStripDrag(){ sDrag=null; }
+function endStripDrag(){ sDrag=null; if(sHoldTimer){ clearTimeout(sHoldTimer); sHoldTimer=0; } }
 on('strip','pointerup', endStripDrag);
-on('strip','pointercancel', ()=>{ sDrag=null; sMoved=true; ST.stripHold=Date.now(); });
+on('strip','pointercancel', ()=>{ sDrag=null; sMoved=true; if(sHoldTimer){ clearTimeout(sHoldTimer); sHoldTimer=0; } ST.stripHold=Date.now(); });
 on('strip','scroll', ()=>{ if(sDrag) ST.stripHold=Date.now(); });
 
 on('strip','click', e=>{
+  if(sLong){ sLong=false; return; }              /* 長押しで編集を開いた直後はタップ選択しない */
   if(sMoved){ sMoved=false; return; }            /* スワイプ中は選択しない */
   const chip=e.target.closest('.nchip');
   if(!chip) return;
@@ -115,9 +129,8 @@ on('strip','click', e=>{
     if(ev){ ST.playhead=ev.onset; startPlay(ev.onset, true); }
     return;
   }
-  selectEvent(id);
+  selectEvent(id);                               /* タップ＝この位置を選ぶだけ（▶ でここから再生） */
   scrollBoardToActive();
-  if(ST.mode==='score') openEditSheet();         /* 👇 運指を変更できます */
 });
 
 /* 五線譜のタップ */

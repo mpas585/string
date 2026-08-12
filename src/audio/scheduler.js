@@ -86,6 +86,13 @@ export function flashMeasure(beat){
 export function transportTick(){
   if(!ST.playing || !ST.ctx || !ST.range){ ST.seekRaf=0; return; }
   ST.seekRaf=requestAnimationFrame(transportTick);
+
+  /* 冒頭カウント中：位置表示は開始位置に固定し、運指（現在音）は動かさない・出さない。 */
+  if(ST.countUntil && ST.ctx.currentTime < ST.countUntil){
+    setSeekHead(Math.max(0, Math.min(totalBeats(), ST.startBeat||0)));
+    return;
+  }
+
   const beat=currentBeat();
   setSeekHead(Math.max(0, Math.min(totalBeats(), beat)));
 
@@ -449,6 +456,10 @@ export function startPlay(fromBeat, noCount, force){
   const countSec = ST.beatSec * cu;
   const countBeats = doCount ? countN : 0;
   ST.t0 = ctx.currentTime + lead + countBeats*countSec - (from - ST.range.sB)*ST.beatSec;
+  /* カウント中の表示制御：この時刻までは「開始位置に固定・運指は出さない」（transportTick が見る）。
+     currentBeat() は t0 が未来にある間、負方向へ回り込み（ループ時は終端側へ巻き戻って見える）ため。 */
+  ST.startBeat  = from;
+  ST.countUntil = doCount ? (ctx.currentTime + lead + countBeats*countSec) : 0;
 
   if(!ST.range.list.length && !ST.enjoy){
     toast(tt('msg.loop_no_notes'));
@@ -457,6 +468,7 @@ export function startPlay(fromBeat, noCount, force){
 
   /* 冒頭カウント＝1小節ぶん（画面全体に数字＋クリック） */
   if(doCount){
+    ST.current=null; paintNotes(null); renderNow(null);   /* カウント中は運指（現在音）を出さない */
     for(let i=0;i<countN;i++){
       const at=ctx.currentTime + lead + i*countSec;
       metroClick(ctx, ST.buses.metro, at, i===0);

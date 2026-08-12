@@ -1036,6 +1036,19 @@ export function buildSongFromData(data){
   return {events:evs, measures, beatsPerMeasure, beatUnit:(data.beatUnit>0 ? data.beatUnit : 1),
           slurs:(Array.isArray(data.slurs) ? data.slurs.map(g=>[g[0],g[1]]) : [])};
 }
+/* 曲データの octave 指定を今の楽器に合わせて解決する。
+   数値なら全楽器共通、{cello:-2, ...} のような指定なら該当楽器（無ければ default）を返す。 */
+function songOctaveHint(data){
+  const o=data && data.octave;
+  if(o==null) return null;
+  if(typeof o==='number') return o|0;
+  if(typeof o==='object'){
+    const id=(typeof window!=='undefined' && window.INSTRUMENT && window.INSTRUMENT.id) || 'cello';
+    const v=(id in o) ? o[id] : (('default' in o) ? o.default : null);
+    return (typeof v==='number') ? (v|0) : null;
+  }
+  return null;
+}
 export async function loadSong(id, quiet){
   const s=SONGS[id];
   if(!s){ toast(tt('msg.soon')); return; }
@@ -1059,6 +1072,8 @@ export async function loadSong(id, quiet){
       const parsed=seqToEvents(guideSeq, bpm, bu);
       /* ガイドのスラー（音符添字の[開始,終了]対）を指板に反映する */
       parsed.slurs=Array.isArray(data.slurs)? data.slurs.map(g=>[g[0],g[1]]) : [];
+      { const oh=songOctaveHint(data); parsed.octaveHint=oh;
+        if(oh!=null) ST.octave='auto'; }        /* 推奨オクターブのある曲は自動選択で開く＝推奨ポジションに合わせる */
       setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
       setScore(parsed, 'song:'+id, title);
       /* 伴奏トラックを直接組み立てる（midiFile は使わない＝トラック選択UIは出ない） */
@@ -1078,6 +1093,8 @@ export async function loadSong(id, quiet){
     }
     /* パートを持たない旧来の曲：単旋律（notes＝[midi,拍数]）。従来どおり。 */
     const parsed=buildSongFromData(data);
+    { const oh=songOctaveHint(data); parsed.octaveHint=oh;
+      if(oh!=null) ST.octave='auto'; }        /* 推奨オクターブのある曲は自動選択で開く＝推奨ポジションに合わせる */
     setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
     /* 上部バーに出すのは曲名（言語ごとの表示名）。'song:xxx' は運指の保存キー用の内部IDで、
        画面には出さない。 */
