@@ -12,7 +12,7 @@ import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave,
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub, resetFingering } from './drawer.js';
-import { loadSong, loadSongManifest, selectTrack, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
+import { loadSong, loadSongManifest, selectTrack, setTrackRole, setTrackInst, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
          renderSongList, setFavFilter, favFilterOn } from './songs.js';
 /* お気に入り（指板の左上のハート／曲一覧の絞り込み） */
 import { toggleFavCurrent, syncFavBtn, syncFavFilterBtn, reloadFavs } from './favorites.js';
@@ -570,14 +570,17 @@ on('zoomOut','click',  ()=> setZoom(ST.zoom/1.25));
 on('zoomFit','click',  zoomFit);
 on('zoomReset','click',()=> setZoom(1));
 
-/* ===== MIDIトラック選択 ===== */
+/* ===== トラック選択（メロディガイド／伴奏／ミュート。試聴はしない） ===== */
 on('trackList','click', e=>{
-  const row=e.target.closest('.trow');
-  if(!row) return;
-  /* 行の中のボタンで分ける。「選択」だけドロワーを閉じて開始カウントあり。
-     ボタン以外（トラック名）をタップしたときはこれまでどおりの視聴。 */
-  const btn=e.target.closest('.tbtn');
-  selectTrack(+row.dataset.i, (btn && btn.dataset.act==='select') ? 'select' : 'preview');
+  const rb=e.target.closest('.rbtn');
+  if(!rb) return;
+  setTrackRole(+rb.dataset.i, rb.dataset.role);
+});
+/* 伴奏トラックの音色を変える */
+on('trackList','change', e=>{
+  const sel=e.target.closest('.tinst');
+  if(!sel) return;
+  setTrackInst(+sel.dataset.i, sel.value);
 });
 on('skipStart','click', skipToStart);
 /* MIDIトラック選択の面から「譜面を読み込む」へ戻る */

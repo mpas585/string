@@ -103,23 +103,6 @@
       "file": "elise.json"
     },
     {
-      "id": "bach_prelude_bwv1007",
-      "title": {
-        "ja": "無伴奏チェロ組曲 第1番 プレリュード",
-        "en": "Cello Suite No.1 Prelude (BWV 1007)",
-        "es": "Suite para violonchelo n.º 1, Preludio",
-        "zh": "第一号无伴奏大提琴组曲 前奏曲"
-      },
-      "desc": {
-        "ja": "ト長調・4/4拍子（冒頭8小節）",
-        "en": "G major, 4/4 (first 8 bars)",
-        "es": "Sol mayor, 4/4 (8 primeros compases)",
-        "zh": "G大调・4/4拍（前8小节）"
-      },
-      "level": 3,
-      "file": "bach_prelude_bwv1007.json"
-    },
-    {
       "id": "sakura",
       "title": {
         "ja": "さくらさくら",
@@ -154,23 +137,6 @@
       "file": "largo_going_home.json"
     },
     {
-      "id": "pachelbel_canon",
-      "title": {
-        "ja": "カノン",
-        "en": "Canon in D",
-        "es": "Canon en re mayor",
-        "zh": "D大调卡农"
-      },
-      "desc": {
-        "ja": "ニ長調・4/4拍子（冒頭12小節）",
-        "en": "D major, 4/4 (first 12 bars)",
-        "es": "Re mayor, 4/4 (12 primeros compases)",
-        "zh": "D大调・4/4拍（前12小节）"
-      },
-      "level": 2,
-      "file": "pachelbel_canon.json"
-    },
-    {
       "id": "pd_01_concerto_for_2_mandolins_in_g_rv532_a",
       "title": {
         "ja": "2つのマンドリンのための協奏曲 RV532",
@@ -193,30 +159,6 @@
         "contrabass"
       ],
       "baseInstrument": "cello"
-    },
-    {
-      "id": "pd_air_on_the_g_string",
-      "title": {
-        "ja": "G線上のアリア",
-        "en": "Air on the G String",
-        "es": "Aria en la cuerda de Sol",
-        "zh": "G弦上的咏叹调"
-      },
-      "desc": {
-        "ja": "ト長調・4/4拍子（32小節）",
-        "en": "G major, 4/4 (32 bars)",
-        "es": "Sol mayor, 4/4 (32 compases)",
-        "zh": "G大调・4/4拍（32小节）"
-      },
-      "level": 1,
-      "file": "pd_air_on_the_g_string.json",
-      "instruments": [
-        "violin",
-        "viola",
-        "cello",
-        "contrabass"
-      ],
-      "baseInstrument": "violin"
     },
     {
       "id": "pd_angels_we_have_heard_on_high",
@@ -3404,30 +3346,6 @@
       "baseInstrument": "cello"
     },
     {
-      "id": "pd_canon_in_d_major",
-      "title": {
-        "ja": "パッヘルベルのカノン",
-        "en": "Canon in D",
-        "es": "Canon en Re",
-        "zh": "帕赫贝尔卡农"
-      },
-      "desc": {
-        "ja": "ニ長調・4/4拍子（32小節）",
-        "en": "D major, 4/4 (32 bars)",
-        "es": "Re mayor, 4/4 (32 compases)",
-        "zh": "D大调・4/4拍（32小节）"
-      },
-      "level": 4,
-      "file": "pd_canon_in_d_major.json",
-      "instruments": [
-        "violin",
-        "viola",
-        "cello",
-        "contrabass"
-      ],
-      "baseInstrument": "violin"
-    },
-    {
       "id": "pd_polonaise_no_4_from_12_duos_k_487",
       "title": {
         "ja": "ポロネーズ（12の二重奏曲 K.487より）",
@@ -3846,6 +3764,108 @@
         "contrabass"
       ],
       "baseInstrument": "viola"
+    },
+    {
+      "id": "air_on_the_g_string_duo",
+      "title": {
+        "ja": "G線上のアリア（二重奏）",
+        "en": "Air on the G String (duet)",
+        "es": "Aria en la cuerda de Sol (dúo)",
+        "zh": "G弦上的咏叹调（二重奏）"
+      },
+      "desc": {
+        "ja": "ニ長調・4/4拍子・伴奏つき",
+        "en": "D major, 4/4 with accompaniment",
+        "es": "D mayor, 4/4 con acompañamiento",
+        "zh": "D大调・4/4・带伴奏"
+      },
+      "level": 2,
+      "file": "air_on_the_g_string_duo.json"
+    },
+    {
+      "id": "canon_duo_cello_guitar",
+      "title": {
+        "ja": "カノン（チェロとギター）",
+        "en": "Canon (cello & guitar)",
+        "es": "Canon (violonchelo y guitarra)",
+        "zh": "卡农（大提琴与吉他）"
+      },
+      "desc": {
+        "ja": "ニ長調・2/2拍子・伴奏つき",
+        "en": "D major, 2/2 with accompaniment",
+        "es": "D mayor, 2/2 con acompañamiento",
+        "zh": "D大调・2/2・带伴奏"
+      },
+      "level": 2,
+      "file": "canon_duo_cello_guitar.json"
+    },
+    {
+      "id": "pathetique_grave_ensemble",
+      "title": {
+        "ja": "悲愴ソナタ グラーヴェ（アンサンブル）",
+        "en": "Pathétique Sonata – Grave (ensemble)",
+        "es": "Sonata Patética – Grave (conjunto)",
+        "zh": "悲怆奏鸣曲 广板（合奏）"
+      },
+      "desc": {
+        "ja": "ハ長調・2/4拍子・伴奏つき",
+        "en": "C major, 2/4 with accompaniment",
+        "es": "C mayor, 2/4 con acompañamiento",
+        "zh": "C大调・2/4・带伴奏"
+      },
+      "level": 3,
+      "file": "pathetique_grave_ensemble.json"
+    },
+    {
+      "id": "pachelbel_canon_cello_piano",
+      "title": {
+        "ja": "パッヘルベルのカノン（チェロとピアノ）",
+        "en": "Pachelbel Canon (cello & piano)",
+        "es": "Canon de Pachelbel (violonchelo y piano)",
+        "zh": "帕赫贝尔卡农（大提琴与钢琴）"
+      },
+      "desc": {
+        "ja": "ニ長調・4/4拍子・伴奏つき",
+        "en": "D major, 4/4 with accompaniment",
+        "es": "D mayor, 4/4 con acompañamiento",
+        "zh": "D大调・4/4・带伴奏"
+      },
+      "level": 2,
+      "file": "pachelbel_canon_cello_piano.json"
+    },
+    {
+      "id": "prelude_cello_solo",
+      "title": {
+        "ja": "プレリュード",
+        "en": "Prelude",
+        "es": "Preludio",
+        "zh": "前奏曲"
+      },
+      "desc": {
+        "ja": "ト長調・4/4拍子",
+        "en": "G major, 4/4",
+        "es": "G mayor, 4/4",
+        "zh": "G大调・4/4"
+      },
+      "level": 2,
+      "file": "prelude_cello_solo.json"
+    },
+    {
+      "id": "humoresque_duo",
+      "title": {
+        "ja": "ユーモレスク（二重奏）",
+        "en": "Humoresque (duet)",
+        "es": "Humoresque (dúo)",
+        "zh": "幽默曲（二重奏）"
+      },
+      "desc": {
+        "ja": "ニ長調・2/4拍子・伴奏つき",
+        "en": "D major, 2/4 with accompaniment",
+        "es": "D mayor, 2/4 con acompañamiento",
+        "zh": "D大调・2/4・带伴奏"
+      },
+      "level": 2,
+      "file": "humoresque_duo.json"
     }
   ]
 }

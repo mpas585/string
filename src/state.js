@@ -45,6 +45,7 @@ export const ST = {
   loop: {on:false, from:1, to:4},
   enjoy: false,
   songChords: null,      // 曲JSONの伴奏コード [{root,q},…]（1小節1個）。持たない譜面は null
+  accompTracks: [],      // 伴奏トラック [{inst, ev:[{onset,dur,midis}]}]。伴奏に割り当てた複数トラックを鳴らす
   keyRoot: 0,
   scaleType: 'pop',
   scaleOct: 2,

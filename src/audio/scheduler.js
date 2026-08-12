@@ -14,7 +14,7 @@
   ※ modes は Batch5 後半で作成。それまで実行時は未解決（構文・元一致は検証済み）。
 */
 import { ST } from '../state.js';
-import { playNote, bassNote, drHat, drKick, drSnare, metroClick, padChord } from './synth.js';
+import { playNote, bassNote, drHat, drKick, drSnare, metroClick, padChord, organNote, guitarNote, stringNote } from './synth.js';
 import { audio, makeBuses, NOISEBUF } from './context.js';
 import { paintNotes, pluckEvent, scrollBoardToActive } from '../fingerboard.js';
 import { updateStaffActive, scrollStaffToActive } from '../notation.js';
@@ -232,10 +232,31 @@ export function scheduleBar(ctx, B, tBar, bs, chord, next, beats, unit){
   if(n>=4) padChord(ctx, B.chord, tBar+bs*2, n*bs*0.5, voic.slice(1));
 }
 
-/* 伴奏が鳴らせるか。スケール練習はキーから自動生成、曲を練習は曲JSONの chords がある時だけ */
+/* 伴奏トラック（MIDI/XML の複数トラック）を、選ばれた音色で1イベントぶん鳴らす。
+   音量スライダーが効くよう、既存のバス（chord/bass/drum）へ振り分ける。
+   打楽器（スネア/ハット/バスドラム）は音程を無視して1発ずつ叩く。 */
+export function accVoice(ctx, B, inst, midis, t, dur){
+  switch(inst){
+    case 'organ':    midis.forEach(m=> organNote(ctx, B.chord, m, t, dur)); break;
+    case 'strings':  midis.forEach(m=> stringNote(ctx, B.chord, m, t, dur)); break;
+    case 'guitar':   midis.forEach(m=> guitarNote(ctx, B.chord, m, t, dur)); break;
+    case 'bass':     bassNote(ctx, B.bass, t, Math.max(dur,0.12), Math.min.apply(null,midis), 1); break;
+    case 'snare':    drSnare(ctx, B.drum, t); break;
+    case 'hat':      drHat(ctx, B.drum, t, dur>0.4); break;
+    case 'bassdrum': drKick(ctx, B.drum, t); break;
+    case 'piano':
+    default:         padChord(ctx, B.chord, t, Math.max(dur,0.12), midis); break;
+  }
+}
+/* 伴奏トラックを持っているか（1つ以上のトラックが伴奏に割り当てられている） */
+export function hasAccompTracks(){
+  return Array.isArray(ST.accompTracks) && ST.accompTracks.some(a=> a && a.ev && a.ev.length);
+}
+/* 伴奏が鳴らせるか。スケール練習はキーから自動生成、曲を練習は曲JSONの chords か伴奏トラックがある時だけ */
 export function enjoyOK(){
   if(ST.mode==='scale') return true;
-  return Array.isArray(ST.songChords) && ST.songChords.length>0;
+  if(Array.isArray(ST.songChords) && ST.songChords.length>0) return true;
+  return hasAccompTracks();
 }
 /* 伴奏に使うコード列（曲のコード優先。無ければ従来どおりスケール設定の4コード） */
 export function chordSource(){
@@ -265,10 +286,19 @@ export function playRange(){
     sB=0;
     eB=Math.max(...ST.events.map(e=> e.onset+e.dur));
     if(ms.length) eB=Math.max(eB, ms[ms.length-1].end);
+    /* 伴奏トラックがガイドより長い場合、その末尾まで再生範囲を伸ばす（伴奏が途中で切れない） */
+    if(Array.isArray(ST.accompTracks)){
+      ST.accompTracks.forEach(a=>{ (a.ev||[]).forEach(e=>{ const en=e.onset+e.dur; if(en>eB) eB=en; }); });
+    }
   }
   if(eB<=sB) eB=sB+ST.beatsPerMeasure;
   const list=ST.events.filter(e=> e.onset >= sB-1e-6 && e.onset < eB-1e-6);
-  return {sB, eB, list};
+  /* 伴奏トラック：範囲内のイベントだけを音色ごとに切り出す */
+  const acc=(Array.isArray(ST.accompTracks)?ST.accompTracks:[]).map(a=>({
+    inst:a.inst,
+    list:(a.ev||[]).filter(e=> e.onset >= sB-1e-6 && e.onset < eB-1e-6)
+  })).filter(a=> a.list.length);
+  return {sB, eB, list, acc};
 }
 
 export const LOOKAHEAD = 0.85;   /* 秒：メインスレッドが数百ms止まっても音が途切れない */
@@ -467,6 +497,16 @@ export function fillQueue(untilTime){
       if(ev.onset < from - 1e-6) return;
       ST.queue.push({t: base + (ev.onset - r.sB)*bs, kind:'note', ev, dur: ev.dur*bs});
     });
+    /* 伴奏トラック（予約はONに関わらず作り、鳴らすかは pumpQueue 側の ST.enjoy で決める
+       ＝再生中に伴奏モードをONにしても、その先から一緒に鳴りだせる） */
+    if(r.acc && r.acc.length){
+      r.acc.forEach(a=>{
+        a.list.forEach(ev=>{
+          if(ev.onset < from - 1e-6) return;
+          ST.queue.push({t: base + (ev.onset - r.sB)*bs, kind:'acc', inst:a.inst, midis:ev.midis, dur: ev.dur*bs});
+        });
+      });
+    }
     const bars=Math.max(1, Math.round(ST.passDur/barSec));
     for(let b=0;b<bars;b++){
       const tBar=base + b*barSec;
@@ -490,6 +530,8 @@ export function pumpQueue(){
     if(it.t < ctx.currentTime - 0.06) continue;
     if(it.kind==='note'){
       it.ev.pitches.forEach(p=> playNote(ctx, B.lead, p.midi, it.t, it.dur));
+    } else if(it.kind==='acc'){
+      if(ST.enjoy) accVoice(ctx, B, it.inst, it.midis, it.t, it.dur);
     } else if(it.kind==='bar'){
       const acc = ST.enjoy && enjoyOK();
       const n = it.prog.length;

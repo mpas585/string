@@ -371,6 +371,20 @@
     background:var(--panel); border:1px solid var(--line); color:var(--muted);
   }
   .trow .tbtn.pri{background:var(--accent); border-color:var(--accent); color:#241a08}
+  /* ---- トラックの役割ボタン（メロディガイド／伴奏／ミュート）と伴奏の音色選択 ---- */
+  .trow .troles{flex:0 0 100%; display:flex; gap:6px}
+  .trow .rbtn{
+    flex:1; justify-content:center; min-height:34px; padding:0 6px; border-radius:8px;
+    font-size:12px; font-weight:700; box-shadow:none; cursor:pointer;
+    background:var(--panel); border:1px solid var(--line); color:var(--muted);
+  }
+  .trow .rbtn.on{background:var(--accent); border-color:var(--accent); color:#241a08}
+  .trow .tinstwrap{flex:0 0 100%; display:flex; align-items:center; gap:8px; margin-top:2px}
+  .trow .tinstwrap label{font-size:11px; color:var(--muted); flex:0 0 auto}
+  .trow .tinst{
+    flex:1; min-height:34px; padding:0 8px; border-radius:8px; font-size:12px;
+    background:var(--panel); border:1px solid var(--line); color:var(--fg);
+  }
 
   /* ---- コピー：子タブ（曲を選ぶ / 譜面を読み込む） ---- */
   .subseg{display:flex; gap:4px; margin-bottom:12px; background:var(--panel2);

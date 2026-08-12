@@ -568,6 +568,7 @@ export function setScore(parsed, scoreName, title){
   ST.tempoOrig=ST.tempo;
   ST.parsed=parsed;
   ST.songChords=null;                  /* 伴奏コードは譜面ごと。持つ曲は setScore の後で入れ直す */
+  ST.accompTracks=[];                  /* 伴奏トラックも譜面ごと。複数トラックの譜面は setScore の後で入れ直す */
   ST.measures=parsed.measures || [];
   ST.beatsPerMeasure=parsed.beatsPerMeasure || 4;
   ST.beatUnit=(parsed.beatUnit>0) ? parsed.beatUnit : 1;
@@ -614,7 +615,8 @@ export function syncDock(){
   const ej=document.getElementById('enjoySw');
   if(ej){
     const hasChords = Array.isArray(ST.songChords) && ST.songChords.length>0;
-    ej.classList.toggle('m-hide', !(ST.mode==='score' && hasChords));
+    const hasAccomp = Array.isArray(ST.accompTracks) && ST.accompTracks.some(a=> a && a.ev && a.ev.length);
+    ej.classList.toggle('m-hide', !(ST.mode==='score' && (hasChords || hasAccomp)));
   }
 }
 export function syncLoopUI(){

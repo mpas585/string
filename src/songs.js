@@ -398,6 +398,69 @@ export async function unMxl(file){
   return await zip.file(target).async('string');
 }
 
+/* 伴奏に選べる音色。ピアノ＝コード、オルガン／ストリングス／ギター＝旋律的な持続・撥弦、
+   ベース＝低音、スネア／ハット／バスドラム＝打楽器（音程は無視して1発ずつ）。既定はピアノ。 */
+export const INSTRUMENTS = ['piano','organ','strings','guitar','bass','snare','hat','bassdrum'];
+
+/* トラック（絶対オンセット形式 [onset,dur,...midis]）→ イベント列。休符は要素を作らない。 */
+export function seqToEvents(seq, bpm, bu){
+  bpm=bpm||4; bu=(bu>0)?bu:1;
+  const evs=[];
+  (seq||[]).forEach(it=>{
+    const onset=it[0], dur=it[1], midis=it.slice(2).filter(m=>!!m);
+    if(midis.length){
+      const pitches=midis.slice().sort((a,b)=>a-b).map(m=>({midi:m, name:midiName(m)}));
+      evs.push({id:0, measure:Math.floor(onset/bpm)+1, onset, dur, pitches, leadIdx:pitches.length-1, fing:null});
+    }
+  });
+  evs.sort((a,b)=> a.onset-b.onset);
+  evs.forEach((e,i)=>{ e.id=i; e.fing=recommend(e.pitches[e.leadIdx].midi); });
+  let maxEnd=0; for(const e of evs){ const en=e.onset+e.dur; if(en>maxEnd) maxEnd=en; }
+  const maxM=Math.max(1, Math.ceil(maxEnd/bpm));
+  const measures=[]; for(let m=1;m<=maxM;m++) measures.push({num:m, start:(m-1)*bpm, end:m*bpm});
+  return {events:evs, measures, beatsPerMeasure:bpm, beatUnit:bu};
+}
+/* トラックのイベント列を得る（MIDIはその場で、XML/曲は seq から。結果はトラックに載せて使い回す） */
+export function trackEvents(t){
+  if(t._ev) return t._ev;
+  let parsed;
+  if(midiFile && midiFile.kind==='midi'){
+    parsed=midiTrackToEvents(t, midiFile.division, midiFile.tsNum, midiFile.tsDen);
+  } else {
+    parsed=seqToEvents(t.seq||[], midiFile?midiFile.beatsPerMeasure:4, midiFile?midiFile.beatUnit:1);
+  }
+  t._ev=parsed;
+  return parsed;
+}
+/* メロディガイドの初期トラック（seq または notes を持つトラック用の汎用版） */
+export function pickGuideIndex(tracks){
+  let best=0, bestScore=-1;
+  tracks.forEach((t,i)=>{
+    if(t.drum) return;
+    let inRange=0;
+    if(t.seq){ for(const e of t.seq){ for(let j=2;j<e.length;j++){ const m=e[j]; if(m>=OPEN[0] && m<=OPEN[3]+FB.maxOff) inRange++; } } }
+    else if(t.notes){ for(const n of t.notes){ if(n.midi>=OPEN[0] && n.midi<=OPEN[3]+FB.maxOff) inRange++; } }
+    if(!inRange) return;
+    let score=inRange;
+    if(MELODY_RE.test(t.name)) score += 1e6;
+    if(score>bestScore){ bestScore=score; best=i; }
+  });
+  return bestScore>0 ? best : 0;
+}
+/* 伴奏に割り当てたトラックを ST.accompTracks に組み立てる（伴奏モードON時に鳴る） */
+export function buildAccomp(){
+  ST.accompTracks=[];
+  if(midiFile && Array.isArray(midiFile.tracks)){
+    midiFile.tracks.forEach(t=>{
+      if(t.role!=='accomp') return;
+      const parsed=trackEvents(t);
+      const ev=parsed.events.map(e=>({onset:e.onset, dur:e.dur, midis:e.pitches.map(pp=>pp.midi)}));
+      if(ev.length) ST.accompTracks.push({inst:t.inst||'piano', ev});
+    });
+  }
+  syncDock();   /* 伴奏ボタンの表示を更新（伴奏トラックがあれば出す） */
+}
+
 export let midiFile=null;
 export function setMidiFile(v){ midiFile=v; }  /* 分割対応: 外部モジュールからの代入用 */
 export function renderTracks(){
@@ -405,41 +468,71 @@ export function renderTracks(){
   const list=document.getElementById('trackList');
   if(!midiFile){ box.classList.remove('show'); list.innerHTML=''; return; }
   box.classList.add('show');
+  const instOpts=(sel)=> INSTRUMENTS.map(v=>`<option value="${v}"${v===sel?' selected':''}>${tt('ui.inst_'+v)}</option>`).join('');
   list.innerHTML = midiFile.tracks.map((t,i)=>{
     const range = `${midiName(t.lo)}–${midiName(t.hi)}`;
-    /* 視聴：ドロワーは開いたまま・開始カウントなしで鳴らす（これまでのタップと同じ）
-       選択：ドロワーを閉じて、開始カウントありで鳴らす */
-    return `<div class="trow${i===midiFile.sel?' on':''}" data-i="${i}">`
+    const role = t.role || 'mute';
+    const rbtn=(r,lbl)=> `<button type="button" class="rbtn${role===r?' on':''}" data-i="${i}" data-role="${r}">${lbl}</button>`;
+    const instRow = (role==='accomp')
+      ? `<span class="tinstwrap"><label>${tt('ui.inst_label')}</label>`
+        + `<select class="tinst" data-i="${i}">${instOpts(t.inst||'piano')}</select></span>`
+      : '';
+    return `<div class="trow${role==='guide'?' on':''}" data-i="${i}">`
       + `<span class="tn">${t.name}<small>${range}</small></span>`
       + `<span class="tc">${tt('msg.track_count', t.count)}</span>`
-      + `<span class="tb">`
-      +   `<button type="button" class="tbtn" data-act="preview">${tt('ui.track_preview')}</button>`
-      +   `<button type="button" class="tbtn pri" data-act="select">${tt('ui.track_select')}</button>`
-      + `</span></div>`;
+      + `<span class="troles">`
+      +   rbtn('guide', tt('ui.role_guide'))
+      +   rbtn('accomp', tt('ui.role_accomp'))
+      +   rbtn('mute', tt('ui.role_mute'))
+      + `</span>`
+      + instRow
+      + `</div>`;
   }).join('');
+}
+/* トラックの役割を変える（メロディガイド＝1つだけ・伴奏・ミュート）。試聴はしない。 */
+export function setTrackRole(i, role){
+  if(!midiFile || !midiFile.tracks[i]) return;
+  if(role==='guide'){
+    selectTrack(i);          /* ガイド＝練習する譜面。ここで他のガイドは自動でミュートに落ちる */
+    return;
+  }
+  midiFile.tracks[i].role = (role==='accomp') ? 'accomp' : 'mute';
+  renderTracks();
+  buildAccomp();
+}
+/* 伴奏トラックの音色を変える */
+export function setTrackInst(i, inst){
+  if(!midiFile || !midiFile.tracks[i]) return;
+  if(INSTRUMENTS.indexOf(inst)<0) inst='piano';
+  midiFile.tracks[i].inst=inst;
+  buildAccomp();
 }
 export function selectTrack(i, play){
   if(!midiFile || !midiFile.tracks[i]) return;
-  /* 再生中に別のトラックを選んだ＝いま鳴っているものは止めてから差し替える
-     （下で play が指定されていれば、そのあと最初の音から鳴らし直す） */
+  /* 再生中に別のトラックを選んだ＝いま鳴っているものは止めてから差し替える */
   if(ST.playing) stopPlay();
   midiFile.sel=i;
+  /* 役割を更新：選んだトラックをメロディガイドにし、他のガイドはミュートへ落とす（ガイドは1つだけ） */
+  midiFile.tracks.forEach((t,k)=>{ if(k!==i && t.role==='guide') t.role='mute'; });
   const t=midiFile.tracks[i];
-  const parsed=midiTrackToEvents(t, midiFile.division, midiFile.tsNum, midiFile.tsDen);
-  setTempo(Math.round(midiFile.tempo));
-  setScore(parsed, midiFile.name+'#'+i, midiFile.name+' / '+t.name);
-  /* 選んだトラックを保存番号に紐づけて残す（自動選択ぶんもここを通るので、
-     loadScoreFile 側では呼ばない＝二重に保存しない）。
-     一覧に出す名前はファイル名だけにして、選んだトラックは副題として持たせる
-     ＝トラックを選び直しても件数は増えず、同じ1件が書き換わる。 */
-  rememberUpload(midiFile.name, parsed, midiFile.tempo, {track:i, trackName:t.name, src:midiFile.src||null});
+  t.role='guide';
+  const parsed=trackEvents(t);
+  const base = midiFile.keyBase || midiFile.name || '';
+  const scoreName = base + '#' + i;
+  const title = (midiFile.kind==='song')
+    ? (midiFile.title || base)
+    : ((midiFile.name || base) + ' / ' + t.name);
+  setTempo(Math.round(midiFile.tempo || ST.tempo));
+  setScore(parsed, scoreName, title);
+  /* 保存：アップロードしたMIDIのときだけ（曲・XMLは保存対象にしない） */
+  if(midiFile.kind==='midi'){
+    rememberUpload(midiFile.name, parsed, midiFile.tempo, {track:i, trackName:t.name, src:midiFile.src||null});
+  }
+  buildAccomp();            /* setScore が accompTracks を消すので、ここで組み直す */
   renderTracks();
   const out=parsed.events.filter(e=> !e.fing).length;
   toast(tt('msg.track_loaded', t.name, parsed.events.length) + (out ? tt('msg.out_range_suffix', out) : ''));
   if(play && ST.events.length){
-    /* 最初の音から鳴らす。playの値で二つに分ける
-       'select' … 選択：ドロワーを閉じて、開始カウントあり（設定に従う）
-       それ以外  … 視聴：ドロワーは開いたまま、開始カウントなし */
     const first=firstNoteBeat();
     ST.playhead=first;
     if(play==='select'){
@@ -477,6 +570,93 @@ function scoreNameOf(dataTitle, file){
   const t=String(dataTitle||'').trim();
   return t || file.name;
 }
+/* 複数パートの MusicXML を、パート＝トラックとして取り出す（伴奏用に多声も保持）。
+   1パートだけのときは従来どおり parseMusicXML を使う（スラーなども拾える）ので、こちらは呼ばない。 */
+export function parseMusicXMLTracks(text){
+  const doc=new DOMParser().parseFromString(text, 'application/xml');
+  if(doc.querySelector('parsererror')) throw new Error(tt('msg.xml_parse_fail'));
+  if(!doc.querySelector('score-partwise')) throw new Error(tt('msg.not_musicxml'));
+  let title='';
+  const wtEl=doc.querySelector('work > work-title'); if(wtEl) title=wtEl.textContent.trim();
+  if(!title){ const mtEl=doc.querySelector('movement-title'); if(mtEl) title=mtEl.textContent.trim(); }
+  if(!title){ const cwEl=doc.querySelector('credit > credit-words'); if(cwEl) title=cwEl.textContent.trim(); }
+  let tempo=ST.tempo;
+  const sT=doc.querySelector('sound[tempo]');
+  if(sT) tempo=parseFloat(sT.getAttribute('tempo'));
+  else { const pm=doc.querySelector('metronome per-minute'); if(pm) tempo=parseFloat(pm.textContent); }
+  let bpm=4, bu=1;
+  const timeEl=doc.querySelector('time');
+  if(timeEl){ const b=timeEl.querySelector('beats'), bt=timeEl.querySelector('beat-type');
+    if(b&&bt){ const bn=parseInt(b.textContent,10), btn=parseInt(bt.textContent,10);
+      if(bn>0&&btn>0){ bpm=bn*(4/btn); bu=beatUnitOf(bn,btn); } } }
+  const names={};
+  doc.querySelectorAll('part-list > score-part').forEach(sp=>{
+    const id=sp.getAttribute('id'); const pn=sp.querySelector('part-name');
+    names[id]=(pn && pn.textContent.trim()) ? pn.textContent.trim() : id;
+  });
+  const parts=doc.querySelectorAll('score-partwise > part');
+  const tracks=[];
+  parts.forEach(part=>{
+    const pid=part.getAttribute('id');
+    let divisions=1, cursor=0, lastOnset=0;
+    const raw=[];   /* {onset,dur,midi,ts,tp} */
+    part.querySelectorAll(':scope > measure').forEach(m=>{
+      const mStart=cursor; let mMax=cursor;
+      for(const node of m.children){
+        const tag=node.tagName;
+        if(tag==='attributes'){ const d=node.querySelector('divisions'); if(d) divisions=parseInt(d.textContent,10)||divisions; }
+        else if(tag==='note'){
+          const durEl=node.querySelector('duration');
+          const dur=durEl ? (parseInt(durEl.textContent,10)/divisions) : 0;
+          const isChord=!!node.querySelector('chord');
+          const isRest =!!node.querySelector('rest');
+          const onset=isChord ? lastOnset : cursor;
+          if(!isRest){
+            const pEl=node.querySelector('pitch');
+            if(pEl){
+              let ts=false, tp=false;
+              node.querySelectorAll(':scope > tie').forEach(x=>{ const y=x.getAttribute('type'); if(y==='start')ts=true; else if(y==='stop')tp=true; });
+              node.querySelectorAll(':scope > notations > tied').forEach(x=>{ const y=x.getAttribute('type'); if(y==='start')ts=true; else if(y==='stop')tp=true; });
+              raw.push({onset, dur, midi:pitchToMidi(pEl), ts, tp});
+            }
+          }
+          if(!isChord){ cursor+=dur; lastOnset=onset; }
+          if(cursor>mMax) mMax=cursor;
+        }
+        else if(tag==='backup'){ const d=node.querySelector('duration'); if(d) cursor-=parseInt(d.textContent,10)/divisions; }
+        else if(tag==='forward'){ const d=node.querySelector('duration'); if(d){ cursor+=parseInt(d.textContent,10)/divisions; if(cursor>mMax) mMax=cursor; } }
+      }
+      cursor=Math.max(mMax, mStart+bpm);
+    });
+    /* タイでつながる同音は1音にまとめる（音程ごとに連結） */
+    raw.sort((a,b)=> a.midi-b.midi || a.onset-b.onset);
+    const merged=[];
+    for(let i=0;i<raw.length;){
+      let onset=raw[i].onset, dur=raw[i].dur, midi=raw[i].midi, ts=raw[i].ts, k=i+1;
+      while(ts && k<raw.length){
+        const n=raw[k];
+        if(n.midi===midi && Math.abs(n.onset-(onset+dur))<1e-3 && n.tp){ dur+=n.dur; ts=n.ts; k++; }
+        else break;
+      }
+      merged.push({onset:Math.round(onset*1e4)/1e4, dur:Math.round(dur*1e4)/1e4, midi});
+      i=k;
+    }
+    /* 同時刻を和音にまとめて [onset,dur,...midis] に */
+    const map=new Map();
+    merged.forEach(r=>{ const key=Math.round(r.onset*1e4)/1e4;
+      if(!map.has(key)) map.set(key,{onset:r.onset, dur:r.dur, midis:new Set()});
+      const g=map.get(key); g.midis.add(r.midi); g.dur=Math.max(g.dur, r.dur); });
+    const seq=[...map.values()].sort((a,b)=> a.onset-b.onset)
+      .map(g=> [Math.round(g.onset*1e4)/1e4, Math.round(g.dur*1e4)/1e4, ...[...g.midis].sort((x,y)=>x-y)]);
+    let lo=127, hi=0, cnt=0;
+    seq.forEach(e=>{ for(let j=2;j<e.length;j++){ cnt++; const mm=e[j]; if(mm<lo)lo=mm; if(mm>hi)hi=mm; } });
+    if(!cnt){ lo=0; hi=0; }
+    tracks.push({index:tracks.length, name:names[pid]||('Part '+(tracks.length+1)),
+                 seq, count:seq.length, lo, hi, drum:false, role:'mute', inst:'piano'});
+  });
+  if(!tracks.length) throw new Error(tt('msg.no_notes'));
+  return {tracks, tempo, beatsPerMeasure:bpm, beatUnit:bu, title};
+}
 export async function loadScoreFile(file){
   const name=file.name.toLowerCase();
 
@@ -491,8 +671,10 @@ export async function loadScoreFile(file){
       const sel=bestTrackIndex(m.tracks);
       /* 元のMIDIも保存番号に預ける（一覧から開き直したあとトラックを選び直せるようにするため）。
          大きすぎるものは預けない＝そのときはトラック選択のリンクが出ないだけ。 */
-      midiFile={tracks:m.tracks, tempo:m.tempo, tsNum:m.tsNum, tsDen:m.tsDen, division:m.division,
-                name:title, sel, src:bytesToBase64(new Uint8Array(buf))};
+      /* 各トラックに役割（既定＝ミュート）と音色（既定＝ピアノ）を持たせる。selectTrack がガイドを立てる */
+      m.tracks.forEach(t=>{ t.role='mute'; t.inst='piano'; });
+      midiFile={kind:'midi', tracks:m.tracks, tempo:m.tempo, tsNum:m.tsNum, tsDen:m.tsDen, division:m.division,
+                name:title, keyBase:title, title, sel, src:bytesToBase64(new Uint8Array(buf))};
       selectTrack(sel);        /* 保存は selectTrack 側で行う（トラックを選び直したぶんも同じ1件を更新） */
       setScoreSub('tracks');   /* 読み込んだ直後はトラックを選ぶ面を出す */
       openDrawer();
@@ -509,6 +691,26 @@ export async function loadScoreFile(file){
     else{
       text=await readAsText(file);
       if(text.trimStart()[0] !== '<'){ text=await unMxl(file); } // zip実体だった場合
+    }
+    /* 複数パートの MusicXML は MIDI と同じくトラック選択（メロディガイド／伴奏／ミュート）を出す */
+    let mt=null;
+    try{ mt=parseMusicXMLTracks(text); }catch(e){ mt=null; }
+    if(mt && mt.tracks.length>1){
+      const title=scoreNameOf(mt.title, file);
+      beginUpload(title);
+      mt.tracks.forEach(t=>{ t.role='mute'; if(!t.inst) t.inst='piano'; });
+      const sel=pickGuideIndex(mt.tracks);
+      midiFile={kind:'xml', tracks:mt.tracks, tempo:mt.tempo,
+                beatsPerMeasure:mt.beatsPerMeasure, beatUnit:mt.beatUnit,
+                name:title, keyBase:title, title, sel, src:null};
+      setTempo(Math.round(mt.tempo));
+      selectTrack(sel);                       /* ガイドを立てて譜面をセット（buildAccomp も走る） */
+      rememberUpload(title, ST.parsed, mt.tempo, null);   /* ガイドの譜面だけは保存に残す */
+      setScoreSub('tracks'); openDrawer();
+      const box=document.getElementById('tracks');
+      if(box && box.scrollIntoView) box.scrollIntoView({block:'nearest'});
+      toast(tt('msg.midi_tracks', mt.tracks.length));
+      return;
     }
     const parsed=parseMusicXML(text);
     const title=scoreNameOf(parsed.title, file);
@@ -846,15 +1048,44 @@ export async function loadSong(id, quiet){
     const res=await fetch(localFile(s.file || (id+'.json'), localUrl(SONGS_DIR)), {cache:'no-cache'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
+    const title=pickText(data.title) || pickText(s.title) || id;
+    /* パートを持つ曲（ガイド＝練習する旋律、伴奏＝譜面についていたパート）。
+       プリセット曲ではトラック選択は出さない（役割は曲データ側で固定。UIは自分のアップ曲だけ）。
+       伴奏は「伴奏モード」ONのとき、各パートの音色で一緒に鳴る。コードは使わない。 */
+    if(Array.isArray(data.tracks) && data.tracks.length){
+      const bpm=data.beatsPerMeasure||4, bu=(data.beatUnit>0)?data.beatUnit:1;
+      let gi=data.tracks.findIndex(t=>t.role==='guide'); if(gi<0) gi=0;
+      const guideSeq=Array.isArray(data.tracks[gi].notes)?data.tracks[gi].notes:[];
+      const parsed=seqToEvents(guideSeq, bpm, bu);
+      /* ガイドのスラー（音符添字の[開始,終了]対）を指板に反映する */
+      parsed.slurs=Array.isArray(data.slurs)? data.slurs.map(g=>[g[0],g[1]]) : [];
+      setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
+      setScore(parsed, 'song:'+id, title);
+      /* 伴奏トラックを直接組み立てる（midiFile は使わない＝トラック選択UIは出ない） */
+      ST.accompTracks=[];
+      data.tracks.forEach((t,i)=>{
+        if(i===gi || t.role!=='accomp') return;
+        const inst=(INSTRUMENTS.indexOf(t.inst)>=0)?t.inst:'piano';
+        const pev=seqToEvents(Array.isArray(t.notes)?t.notes:[], bpm, bu).events
+                  .map(e=>({onset:e.onset, dur:e.dur, midis:e.pitches.map(pp=>pp.midi)}));
+        if(pev.length) ST.accompTracks.push({inst, ev:pev});
+      });
+      ST.songChords=null;                 /* コードは使わない（パートで鳴らす） */
+      midiFile=null; renderTracks();      /* 念のためトラックUIを消しておく */
+      syncDock();                         /* 伴奏パートがあれば「伴奏」ボタンを出す */
+      if(!quiet){ closeDrawer(); setFabLed(); toast(tt('msg.song_loaded', title)); }
+      return;
+    }
+    /* パートを持たない旧来の曲：単旋律（notes＝[midi,拍数]）。従来どおり。 */
     const parsed=buildSongFromData(data);
     setTempo(Math.round(data.tempo || s.tempo || ST.tempo));
     /* 上部バーに出すのは曲名（言語ごとの表示名）。'song:xxx' は運指の保存キー用の内部IDで、
        画面には出さない。 */
-    const title=pickText(data.title) || pickText(s.title) || id;
     setScore(parsed, 'song:'+id, title);
     ST.songChords=buildChords(data.chords);   /* setScore が消すので、その後に入れる */
     syncDock();
     /* ドロワーが閉じて指板だけになるので、次に押す ▶ を光らせて示す */
     if(!quiet){ closeDrawer(); setFabLed(); toast(tt('msg.song_loaded', title)); }
+
   }catch(e){ toast(tt('msg.song_err', e.message)); }
 }

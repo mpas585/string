@@ -230,6 +230,91 @@ export function chimeOK(ctx, bus, t){
   });
 }
 
+/* ===== 伴奏トラック用の音色（MIDI/XML の複数トラックを伴奏として鳴らすときに使う） =====
+   ピアノ＝padChord、ベース＝bassNote、スネア/ハット/バスドラム＝ドラム関数を流用し、
+   ここでは足りない「オルガン・ギター・ストリングス」を追加する。いずれも音は控えめ。 */
+
+/* オルガン：ドローバー風の加算合成（基音＋オクターブ＋5度＋2オクターブ）。持続音。 */
+export function organNote(ctx, bus, midi, t, dur){
+  const f=midiFreq(midi);
+  const end=t+Math.max(dur,0.12);
+  const g=ctx.createGain();
+  const peak = ST.lite ? 0.14 : 0.10;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t+0.02);
+  g.gain.setValueAtTime(peak, Math.max(t+0.02, end-0.05));
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  const parts = ST.lite ? [[1,1.0]] : [[1,1.0],[2,0.5],[3,0.32],[4,0.22]];
+  const nodes=[];
+  parts.forEach(([mul,amt])=>{
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f*mul;
+    const og=ctx.createGain(); og.gain.value=amt;
+    o.connect(og); og.connect(g); nodes.push(o);
+  });
+  g.connect(bus);
+  nodes.forEach(o=>{ o.start(t); o.stop(end+0.04); });
+  nodes[0].onended=()=>{ try{ g.disconnect(); }catch(e){} };
+}
+
+/* ギター：撥弦（すばやい立ち上がり＋指数減衰）。ローパスを閉じていく＝弦の丸み。 */
+export function guitarNote(ctx, bus, midi, t, dur){
+  const f=midiFreq(midi);
+  const end=t+Math.max(dur,0.18);
+  const g=ctx.createGain();
+  const peak = ST.lite ? 0.18 : 0.16;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t+0.006);
+  g.gain.exponentialRampToValueAtTime(peak*0.35, t+0.18);
+  g.gain.exponentialRampToValueAtTime(0.0001, end);
+  if(ST.lite){
+    const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=f;
+    o.connect(g); g.connect(bus); o.start(t); o.stop(end+0.03);
+    o.onended=()=>{ try{ g.disconnect(); }catch(e){} };
+    return;
+  }
+  const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=0.6;
+  lp.frequency.setValueAtTime(Math.min(7000, f*10), t);
+  lp.frequency.exponentialRampToValueAtTime(Math.min(1600, f*3.2), t+Math.min(dur,0.9));
+  const nodes=[];
+  [[0,0.6],[0.5,0.4]].forEach(([det,amt])=>{
+    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f; o.detune.value=det;
+    const og=ctx.createGain(); og.gain.value=amt;
+    o.connect(og); og.connect(lp); nodes.push(o);
+  });
+  lp.connect(g); g.connect(bus);
+  nodes.forEach(o=>{ o.start(t); o.stop(end+0.05); });
+  nodes[0].onended=()=>{ try{ lp.disconnect(); g.disconnect(); }catch(e){} };
+}
+
+/* ストリングス：やわらかい持続音（弦の重なり）。playNote より軽い。 */
+export function stringNote(ctx, bus, midi, t, dur){
+  const f=midiFreq(midi);
+  const end=t+Math.max(dur,0.2);
+  const g=ctx.createGain();
+  const peak = ST.lite ? 0.14 : 0.09;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t+0.09);
+  g.gain.setValueAtTime(peak, Math.max(t+0.09, end-0.12));
+  g.gain.linearRampToValueAtTime(0.0001, end);
+  if(ST.lite){
+    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
+    o.connect(g); g.connect(bus); o.start(t); o.stop(end+0.03);
+    o.onended=()=>{ try{ g.disconnect(); }catch(e){} };
+    return;
+  }
+  const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=0.5;
+  lp.frequency.value=Math.min(5000, f*7);
+  const nodes=[];
+  [[-7,0.5],[7,0.5]].forEach(([det,amt])=>{
+    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f; o.detune.value=det;
+    const og=ctx.createGain(); og.gain.value=amt;
+    o.connect(og); og.connect(lp); nodes.push(o);
+  });
+  lp.connect(g); g.connect(bus);
+  nodes.forEach(o=>{ o.start(t); o.stop(end+0.05); });
+  nodes[0].onended=()=>{ try{ lp.disconnect(); g.disconnect(); }catch(e){} };
+}
+
 /* メトロノーム（エンジョイモードOFF時） */
 export function metroClick(ctx, bus, t, accent){
   const o=ctx.createOscillator(); o.type='square';
