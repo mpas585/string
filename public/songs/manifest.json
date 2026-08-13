@@ -230,10 +230,10 @@
         "zh": "幽默曲（二重奏）"
       },
       "desc": {
-        "ja": "ニ長調・2/4拍子・伴奏つき",
-        "en": "D major, 2/4 with accompaniment",
-        "es": "D mayor, 2/4 con acompañamiento",
-        "zh": "D大调・2/4・带伴奏"
+        "ja": "ト長調・2/4拍子・伴奏つき",
+        "en": "G major, 2/4 with accompaniment",
+        "es": "Sol mayor, 2/4 con acompañamiento",
+        "zh": "G大调・2/4・带伴奏"
       },
       "level": 2,
       "file": "humoresque_duo.json"
