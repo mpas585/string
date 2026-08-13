@@ -19,18 +19,27 @@ export function midiFreq(m){ return 440*Math.pow(2,(m-69)/12); }
    音数が増えたときに音切れする。軽量モードでは「オシレータ1本＋ゲイン」だけにして、
    ビブラート・ユニゾン・弓ノイズ・ローパスを省く（＝MIDI音源のような素の音）。
    鳴らす場所（scheduler）は変えず、ここで分岐するだけにしてある。 */
-export function playNoteLite(ctx, bus, midi, t, dur){
+export function playNoteLite(ctx, bus, midi, t, dur, slur){
+  const sIn=!!(slur&&slur.in), sOut=!!(slur&&slur.out);
   const f=midiFreq(midi);
-  const end=t+Math.max(dur,0.18);
+  const atk = sIn  ? 0.05 : 0.02;                  /* スラー継続音は弾き直さず柔らかく入る */
+  const rel = sOut ? 0.06 : 0.08;                  /* スラー送り出し音は境界の先へ短く伸ばす（重ねる） */
+  const end = t + (sOut ? Math.max(dur, atk+0.03) : Math.max(dur,0.18));
   const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=f;
   const g=ctx.createGain();
   const peak=0.20;
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(peak, t+0.02);
-  g.gain.setValueAtTime(peak, Math.max(t+0.02, end-0.08));
-  g.gain.linearRampToValueAtTime(0.0001, end);
+  g.gain.linearRampToValueAtTime(peak, t+atk);
+  if(sOut){
+    g.gain.setValueAtTime(peak, Math.max(t+atk, end));
+    g.gain.linearRampToValueAtTime(0.0001, end+rel);   /* 次の音の頭へ重ねてクロスフェード＝スラー中は音が途切れない */
+  }else{
+    g.gain.setValueAtTime(peak, Math.max(t+atk, end-rel));
+    g.gain.linearRampToValueAtTime(0.0001, end);
+  }
+  const stopAt = sOut ? end+rel+0.03 : end+0.03;
   o.connect(g); g.connect(bus);
-  o.start(t); o.stop(end+0.03);
+  o.start(t); o.stop(stopAt);
   o.onended=()=>{ try{ g.disconnect(); }catch(e){} };
 }
 /* コードも同じ考え方で1音1オシレータにする */
@@ -49,11 +58,13 @@ export function padChordLite(ctx, bus, t, dur, midis){
   });
 }
 
-export function playNote(ctx, bus, midi, t, dur){
-  if(ST.lite) return playNoteLite(ctx, bus, midi, t, dur);
+export function playNote(ctx, bus, midi, t, dur, slur){
+  if(ST.lite) return playNoteLite(ctx, bus, midi, t, dur, slur);
+  const sIn=!!(slur&&slur.in), sOut=!!(slur&&slur.out);
   const f=midiFreq(midi);
-  const end=t+Math.max(dur,0.18);
-  const rel=0.14, atk=0.055;                       /* 弓のアタック */
+  const rel = sOut ? 0.06 : 0.14;                  /* スラー送り出し音は境界の先へ短く伸ばす（重ねる）／通常は弓の離弦 */
+  const atk = sIn  ? 0.05 : 0.055;                 /* スラー継続音は弾き直さず柔らかく入る／通常は弓のアタック */
+  const end = t + (sOut ? Math.max(dur, atk+0.03) : Math.max(dur,0.18));
 
   /* 弓圧でローパスが開く（胴鳴りはバス側にあるので1音ごとには作らない） */
   const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=0.7;
@@ -71,8 +82,14 @@ export function playNote(ctx, bus, midi, t, dur){
   const peak=0.16;
   g.gain.setValueAtTime(0.0001, t);
   g.gain.linearRampToValueAtTime(peak, t+atk);
-  g.gain.setValueAtTime(peak, Math.max(t+atk, end-rel));
-  g.gain.linearRampToValueAtTime(0.0001, end);
+  if(sOut){
+    /* スラーで次へ繋ぐ音：離弦せずピークを保ち、境界の先へ短く重ねる＝音が途切れない */
+    g.gain.setValueAtTime(peak, Math.max(t+atk, end));
+    g.gain.linearRampToValueAtTime(0.0001, end+rel);
+  }else{
+    g.gain.setValueAtTime(peak, Math.max(t+atk, end-rel));
+    g.gain.linearRampToValueAtTime(0.0001, end);
+  }
 
   /* ユニゾン（デチューンした鋸波3本＋サブ） */
   const nodes=[lfo];
@@ -87,8 +104,8 @@ export function playNote(ctx, bus, midi, t, dur){
   const sg=ctx.createGain(); sg.gain.value=0.16;
   sub.connect(sg); sg.connect(lp); nodes.push(sub);
 
-  /* 弓のノイズ（アタックだけ） */
-  if(ST.noise){
+  /* 弓のノイズ（アタックだけ）。スラー継続音は弾き直しではないので出さない＝擦り直しノイズを消す。 */
+  if(ST.noise && !sIn){
     const n=ctx.createBufferSource(); n.buffer=ST.noise;
     const nf=ctx.createBiquadFilter(); nf.type='bandpass';
     nf.frequency.value=Math.min(3200, f*4.5); nf.Q.value=0.9;
@@ -102,7 +119,8 @@ export function playNote(ctx, bus, midi, t, dur){
 
   lfo.connect(vib);
   lp.connect(g); g.connect(bus);
-  nodes.forEach(o=>{ o.start(t); o.stop(end+0.06); });
+  const stopAt = sOut ? end+rel+0.06 : end+0.06;
+  nodes.forEach(o=>{ o.start(t); o.stop(stopAt); });
   /* 終了時にグラフから切り離す（ノードが溜まって重くなるのを防ぐ） */
   nodes[nodes.length-1].onended=()=>{ try{ vib.disconnect(); lp.disconnect(); g.disconnect(); }catch(e){} };
 }

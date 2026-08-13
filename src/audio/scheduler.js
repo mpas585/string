@@ -24,6 +24,18 @@ import { toast } from '../dom.js';
 import { render, renderNow, updateChrome, renderStrip, updateStripActive, scrollStripToActive, mq, syncDock } from '../modes.js';
 import { tt } from '../util.js';
 
+/* スラー連結成分から、その音符が「前から繋がる(in)／次へ繋ぐ(out)」かを返す。
+   in=弾き直さず柔らかく入る、out=次の頭へ音を重ねる。これでスラー中は音が途切れない。 */
+function slurFlags(id){
+  const S = ST.slurComps;
+  if(!S || !S.length || id==null) return null;
+  for(let k=0;k<S.length;k++){
+    const g=S[k];
+    if(id>=g[0] && id<=g[1]) return { in: id>g[0], out: id<g[1] };
+  }
+  return null;
+}
+
 export function totalBeats(){
   if(!ST.events.length) return 1;
   let t = Math.max(...ST.events.map(e=> e.onset + e.dur));
@@ -541,7 +553,8 @@ export function pumpQueue(){
     const it=ST.queue.shift();
     if(it.t < ctx.currentTime - 0.06) continue;
     if(it.kind==='note'){
-      it.ev.pitches.forEach(p=> playNote(ctx, B.lead, p.midi, it.t, it.dur));
+      const _sl = slurFlags(it.ev.id);
+      it.ev.pitches.forEach(p=> playNote(ctx, B.lead, p.midi, it.t, it.dur, _sl));
     } else if(it.kind==='acc'){
       if(ST.enjoy) accVoice(ctx, B, it.inst, it.midis, it.t, it.dur);
     } else if(it.kind==='bar'){
