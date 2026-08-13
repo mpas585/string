@@ -43,10 +43,10 @@
         "zh": "天鹅"
       },
       "desc": {
-        "ja": "ト長調・3/4拍子",
-        "en": "G major, 3/4",
-        "es": "Sol mayor, 3/4",
-        "zh": "G大调・3/4拍"
+        "ja": "ト長調・6/4拍子・伴奏つき",
+        "en": "G major, 6/4 with accompaniment",
+        "es": "Sol mayor, 6/4 con acompañamiento",
+        "zh": "G大调・6/4・带伴奏"
       },
       "level": 3,
       "file": "swan.json"
