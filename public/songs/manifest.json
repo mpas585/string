@@ -154,6 +154,23 @@
       "file": "air_on_the_g_string_duo.json"
     },
     {
+      "id": "air_on_the_g_string_cello",
+      "title": {
+        "ja": "G線上のアリア（chello part）",
+        "en": "Air on the G String (chello part)",
+        "es": "Aria en la cuerda de Sol (chello part)",
+        "zh": "G弦上的咏叹调（chello part）"
+      },
+      "desc": {
+        "ja": "ニ長調・4/4拍子・チェロ主旋律・伴奏つき",
+        "en": "D major, 4/4, cello lead with accompaniment",
+        "es": "Re mayor, 4/4, violonchelo principal con acompañamiento",
+        "zh": "D大调・4/4・大提琴主旋律・带伴奏"
+      },
+      "level": 2,
+      "file": "air_on_the_g_string_cello.json"
+    },
+    {
       "id": "canon_duo_cello_guitar",
       "title": {
         "ja": "カノン（チェロとギター）",
@@ -207,10 +224,10 @@
     {
       "id": "prelude_cello_solo",
       "title": {
-        "ja": "プレリュード",
-        "en": "Prelude",
-        "es": "Preludio",
-        "zh": "前奏曲"
+        "ja": "バッハ チェロ組曲第1番 プレリュード",
+        "en": "Bach: Cello Suite No.1 Prelude",
+        "es": "Bach: Preludio de la Suite para violonchelo n.º 1",
+        "zh": "巴赫：第1号大提琴组曲 前奏曲"
       },
       "desc": {
         "ja": "ト長調・4/4拍子",

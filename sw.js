@@ -12,7 +12,7 @@
   更新するとき: 下の VER を上げる。古いキャッシュは activate で消える。
   ルート直下に置くこと（スコープが / になる）。
 */
-const VER   = 'gs-v37';
+const VER   = 'gs-v38';
 const CORE  = 'core-' + VER;    /* 先読みする最小限 */
 const ASSET = 'asset-' + VER;   /* src/ public/ の実行時キャッシュ */
 const PAGE  = 'page-' + VER;    /* HTML の控え */
