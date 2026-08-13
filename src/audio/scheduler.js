@@ -16,6 +16,7 @@
 import { ST } from '../state.js';
 import { playNote, bassNote, drHat, drKick, drSnare, metroClick, padChord, organNote, guitarNote, stringNote } from './synth.js';
 import { audio, makeBuses, NOISEBUF } from './context.js';
+import { ensureInstruments, connectSmplr } from './smplr-inst.js';
 import { paintNotes, pluckEvent, scrollBoardToActive } from '../fingerboard.js';
 import { updateStaffActive, scrollStaffToActive } from '../notation.js';
 import { clearFabLed } from '../dom.js';
@@ -448,6 +449,10 @@ export function startPlay(fromBeat, noCount, force){
   ST.ctx=ctx; ST.noise=NOISEBUF;
   ST.buses=makeBuses(ctx);
   ST.master=ST.buses.master;
+  /* サンプル音源(smplr)の用意（初回のみ import＋生成、以降は即時）と、
+     作り直したバスへの結線。未ロードのあいだは synth.js がシンセにフォールバックする。 */
+  ensureInstruments();
+  connectSmplr(ST.buses);
   ST.playing=true;
 
   ST.range=playRange();

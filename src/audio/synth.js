@@ -11,6 +11,13 @@
 */
 
 import { ST } from '../state.js';
+import { sfReady, sfInst, ensureOrgan, ensureGuitar, ensureStrings } from './smplr-inst.js';
+
+/* ===== サンプル音源(smplr)への振り分け =====
+   ピッチ楽器（メロディ弦・ピアノ・ベース・オルガン・ギター・ストリングス）は、サンプルが
+   読み込み済みで軽量モードOFF のときは smplr(Soundfont)で鳴らす。未ロード時・軽量モード時は
+   下の従来オシレータ音源へフォールバックする（＝無音や遅延を作らない）。
+   打楽器・メトロノーム・チューナー音はサンプル化せず、従来どおりオシレータで鳴らす。 */
 
 export function midiFreq(m){ return 440*Math.pow(2,(m-69)/12); }
 
@@ -59,6 +66,13 @@ export function padChordLite(ctx, bus, t, dur, midis){
 }
 
 export function playNote(ctx, bus, midi, t, dur, slur){
+  /* サンプル音源（該当楽器のリアルな弦音）。読み込み済みならこちらを優先。
+     スラー送り出しは次の音へ少し重ねて、サンプルでも音が途切れないようにする。 */
+  if(sfReady('lead')){
+    const sOut=!!(slur&&slur.out);
+    const d=Math.max(dur,0.12)+(sOut?0.06:0.0);
+    try{ sfInst('lead').start({ note:midi, time:t, duration:d, velocity:96 }); return; }catch(e){}
+  }
   if(ST.lite) return playNoteLite(ctx, bus, midi, t, dur, slur);
   const sIn=!!(slur&&slur.in), sOut=!!(slur&&slur.out);
   const f=midiFreq(midi);
@@ -158,8 +172,11 @@ export function drHat(ctx, bus, t, open){
   s.start(t); s.stop(t+d+0.03);
 }
 export function bassNote(ctx, bus, t, dur, midi, vel){
-  const f=midiFreq(midi);
   const v=(typeof vel==='number') ? vel : 1;
+  if(sfReady('bass')){
+    try{ sfInst('bass').start({ note:midi, time:t, duration:Math.max(dur,0.12), velocity:Math.max(30,Math.min(120, Math.round(96*v))) }); return; }catch(e){}
+  }
+  const f=midiFreq(midi);
   const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=f;
   const o2=ctx.createOscillator(); o2.type='sine'; o2.frequency.value=f/2;
   const lp=ctx.createBiquadFilter(); lp.type='lowpass';
@@ -179,6 +196,10 @@ export function bassNote(ctx, bus, t, dur, midi, vel){
 }
 /* コード：ピアノ（打鍵→2段減衰。倍音は高いほど早く減衰） */
 export function padChord(ctx, bus, t, dur, midis){
+  if(sfReady('piano')){
+    const inst=sfInst('piano'), d=Math.max(dur,0.12);
+    try{ midis.forEach(m=> inst.start({ note:m, time:t, duration:d, velocity:88 })); return; }catch(e){}
+  }
   if(ST.lite) return padChordLite(ctx, bus, t, dur, midis);
   const end=t+dur;
   midis.forEach((m, idx)=>{
@@ -254,6 +275,7 @@ export function chimeOK(ctx, bus, t){
 
 /* オルガン：ドローバー風の加算合成（基音＋オクターブ＋5度＋2オクターブ）。持続音。 */
 export function organNote(ctx, bus, midi, t, dur){
+  if(!ST.lite){ ensureOrgan(); if(sfReady('organ')){ try{ sfInst('organ').start({ note:midi, time:t, duration:Math.max(dur,0.12), velocity:84 }); return; }catch(e){} } }
   const f=midiFreq(midi);
   const end=t+Math.max(dur,0.12);
   const g=ctx.createGain();
@@ -276,6 +298,7 @@ export function organNote(ctx, bus, midi, t, dur){
 
 /* ギター：撥弦（すばやい立ち上がり＋指数減衰）。ローパスを閉じていく＝弦の丸み。 */
 export function guitarNote(ctx, bus, midi, t, dur){
+  if(!ST.lite){ ensureGuitar(); if(sfReady('guitar')){ try{ sfInst('guitar').start({ note:midi, time:t, duration:Math.max(dur,0.12), velocity:92 }); return; }catch(e){} } }
   const f=midiFreq(midi);
   const end=t+Math.max(dur,0.18);
   const g=ctx.createGain();
@@ -306,6 +329,7 @@ export function guitarNote(ctx, bus, midi, t, dur){
 
 /* ストリングス：やわらかい持続音（弦の重なり）。playNote より軽い。 */
 export function stringNote(ctx, bus, midi, t, dur){
+  if(!ST.lite){ ensureStrings(); if(sfReady('strings')){ try{ sfInst('strings').start({ note:midi, time:t, duration:Math.max(dur,0.12), velocity:80 }); return; }catch(e){} } }
   const f=midiFreq(midi);
   const end=t+Math.max(dur,0.2);
   const g=ctx.createGain();

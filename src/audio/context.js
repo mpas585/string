@@ -69,7 +69,10 @@ export function makeBuses(ctx){
   const b3=ctx.createBiquadFilter(); b3.type='peaking'; b3.frequency.value=1350; b3.Q.value=1.8; b3.gain.value=3;
   const leadIn=ctx.createGain(); leadIn.gain.value=ST.vol.lead;
   leadIn.connect(b1); b1.connect(b2); b2.connect(b3); b3.connect(leadOut);
-  return {master, limiter, conv, wet, lead:leadIn,
+  /* サンプル音源(smplr)のメロディ用：整形EQ(b1〜b3)を通さず、EQ後(leadOut)へ合流する。
+     ＝リアルなサンプルの音色をEQで濁さない。音量つまみ(ST.vol.lead)はここに適用する。 */
+  const leadS=ctx.createGain(); leadS.gain.value=ST.vol.lead; leadS.connect(leadOut);
+  return {master, limiter, conv, wet, lead:leadIn, leadS,
     drum : mk(ST.vol.drum , 0.10),
     bass : mk(ST.vol.bass , 0.06),
     chord: mk(ST.vol.chord, 0.42),
@@ -82,4 +85,6 @@ export function applyVolumes(){
     const v = (k==='master') ? ST.vol[k]*MASTER_BOOST : ST.vol[k];
     try{ ST.buses[k].gain.setTargetAtTime(v, t, 0.02); }catch(e){}
   }
+  /* サンプル音源用メロディバスも「メロディ」つまみに追従させる */
+  try{ if(ST.buses.leadS) ST.buses.leadS.gain.setTargetAtTime(ST.vol.lead, t, 0.02); }catch(e){}
 }
