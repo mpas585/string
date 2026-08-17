@@ -367,14 +367,13 @@ export function stopPlay(focus){
 /* ===== 冒頭カウント（1小節ぶん） =====
    数字（#countnum）に加えて、キャンセル導線（#countCancel）と操作説明ティッカー（#legend）を
    カウント中だけ出す。通常再生・採点ゲームのどちらのカウントでも共通で使う。 */
-let _tipTimer=0;
 /* 操作説明の文面。window.T（多言語辞書）から配列で引く。無いときは日本語で保険。 */
 function countTips(){
   const t = (typeof window!=='undefined' && window.T && window.T.msg && window.T.msg.count_tips);
   if(Array.isArray(t) && t.length) return t;
   return [
-    '指板の運指ブロックは長押しで変更できます。',
-    'つながったポジションはスラーです。ひと弓（片道のボウイング）で弾ききりましょう。'
+    '運指ブロックを長押しすると、その音のポジション（押さえる弦や指）を別の候補に変えられます。',
+    'つながって見えるポジションはスラーです。弓を返さず、ひと弓（片道の運弓）で続けて弾きましょう。'
   ];
 }
 /* #countin の中にキャンセル導線を一度だけ用意する（オーバーレイは pointer-events:none なので
@@ -397,19 +396,15 @@ function ensureCountUI(){
   if(lg && !lg.classList.contains('count-tips')) lg.classList.add('count-tips');
   return el;
 }
-/* ティッカー開始：1文ずつフェードで入れ替える（カウントの長さに関係なく回る） */
-function startTips(){
+/* カウントのたびに1文だけ、候補からランダムに選んで出す（カウント中は切り替えない）。 */
+function showOneTip(){
   const lg=document.getElementById('legend'); if(!lg) return;
   const tips=countTips();
+  if(!tips.length){ lg.innerHTML=''; return; }
+  const msg=tips[Math.floor(Math.random()*tips.length)];
   lg.innerHTML='<span class="ct-line"></span>';
-  const line=lg.querySelector('.ct-line');
-  let i=0;
-  const show=()=>{ line.textContent=tips[i % tips.length]; line.style.animation='none'; void line.offsetWidth; line.style.animation=''; i++; };
-  show();
-  if(_tipTimer) clearInterval(_tipTimer);
-  _tipTimer=(tips.length>1) ? setInterval(show, 2600) : 0;
+  lg.querySelector('.ct-line').textContent=msg;
 }
-function stopTips(){ if(_tipTimer){ clearInterval(_tipTimer); _tipTimer=0; } }
 export function showCount(n){
   const el=ensureCountUI();
   const sp=document.getElementById('countnum');
@@ -418,12 +413,11 @@ export function showCount(n){
   sp.textContent=n;
   el.classList.add('show');
   const cb=document.getElementById('countCancel'); if(cb) cb.textContent=tt('ui.count_cancel');
-  if(first) startTips();
+  if(first) showOneTip();
   sp.style.animation='none'; void sp.offsetWidth; sp.style.animation='';
 }
 export function hideCount(){
   const el=document.getElementById('countin'); if(el) el.classList.remove('show');
-  stopTips();
   ST.countCancel=null;
 }
 

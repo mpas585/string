@@ -365,8 +365,8 @@ return [
     'lg_alt'               => 'other positions (tap to change)',
     /* Tips shown one by one during the count-in. Add items to extend. */
     'count_tips'           => [
-      'Long-press a fingering block on the board to change it.',
-      'Connected positions are a slur — play them in a single bow stroke.',
+      'Long-press a fingering block to move that note to another position (a different string or finger).',
+      'Positions joined together are a slur — keep the bow going one way and play them in a single stroke.',
     ],
     'hint_game'      => 'Pick a piece, then press “Record and score”',
     'nowline_game'   => 'Pick a piece',

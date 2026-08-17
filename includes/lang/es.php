@@ -368,8 +368,8 @@ return [
     'lg_alt'               => 'otras posiciones (toca para cambiar)',
     /* Consejos que aparecen uno a uno durante la cuenta. Añade más para ampliar. */
     'count_tips'           => [
-      'Mantén pulsado un bloque de digitación en el diapasón para cambiarlo.',
-      'Las posiciones unidas son una ligadura: tócalas en una sola arcada.',
+      'Mantén pulsado un bloque de digitación para pasar esa nota a otra posición (otra cuerda o dedo).',
+      'Las posiciones unidas son una ligadura: mantén el arco en una dirección y tócalas en una sola arcada.',
     ],
     'hint_game'      => 'Elige una pieza y pulsa “Grabar y puntuar”',
     'nowline_game'   => 'Elige una pieza',
