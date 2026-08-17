@@ -12,7 +12,7 @@ import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave,
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub, resetFingering } from './drawer.js';
-import { loadSong, loadSongManifest, selectTrack, setTrackRole, setTrackInst, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
+import { loadSong, SONGS, loadSongManifest, selectTrack, setTrackRole, setTrackInst, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
          renderSongList, setFavFilter, favFilterOn } from './songs.js';
 /* お気に入り（指板の左上のハート／曲一覧の絞り込み） */
 import { toggleFavCurrent, syncFavBtn, syncFavFilterBtn, reloadFavs } from './favorites.js';
@@ -693,6 +693,18 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
   initPracticeUI();
   /* メトロノーム。札の組み立てとボタンの配線（設定を読んだあとに呼ぶ） */
   initMetro();
+
+  /* 紹介ページ（/{言語}/{楽器}/?song=<曲id>）からの曲指定。
+     「この曲を◯◯で練習する」から来たときは、入口（モード選択）を飛ばして
+     『曲を練習する』を開き、その曲をそのまま読み込む。
+     ・manifest に無い id は無視（何もしない＝通常どおり入口を出す）
+     ・setMode('score') が先に既定サンプルを読むが、直後の loadSong が上書きする
+     ・この時点で ST.mode='score' になるので、ログイン者向けの自動ジャンプ
+       （上の setSaveWatcher）は空振りし、二重に開かない */
+  try{
+    const _sid = new URLSearchParams(location.search).get('song');
+    if(_sid && SONGS[_sid]){ setMode('score'); loadSong(_sid, false); }
+  }catch(e){}
 })();
 /* ページを離れるときはメトロノームを止める（練習時間が増えたままにならないように） */
 window.addEventListener('pagehide', ()=> stopMetro());

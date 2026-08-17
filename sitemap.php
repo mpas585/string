@@ -100,4 +100,34 @@ echo '<?xml version="1.0" encoding="UTF-8"?>', "\n";
   </url>
 <?php endforeach; ?>
 <?php endforeach; ?>
+<?php /* 4) 曲の紹介ページ（/{言語}/songs/ と、各曲 /{言語}/songs/<曲id>/）。
+        掲載する曲は public/songs/manifest.json をそのまま読む（曲を足すと自動で増える）。 */ ?>
+<?php
+  $songs = [];
+  $mf = @file_get_contents(__DIR__ . '/public/songs/manifest.json');
+  if ($mf !== false) { $j = json_decode($mf, true); if (is_array($j) && !empty($j['songs'])) { $songs = $j['songs']; } }
+?>
+<?php /* 4a) 曲一覧 */ ?>
+<?php foreach ($APP['langs'] as $lang): ?>
+  <url>
+    <loc><?= $x($origin . $root . '/' . $lang . '/songs/') ?></loc>
+<?php foreach ($APP['langs'] as $alt): ?>
+    <xhtml:link rel="alternate" hreflang="<?= $x($alt) ?>" href="<?= $x($origin . $root . '/' . $alt . '/songs/') ?>"/>
+<?php endforeach; ?>
+    <priority>0.7</priority>
+  </url>
+<?php endforeach; ?>
+<?php /* 4b) 各曲。id は英数と _ - のみ許可（URLにそのまま出すため） */ ?>
+<?php foreach ($songs as $s): ?>
+<?php if (empty($s['id']) || !preg_match('/^[A-Za-z0-9_-]+$/', $s['id'])) { continue; } $id = $s['id']; ?>
+<?php foreach ($APP['langs'] as $lang): ?>
+  <url>
+    <loc><?= $x($origin . $root . '/' . $lang . '/songs/' . $id . '/') ?></loc>
+<?php foreach ($APP['langs'] as $alt): ?>
+    <xhtml:link rel="alternate" hreflang="<?= $x($alt) ?>" href="<?= $x($origin . $root . '/' . $alt . '/songs/' . $id . '/') ?>"/>
+<?php endforeach; ?>
+    <priority>0.6</priority>
+  </url>
+<?php endforeach; ?>
+<?php endforeach; ?>
 </urlset>
