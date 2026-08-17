@@ -83,6 +83,7 @@ export const ST = {
   /* 冒頭カウント・スリープ防止 */
   countIn: true,
   countBeats: 4,        // 開始カウントの数（4 | 8）。譜面の拍子ではなく利用者の指定
+  countCancel: null,    // カウント中のキャンセル導線が呼ぶ処理（再生=stopPlay / ゲーム=abortGame）
   keepAwake: true,
   wakeLock: null,
   buses: null,

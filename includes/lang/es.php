@@ -59,6 +59,7 @@ return [
     'countin_4'      => '4 tiempos',
     'countin_8'      => '8 tiempos',
     'countin_off'    => 'OFF',
+    'count_cancel'   => 'Detener',
     'tun_ref_play'   => '🔊 Tono de referencia',
     'tun_ref_stop'   => '⏹ Parar',
     'tun_ref_oct'    => '1 oct arriba',
@@ -365,6 +366,11 @@ return [
     'lg_lead'              => 'melodía',
     'lg_press'             => 'nota a pisar',
     'lg_alt'               => 'otras posiciones (toca para cambiar)',
+    /* Consejos que aparecen uno a uno durante la cuenta. Añade más para ampliar. */
+    'count_tips'           => [
+      'Mantén pulsado un bloque de digitación en el diapasón para cambiarlo.',
+      'Las posiciones unidas son una ligadura: tócalas en una sola arcada.',
+    ],
     'hint_game'      => 'Elige una pieza y pulsa “Grabar y puntuar”',
     'nowline_game'   => 'Elige una pieza',
     'empty_game_html'=> '<b>Elige una pieza</b><div>Selecciona una desde <span class="kbd">☰</span></div>',

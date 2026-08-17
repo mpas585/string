@@ -1104,6 +1104,27 @@
   }
   @keyframes cpop{0%{transform:scale(.35); opacity:0}55%{transform:scale(1.12); opacity:1}100%{transform:scale(1); opacity:1}}
 
+  /* カウント中のキャンセル導線。#countin は pointer-events:none なのでボタンだけ auto にする */
+  .countin .count-cancel{
+    position:fixed; z-index:2; pointer-events:auto;
+    top:calc(12px + env(safe-area-inset-top)); right:12px;
+    min-height:40px; padding:8px 18px; border-radius:999px;
+    font-family:var(--mono); font-size:13px; color:var(--ink);
+    background:rgba(20,17,12,.82); border:1px solid var(--line);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  }
+  .countin .count-cancel:active{ transform:scale(.96) }
+  /* 凡例の場所を操作説明ティッカーに転用（1文ずつフェードで入れ替わる） */
+  .legend.count-tips{
+    position:static; display:flex; align-items:center; justify-content:center;
+    margin-top:26px; padding:10px 14px; max-width:min(88vw,420px); min-height:2.6em;
+    text-align:center; color:var(--ink); font-size:13px; line-height:1.5;
+    background:rgba(20,17,12,.72); border:1px solid var(--line); border-radius:10px;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  }
+  .legend.count-tips .ct-line{ display:block; animation:ctfade .45s ease }
+  @keyframes ctfade{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+
   /* ======== オクターブ（±7・横スクロール） ======== */
   .octrow{
     display:flex; gap:5px; overflow-x:auto; padding-bottom:6px; margin-bottom:2px;

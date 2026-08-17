@@ -56,6 +56,7 @@ return [
     'countin_4'      => '4 counts',
     'countin_8'      => '8 counts',
     'countin_off'    => 'OFF',
+    'count_cancel'   => 'Stop',
     'tun_ref_play'   => '🔊 Play reference',
     'tun_ref_stop'   => '⏹ Stop',
     'tun_ref_oct'    => '1 oct up',
@@ -362,6 +363,11 @@ return [
     'lg_lead'              => 'lead',
     'lg_press'             => 'note to stop',
     'lg_alt'               => 'other positions (tap to change)',
+    /* Tips shown one by one during the count-in. Add items to extend. */
+    'count_tips'           => [
+      'Long-press a fingering block on the board to change it.',
+      'Connected positions are a slur — play them in a single bow stroke.',
+    ],
     'hint_game'      => 'Pick a piece, then press “Record and score”',
     'nowline_game'   => 'Pick a piece',
     'empty_game_html'=> '<b>Pick a piece</b><div>Choose one from <span class="kbd">☰</span></div>',

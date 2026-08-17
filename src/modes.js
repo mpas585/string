@@ -86,13 +86,9 @@ export function render(){
   updateChrome();
 }
 export function renderLegend(){
-  const lg=document.getElementById('legend');
-  if(!ST.mode || ST.mode==='tuner' || ST.mode==='metro' || !ST.events.length){ lg.style.display='none'; return; }
-  lg.style.display='flex';
-  const chordItem = (ST.mode==='score') ? `<span><i class="dot chord"></i>${tt('msg.lg_chord')}</span>` : '';
-  lg.innerHTML = '<span><i class="dot lead"></i>' + (ST.mode==='score' ? tt('msg.lg_lead') : tt('msg.lg_press')) + '</span>'
-    + chordItem
-    + `<span><i class="dot alt"></i>${tt('msg.lg_alt')}</span>`;
+  /* 旧・色凡例（リード／和音の他音／別候補）はカウント画面の操作説明ティッカーへ置き換えたため、
+     ここでは中身を作らない。ティッカーの内容は src/audio/scheduler.js の showCount が管理する。
+     凡例エリア（#legend）は #countin の中にあり、カウント中だけ表示される。 */
 }
 
 /* ===== 練習モードの切替 ===== */

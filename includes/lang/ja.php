@@ -62,6 +62,7 @@ return [
     'countin_4'      => '4カウント',
     'countin_8'      => '8カウント',
     'countin_off'    => 'OFF',
+    'count_cancel'   => 'やめる',
     'tun_ref_play'   => '🔊 基準音を鳴らす',
     'tun_ref_stop'   => '⏹ 止める',
     'tun_ref_oct'    => '1oct上',
@@ -370,6 +371,11 @@ return [
     'lg_lead'              => 'リード',
     'lg_press'             => '押さえる音',
     'lg_alt'               => '別の位置の候補(タップで変更)',
+    /* カウント画面で1文ずつ流す操作説明。項目を足すとそのまま増える */
+    'count_tips'           => [
+      '指板の運指ブロックは長押しで変更できます。',
+      'つながったポジションはスラーです。ひと弓（片道のボウイング）で弾ききりましょう。',
+    ],
     'hint_game'      => '課題曲を選んで「録音して採点する」を押してください',
     'nowline_game'   => '課題曲を選んでください',
     'empty_game_html'=> '<b>課題曲を選んでください</b><div><span class="kbd">☰</span> から課題曲を選ぶ</div>',

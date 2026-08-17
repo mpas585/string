@@ -56,6 +56,7 @@ return [
     'countin_4'      => '4拍',
     'countin_8'      => '8拍',
     'countin_off'    => 'OFF',
+    'count_cancel'   => '取消',
     'tun_ref_play'   => '🔊 播放基准音',
     'tun_ref_stop'   => '⏹ 停止',
     'tun_ref_oct'    => '高八度',
@@ -362,6 +363,11 @@ return [
     'lg_lead'              => '旋律',
     'lg_press'             => '要按的音',
     'lg_alt'               => '其他把位候选（点击切换）',
+    /* 起始倒计时中逐条滚动的操作说明。增加条目即可扩展。 */
+    'count_tips'           => [
+      '长按指板上的指法块即可修改。',
+      '相连的把位是连弓（slur），请用一弓（单向运弓）拉完。',
+    ],
     'hint_game'      => '选择课题曲后，按“录音并评分”',
     'nowline_game'   => '请选择课题曲',
     'empty_game_html'=> '<b>请选择课题曲</b><div>从 <span class="kbd">☰</span> 选择课题曲</div>',

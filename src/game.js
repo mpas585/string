@@ -312,6 +312,8 @@ export function beginRun(){
   GAME.endT=t0 + endBeat*bs + GAME.latency + 0.7;   /* 最後の音の余韻ぶんだけ長めに録る */
 
   /* 開始カウント（画面いっぱいの数字＋クリック）。ゲームは合図が要るので常に出す */
+  /* カウント中のキャンセル導線＝採点ゲームでは中止（abortGame）に割り当てる */
+  ST.countCancel = ()=> abortGame(true);
   for(let i=0;i<countN;i++){
     const at=ctx.currentTime + lead + i*countSec;
     metroClick(ctx, out, at, i===0);

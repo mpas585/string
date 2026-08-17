@@ -364,14 +364,68 @@ export function stopPlay(focus){
   if(focus) requestAnimationFrame(()=>{ try{ updateStripActive(); scrollStripToActive(); scrollBoardToActive(true); }catch(e){} });
 }
 
-/* ===== 冒頭カウント（1小節ぶん） ===== */
+/* ===== 冒頭カウント（1小節ぶん） =====
+   数字（#countnum）に加えて、キャンセル導線（#countCancel）と操作説明ティッカー（#legend）を
+   カウント中だけ出す。通常再生・採点ゲームのどちらのカウントでも共通で使う。 */
+let _tipTimer=0;
+/* 操作説明の文面。window.T（多言語辞書）から配列で引く。無いときは日本語で保険。 */
+function countTips(){
+  const t = (typeof window!=='undefined' && window.T && window.T.msg && window.T.msg.count_tips);
+  if(Array.isArray(t) && t.length) return t;
+  return [
+    '指板の運指ブロックは長押しで変更できます。',
+    'つながったポジションはスラーです。ひと弓（片道のボウイング）で弾ききりましょう。'
+  ];
+}
+/* #countin の中にキャンセル導線を一度だけ用意する（オーバーレイは pointer-events:none なので
+   ボタン側で pointer-events:auto にしてある＝CSS）。凡例の場所は操作説明ティッカーに転用する。 */
+function ensureCountUI(){
+  const el=document.getElementById('countin');
+  if(!el) return null;
+  if(!document.getElementById('countCancel')){
+    const b=document.createElement('button');
+    b.id='countCancel'; b.type='button'; b.className='count-cancel';
+    b.textContent=tt('ui.count_cancel');
+    b.setAttribute('aria-label', tt('ui.count_cancel'));
+    b.addEventListener('click', ()=>{
+      const fn=ST.countCancel; ST.countCancel=null;
+      if(typeof fn==='function') fn(); else stopPlay();
+    });
+    el.appendChild(b);
+  }
+  const lg=document.getElementById('legend');
+  if(lg && !lg.classList.contains('count-tips')) lg.classList.add('count-tips');
+  return el;
+}
+/* ティッカー開始：1文ずつフェードで入れ替える（カウントの長さに関係なく回る） */
+function startTips(){
+  const lg=document.getElementById('legend'); if(!lg) return;
+  const tips=countTips();
+  lg.innerHTML='<span class="ct-line"></span>';
+  const line=lg.querySelector('.ct-line');
+  let i=0;
+  const show=()=>{ line.textContent=tips[i % tips.length]; line.style.animation='none'; void line.offsetWidth; line.style.animation=''; i++; };
+  show();
+  if(_tipTimer) clearInterval(_tipTimer);
+  _tipTimer=(tips.length>1) ? setInterval(show, 2600) : 0;
+}
+function stopTips(){ if(_tipTimer){ clearInterval(_tipTimer); _tipTimer=0; } }
 export function showCount(n){
-  const el=document.getElementById('countin'), sp=document.getElementById('countnum');
+  const el=ensureCountUI();
+  const sp=document.getElementById('countnum');
+  if(!el || !sp) return;
+  const first=!el.classList.contains('show');
   sp.textContent=n;
   el.classList.add('show');
+  const cb=document.getElementById('countCancel'); if(cb) cb.textContent=tt('ui.count_cancel');
+  if(first) startTips();
   sp.style.animation='none'; void sp.offsetWidth; sp.style.animation='';
 }
-export function hideCount(){ document.getElementById('countin').classList.remove('show'); }
+export function hideCount(){
+  const el=document.getElementById('countin'); if(el) el.classList.remove('show');
+  stopTips();
+  ST.countCancel=null;
+}
 
 /* ===== スリープ防止（Wake Lock） ===== */
 /* テンポ変更・シーク・ループ範囲変更では stopPlay→startPlay が連続で走るため、
@@ -485,6 +539,8 @@ export function startPlay(fromBeat, noCount, force){
 
   /* 冒頭カウント＝1小節ぶん（画面全体に数字＋クリック） */
   if(doCount){
+    /* カウント中のキャンセル導線＝通常再生では停止（stopPlay）に割り当てる */
+    ST.countCancel = ()=> stopPlay();
     ST.current=null; paintNotes(null); renderNow(null);   /* カウント中は運指（現在音）を出さない */
     for(let i=0;i<countN;i++){
       const at=ctx.currentTime + lead + i*countSec;
