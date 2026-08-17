@@ -366,7 +366,7 @@ return [
     /* Tips shown one by one during the count-in. Add items to extend. */
     'count_tips'           => [
       'Long-press a fingering block to move that note to another position (a different string or finger).',
-      'Positions joined together are a slur — keep the bow going one way and play them in a single stroke.',
+      'The band joining notes is a slur — don’t change bow direction; play them in a single bow.',
     ],
     'hint_game'      => 'Pick a piece, then press “Record and score”',
     'nowline_game'   => 'Pick a piece',

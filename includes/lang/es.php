@@ -369,7 +369,7 @@ return [
     /* Consejos que aparecen uno a uno durante la cuenta. Añade más para ampliar. */
     'count_tips'           => [
       'Mantén pulsado un bloque de digitación para pasar esa nota a otra posición (otra cuerda o dedo).',
-      'Las posiciones unidas son una ligadura: mantén el arco en una dirección y tócalas en una sola arcada.',
+      'La banda que une las notas es una ligadura: no cambies la dirección del arco y tócalas en una sola arcada.',
     ],
     'hint_game'      => 'Elige una pieza y pulsa “Grabar y puntuar”',
     'nowline_game'   => 'Elige una pieza',
