@@ -20,21 +20,19 @@ import { loadScales } from './scale.js';
 import { startTuner, stopTuner, pickTunerString, toggleReference, syncReferenceUI, TUN } from './tuner.js';
 import { tt } from './util.js';
 import { initPractice } from './practice.js';
-import { initPracticeUI, openPractice, prevMonth, nextMonth } from './practice-ui.js';
+import { initPracticeUI, openPractice, prevMonth, nextMonth, refreshPracticeLine, renderCalendar } from './practice-ui.js';
 import { initAccount, openAccount, showSignin, showMe, showSignup, showForgot, showPasswd, showDelete, togglePassword, doLogin, doSignup,
          doResend, doForgot, doPasswd, doLogout, doDestroy, googleSignin, askLogin, askSkip,
          setSaveApply, armSave, setSaveWatcher } from './account.js';
 import { openContact, sendContact, syncKind } from './contact.js';
 import { initUploads, openUpload, deleteUpload, upDupOverwrite, upDupAddNew, upDupCancel, openRename, doRename, curUploadItem, syncShareDeleteBtns,
-         openDownload, doDownload, setUpFavFilter, upFavFilterOn } from './uploads.js';
+         setUpFavFilter, upFavFilterOn } from './uploads.js';
 /* みんなの曲（利用者が共有した楽譜）。一覧に混ぜて出す／公開する／削除依頼／管理 */
 import { initShares, loadShared, openShare, doShare, unshareSong,
          openAdmin, setAdminQuery, setAdminPage, adminListPage, adminAction } from './shares.js';
 import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
 /* メトロノーム（採点ゲームがあった場所）。画面ごと src/metronome.js が受け持つ */
 import { initMetro, stopMetro } from './metronome.js';
-/* 譜面編集（item6）。自分のアップ曲だけ編集できる（ボタンは src/uploads.js が出し入れ） */
-import { openScoreEditor, closeScoreEditor, seNav, seBodyClick, seSave } from './editor.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
@@ -239,8 +237,6 @@ on('fbsvg','pointerleave', endHold);
    左ドロワー（.scrim）・歯車（.gscrim）と同じ作法で、暗幕をタップしても閉じる。 */
 function openEditSheet(){
   if(ST.mode!=='score' || !ST.events.length) return;
-  /* 譜面編集シート（item6）が開いているあいだは、運指シートを重ねない */
-  const se=document.getElementById('scoreEdit'); if(se && se.classList.contains('open')) return;
   document.getElementById('editSheet').classList.add('open');
   const sc=document.getElementById('editScrim'); if(sc) sc.classList.add('show');
 }
@@ -267,14 +263,6 @@ on('editResetAll','click', ()=>{
   if(!confirm(tt('msg.fing_reset_all_confirm'))) return;
   resetFingering();
 });
-
-/* ===== 譜面編集シート（item6）===== */
-on('editScoreBtn','click', openScoreEditor);
-on('seClose','click', ()=> closeScoreEditor());
-on('seSave','click',  ()=> seSave());
-on('sePrev','click',  ()=> seNav(-1));
-on('seNext','click',  ()=> seNav(1));
-on('seBody','click',  seBodyClick);
 
 /* ===== 設定（歯車） ===== */
 on('viewSeg','click', e=>{
@@ -603,16 +591,11 @@ on('trackBack','click', ()=> setScoreSub('load'));
 /* 名前の変更は上部バーの曲名から、シェアと削除は指板の左上・右上へ移したので、
    ここに残る操作は「トラック」と行そのもの（＝開く）の2つ。 */
 on('upList','click', e=>{
-  const dl=e.target.closest('.ud');
-  if(dl){ openDownload(dl.dataset.id, dl.dataset.name); return; }  /* 形式を選ぶ小窓を出す */
   const trk=e.target.closest('.ut');
   if(trk){ openUpload(trk.dataset.id, true); return; } /* 開いてトラック選択の面を出す */
   const row=e.target.closest('.uprow');
   if(row) openUpload(row.dataset.id);
 });
-/* ダウンロード（#mDownload）：MIDI / MusicXML のどちらで書き出すかを選ぶ */
-on('dlMidi','click', ()=> doDownload('midi'));
-on('dlXml','click',  ()=> doDownload('musicxml'));
 /* 名前の変更（#mUpName）と、みんなの曲として公開（#mShare） */
 on('upNameGo','click', doRename);
 on('upName','keydown', e=>{ if(e.key==='Enter') doRename(); });
@@ -667,6 +650,13 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
     reloadFavs();
     syncFavBtn();
     renderSongList();
+    /* ログインでサーバの練習記録を突き合わせると累計が増えることがある。
+       歯車の「累計練習時間」の1行と（開いていれば）カレンダーも描き直す。
+       これをしないと、ドロワーの数字だけ突き合わせ前のまま残り、
+       カレンダーの累計とズレて見える。 */
+    refreshPracticeLine();
+    const pm = document.getElementById('mPractice');
+    if (pm && pm.classList.contains('open')) renderCalendar();
   });
   /* ここから先の設定変更だけを自動保存の対象にする（起動時の底上げ保存で尋ねないため） */
   armSave();

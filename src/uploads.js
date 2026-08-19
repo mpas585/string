@@ -39,7 +39,6 @@ import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher
 import { isFav } from './favorites.js';
 import { recommend } from './fingerboard.js';
 import { setMidiFile, renderTracks, parseMidi, base64ToBytes } from './songs.js';
-import { buildMidi, buildMusicXML, downloadBlob, safeName } from './export.js';
 
 const API  = new URL('../api/scores.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
@@ -153,12 +152,6 @@ export function renderUploads() {
       const trk = it.hassrc
         ? '<button type="button" class="ubtn ut" data-id="' + it.id + '">' + esc(tt('ui.uploads_tracks')) + '</button>'
         : '';
-      /* ダウンロード（トラックの左）。MIDI / MusicXML はこのあと小窓で選ぶ。
-         元のMIDIを預かっていない行（MusicXMLから読んだもの）にも出す＝
-         書き出しは預かっている「音の並び」から作るため、元ファイルは要らない。 */
-      const dl = '<button type="button" class="ubtn ud" data-id="' + it.id + '"'
-               + ' data-name="' + esc(it.name) + '" aria-label="' + esc(tt('ui.download')) + '"'
-               + ' title="' + esc(tt('ui.download')) + '">\u2913</button>';
       /* 見た目は「曲を選ぶ」の .songbtn とそろえる（同じ「曲を開く」ための一覧なので）。
          中に［トラック］ボタンを入れる都合で button の入れ子にできないため、
          div に .songbtn を併せ持たせて同じ CSS を当てている。
@@ -171,7 +164,7 @@ export function renderUploads() {
       return '<div class="uprow songbtn' + fc + on + '" data-id="' + it.id + '">'
         + esc(it.name) + '<small>' + esc(sub) + '</small>'
         + fav
-        + '<span class="ub">' + dl + trk + '</span>'
+        + '<span class="ub">' + trk + '</span>'
         + '</div>';
     }).join('');
   }
@@ -224,9 +217,6 @@ export function syncShareDeleteBtns() {
     if (!it || !isSignedIn()) { db.hidden = true; }
     else { db.hidden = false; db.dataset.id = String(it.id); }
   }
-  /* 譜面編集ボタン（item6）：自分のアップ曲を score モードで開いているときだけ出す */
-  const eb = document.getElementById('editScoreBtn');
-  if (eb) eb.hidden = !(it && isSignedIn() && ST.mode === 'score');
   /* 上部バーの曲名。自分の譜面のときだけ押せるようにして、その場で名前を変えられる */
   const tb = document.getElementById('scoretitle');
   if (tb) {
@@ -337,22 +327,6 @@ async function sendUpload(p, quiet) {
   } catch (e) { /* 通信できないときは黙って諦める（本体の読み込みは済んでいる） */ }
 }
 
-/* 譜面編集（item6）の保存。いま開いている自分のアップ曲を、その id のまま上書きする。
-   parsed は編集後の ST.parsed（events/measures/beatsPerMeasure/beatUnit）をそのまま渡す。
-   運指は packFing() が現在値（自動再計算後）を一緒に送る。 */
-export async function saveEditedScore(parsed, tempo) {
-  const it = curUploadItem();
-  if (!it) { toast(tt('msg.se_need_own')); return false; }
-  let packed, data;
-  try { packed = packScore(parsed, tempo || ST.tempo, { trackName: it.sub || '' }); data = JSON.stringify(packed); }
-  catch (e) { toast(tt('msg.se_save_fail')); return false; }
-  if (data.length > MAX_BYTES) { toast(tt('msg.up_err', tt('acc.err.payload'))); return false; }
-  const sig = sigOf(data);
-  await sendUpload({ nm: it.name, sub: it.sub || '', sig: sig, data: data, notes: packed.events.length, id: it.id, src: null }, true);
-  toast(tt('msg.se_saved'));
-  return true;
-}
-
 /* #mUpDup の2つのボタン（配線は main.js）。✕ で閉じたときは保存しない */
 export function upDupOverwrite() {
   const p = pending; pending = null;
@@ -418,44 +392,6 @@ export async function openUpload(id, showTracks) {
     toast(tt('msg.up_loaded', r.name));
   } catch (e) {
     toast(tt('msg.up_err', e.message));
-  } finally {
-    busy = false;
-  }
-}
-
-/* ===== ダウンロード（#mDownload） =====
-   預かっている「音の並び」から MIDI / MusicXML を作って書き出す。
-   元のファイルをそのまま返すのではない（MusicXMLは元ファイルを預かっていないため）。
-   運指は入れない＝譜面の音の並びだけ。 */
-let dlId = 0, dlName = '';
-export function openDownload(id, name){
-  if(!isSignedIn() || !id) return;
-  dlId = Number(id) || 0;
-  dlName = String(name || '');
-  const t = document.getElementById('dlName');
-  if (t) t.textContent = dlName;
-  openDockModal('mDownload');
-}
-export async function doDownload(kind){
-  if(busy || !isSignedIn() || !dlId) return;
-  busy = true;
-  try {
-    const r = await call('load', { id: dlId });
-    if(!r || !r.ok){ toast(tt('msg.dl_fail', (r && r.message) || '')); return; }
-    const score = r.data || {};
-    const nm    = safeName(r.name || dlName);
-    if(kind === 'midi'){
-      downloadBlob(buildMidi(score, r.name || dlName), 'audio/midi', nm + '.mid');
-      closeDockModal();
-      toast(tt('msg.dl_done', nm + '.mid'));
-    } else {
-      downloadBlob(buildMusicXML(score, r.name || dlName),
-                   'application/vnd.recordare.musicxml+xml', nm + '.musicxml');
-      closeDockModal();
-      toast(tt('msg.dl_done', nm + '.musicxml'));
-    }
-  } catch(e) {
-    toast(tt('msg.dl_fail', e.message));
   } finally {
     busy = false;
   }

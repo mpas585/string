@@ -11,7 +11,7 @@
 */
 
 import { ST } from '../state.js';
-import { sfReady, sfInst, ensureOrgan, ensureGuitar, ensureStrings } from './smplr-inst.js';
+import { sfReady, sfInst, leadNoteSampled, ensureOrgan, ensureGuitar, ensureStrings } from './smplr-inst.js';
 
 /* ===== サンプル音源(smplr)への振り分け =====
    ピッチ楽器（メロディ弦・ピアノ・ベース・オルガン・ギター・ストリングス）は、サンプルが
@@ -68,7 +68,9 @@ export function padChordLite(ctx, bus, t, dur, midis){
 export function playNote(ctx, bus, midi, t, dur, slur){
   /* サンプル音源（該当楽器のリアルな弦音）。読み込み済みならこちらを優先。
      スラー送り出しは次の音へ少し重ねて、サンプルでも音が途切れないようにする。 */
-  if(sfReady('lead')){
+  /* leadNoteSampled(midi)＝この高さに“音の入ったサンプル”があるか。コントラバスは
+     A3(57) より上が無音サンプルなので、そこは下のオシレータ音源へ回す（高音を鳴らすため）。 */
+  if(sfReady('lead') && leadNoteSampled(midi)){
     const sOut=!!(slur&&slur.out);
     const d=Math.max(dur,0.12)+(sOut?0.06:0.0);
     try{ sfInst('lead').start({ note:midi, time:t, duration:d, velocity:96 }); return; }catch(e){}

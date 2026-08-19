@@ -104,6 +104,18 @@ export function ensureStrings(){ lazyVoice('strings', 'string_ensemble_1',      
 export function sfReady(key){ return !ST.lite && LOADED[key] && !!INST[key]; }
 export function sfInst(key){ return INST[key]; }
 
+/* メロディ弦ごとの「実際に音が入っているサンプルの最高音（MIDI）」。
+   FluidR3 のサウンドフォントは、コントラバスだけ A3(57) より上が“無音サンプル”に
+   なっており、そのまま smplr で鳴らすと高音（1弦の親指ポジション等）が出ない。
+   ここに上限を決めておき、それより高い音はサンプルを使わず synth.js のオシレータ音源へ
+   回す（＝高音が無音になるのを防ぐ）。上限を持たない楽器（cello/viola/violin）は
+   全音域でサンプルが鳴るので登録しない＝従来どおりサンプルを使う。 */
+const LEAD_SAMPLE_MAX = { contrabass: 57 };   /* A3。これより上はオシレータ音源へ */
+export function leadNoteSampled(midi){
+  const cap = LEAD_SAMPLE_MAX[leadName()];
+  return (cap == null) ? true : (midi <= cap);
+}
+
 /* startPlay 側から：作り直したバスへ voiceOut を結線する（古い結線は掃除してから繋ぎ直す）。 */
 export function connectSmplr(buses){
   if(!vout || !buses) return;
