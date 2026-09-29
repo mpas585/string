@@ -22,6 +22,11 @@
               譜面そのものは楽器で分けない＝一覧はどの楽器から見ても同じものが出る。
        src  … MIDI のときだけ元ファイル（base64）。一覧から開き直したあとに
               トラックを選び直せるようにするため。MusicXML では預けない
+       data.accomp … 伴奏パート（任意）。画面からの読み込みでは作らない＝ふつうの譜面は持たない。
+              マスターアカウントの教本二重奏（先生パート付き）にだけ、tools/merge_accomp.php で
+              あとから足してある。形は [{inst, name, events:[[開始拍, 長さ, [midi…]], …]}, …]。
+              開いたときに ST.accompTracks へ入れる＝「伴奏」ボタンで一緒に鳴る。
+              sig（内容の指紋）は data 全体で作るので、伴奏も指紋に含まれる。
      運指を data と分けているのは、運指を直しただけで sig が変わらないようにするため
      ＝「同じ譜面か」の判定が運指の編集で揺れない。
   ※ オクターブを一緒に持つのは、運指の off（開放弦からの半音数）が移調後の音で計算されているため。
@@ -33,12 +38,12 @@ import { ST } from './state.js';
 import { tt, midiName, INSTRUMENT_ID } from './util.js';
 import { toast, openDockModal, closeDockModal } from './dom.js';
 import { isSignedIn, isAdminUser, getCsrf, setSaveWatcher } from './account.js';
-import { setScore, renderScoreTitle } from './modes.js';
+import { setScore, renderScoreTitle, syncDock } from './modes.js';
 import { setTempo, stopPlay } from './audio/scheduler.js';
 import { closeDrawer, fingerData, applyFingerData, saveFingering, setFingWatcher, setScoreSub } from './drawer.js';
 import { isFav } from './favorites.js';
 import { recommend } from './fingerboard.js';
-import { setMidiFile, renderTracks, parseMidi, base64ToBytes } from './songs.js';
+import { setMidiFile, renderTracks, parseMidi, base64ToBytes, INSTRUMENTS } from './songs.js';
 
 const API  = new URL('../api/scores.php', import.meta.url).href;
 const LANG = (window.APP && window.APP.lang) || 'ja';
@@ -100,6 +105,26 @@ export function packScore(parsed, tempo, meta) {
     /* スラー群 [[開始イベント添字, 終了イベント添字], …]。無ければ空配列。 */
     slurs: (Array.isArray(parsed.slurs) ? parsed.slurs.map(g => [g[0], g[1]]) : []),
   };
+}
+/* 伴奏パート（data.accomp）→ ST.accompTracks の形 [{inst, ev:[{onset, dur, midis}]}]。
+   持っていない・壊れているときは空配列（＝伴奏ボタンは出ない）。 */
+export function unpackAccomp(j) {
+  const out = [];
+  if (!j || !Array.isArray(j.accomp)) return out;
+  j.accomp.forEach(t => {
+    if (!t || !Array.isArray(t.events)) return;
+    const inst = (INSTRUMENTS.indexOf(t.inst) >= 0) ? t.inst : 'piano';
+    const ev = [];
+    t.events.forEach(a => {
+      if (!Array.isArray(a) || !Array.isArray(a[2])) return;
+      const onset = Number(a[0]), dur = Number(a[1]);
+      const midis = a[2].map(Number).filter(m => m >= 0 && m <= 127);
+      if (!(onset >= 0) || !(dur > 0) || !midis.length) return;
+      ev.push({ onset, dur, midis });
+    });
+    if (ev.length) out.push({ inst, ev });
+  });
+  return out;
 }
 export function unpackScore(j) {
   const evs = (j.events || []).map((a, i) => {
@@ -375,6 +400,10 @@ export async function openUpload(id, showTracks) {
     /* 第3引数＝上部バーに出す表示名。curScore は 'up:12' という内部IDなので、
        これを渡さないと曲名の欄が空のままになる。 */
     setScore(parsed, curScore, r.name);         /* 運指の保存キーは件ごとに固定 */
+    /* 伴奏パートを持つ譜面（教本の二重奏）は、setScore が空にした伴奏トラックを入れ直す。
+       持たない譜面は空のまま＝従来どおり伴奏ボタンは出ない。 */
+    ST.accompTracks = unpackAccomp(r.data);
+    syncDock();
 
     /* 保存してあった運指を当てる。当てたぶんは localStorage にも書いて、
        次はオフラインでも同じ運指で開けるようにする（送り返しは applying で止める） */
