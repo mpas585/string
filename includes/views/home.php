@@ -14,8 +14,9 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
    見せ方だけをここで決める。一覧に無いものは後ろへ回すので、
    config/app.php に楽器を足しただけでもカードは出る。 */
 $HOME_ORDER = ['violin', 'viola', 'cello', 'contrabass'];
-$ORDERED    = array_values(array_intersect($HOME_ORDER, APP_INSTRUMENTS));
-foreach (APP_INSTRUMENTS as $ins) {
+/* 隠している楽器（includes/instruments.php）は並べない */
+$ORDERED    = array_values(array_intersect($HOME_ORDER, APP_VISIBLE_INSTRUMENTS));
+foreach (APP_VISIBLE_INSTRUMENTS as $ins) {
   if (!in_array($ins, $ORDERED, true)) { $ORDERED[] = $ins; }
 }
 
@@ -111,12 +112,15 @@ foreach ($ORDERED as $ins) {
 <?php endforeach; ?>
     </nav>
   </div>
+<?php /* 楽器が1つだけのときは回さない（src/home-gallery.js も N>1 でしか動かない）ので、‹ › とスワイプの案内も出さない */ ?>
+<?php if (count($CARDS) > 1): ?>
   <div class="hm-nav">
     <button type="button" id="hmPrev" class="hm-arrow" aria-label="<?php e('home.prev') ?>">‹</button>
     <div id="hmDots" class="hm-dots" hidden></div>
     <button type="button" id="hmNext" class="hm-arrow" aria-label="<?php e('home.next') ?>">›</button>
   </div>
   <p class="hm-hint"><?php e('home.swipe') ?></p>
+<?php endif; ?>
 
   <section class="hm-about">
     <h2><?php e('home.about_t') ?></h2>

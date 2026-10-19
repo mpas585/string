@@ -38,6 +38,12 @@ if (!defined('APP_NAME')) {
      src/game.js と辞書 ui.game_* はそのまま残してあるので、消したのは導線だけ。
      ※ 戻すときは includes/lang/*.php の intro / home の文言も採点ゲーム側へ戻すこと。 */
   define('APP_GAME_ENABLED',       (bool)($APP_CFG['game_enabled'] ?? false));
+  /* 隠す楽器・一覧に出す楽器（判定は includes/instruments.php）。
+     APP_INSTRUMENTS は従来どおり全楽器（URL の検証や保存データの読み書きはこちら）。
+     画面に並べるところだけ APP_VISIBLE_INSTRUMENTS を使う。 */
+  require_once APP_ROOT . '/includes/instruments.php';
+  define('APP_HIDDEN_INSTRUMENTS',  app_hidden_instruments($APP_CFG));
+  define('APP_VISIBLE_INSTRUMENTS', app_visible_instruments($APP_CFG));
   define('APP_DB_PATH',            $APP_CFG['db_path']);
   /* アカウント（includes/account.php / api/account.php / oauth/google.php で使う） */
   define('APP_SITE_URL',           rtrim((string)($APP_CFG['site_url'] ?? ''), '/'));

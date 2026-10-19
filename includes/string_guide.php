@@ -25,6 +25,12 @@ require __DIR__ . '/bootstrap.php';
 
 /* ===== 検証（ホワイトリスト外は既定値。require のパスに直接使うため必須） ===== */
 $INSTRUMENT = (isset($INSTRUMENT) && in_array($INSTRUMENT, APP_INSTRUMENTS, true)) ? $INSTRUMENT : APP_DEFAULT_INSTRUMENT;
+
+/* 隠している楽器（includes/instruments.php）のお悩み集は既定楽器のお悩み集へ送る */
+if (in_array($INSTRUMENT, APP_HIDDEN_INSTRUMENTS, true)) {
+  header('Location: ' . $rootPath . '/' . $LANG . '/' . APP_DEFAULT_INSTRUMENT . '/guide/', true, 302);
+  exit;
+}
 $INST       = require APP_ROOT . '/config/' . $INSTRUMENT . '.php';
 $INST_NAME  = t('instrument.' . $INSTRUMENT);
 

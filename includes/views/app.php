@@ -527,7 +527,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
     <span class="dk-tt"><?php e('ui.m_inst') ?></span>
     <button class="iconbtn" data-dkclose aria-label="<?php e('ui.close') ?>">✕</button>
   </div>
-<?php foreach (APP_INSTRUMENTS as $ins):
+<?php /* 隠している楽器（includes/instruments.php）は出さない */ ?>
+<?php foreach (APP_VISIBLE_INSTRUMENTS as $ins):
         $ic = require APP_ROOT . '/config/' . $ins . '.php'; ?>
   <a class="instrow<?= $ins === $INSTRUMENT ? ' on' : '' ?>" href="<?= h($rootPath . '/' . $LANG . '/' . $ins . '/') ?>">
     <span class="ic"><?= h($ic['emoji']) ?></span>

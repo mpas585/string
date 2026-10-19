@@ -13,15 +13,16 @@
 */
 define('STRING_APP', 1);
 $APP = require __DIR__ . '/config/app.php';
+require_once __DIR__ . '/includes/instruments.php';     /* 隠す楽器の判定 */
 
 $https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 $origin = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
 $root   = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
 
-/* 公開済み（ready=true）の楽器だけを対象にする */
+/* 公開済み（ready=true）で、隠していない楽器だけを対象にする */
 $instruments = [];
-foreach ($APP['instruments'] as $i) {
+foreach (app_visible_instruments($APP) as $i) {
   $c = require __DIR__ . '/config/' . $i . '.php';
   if (!empty($c['ready'])) { $instruments[] = $i; }
 }

@@ -11,11 +11,14 @@
 */
 define('STRING_APP', 1);
 $APP  = require __DIR__ . '/config/app.php';
+require_once __DIR__ . '/includes/instruments.php';    /* 隠す楽器の判定 */
 
 $lang = $_GET['lang'] ?? '';
 if (!in_array($lang, $APP['langs'], true)) { $lang = $APP['default_lang']; }
 $inst = $_GET['inst'] ?? '';
 if (!in_array($inst, $APP['instruments'], true)) { $inst = ''; }
+/* 隠している楽器は start_url を作らない（そのページは既定楽器へ転送される） */
+if (in_array($inst, app_hidden_instruments($APP), true)) { $inst = ''; }
 
 $T    = require __DIR__ . '/includes/lang/' . $lang . '.php';
 $name = $APP['name'];
@@ -27,7 +30,7 @@ $start = $root . '/' . $lang . '/' . ($inst === '' ? '' : $inst . '/');
 
 /* ホーム画面アイコンの長押しメニュー（公開済みの楽器へ直接入る） */
 $shortcuts = [];
-foreach ($APP['instruments'] as $i) {
+foreach (app_visible_instruments($APP) as $i) {
   $c = require __DIR__ . '/config/' . $i . '.php';
   if (empty($c['ready'])) continue;
   $shortcuts[] = [

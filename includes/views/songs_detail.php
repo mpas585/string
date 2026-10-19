@@ -92,7 +92,8 @@ $ld = ['@context' => 'https://schema.org', '@graph' => [
   <section class="gd-sec">
     <h2><?= h($SL['choose_inst_h']) ?></h2>
     <nav class="hm-list">
-<?php foreach (APP_INSTRUMENTS as $inst):
+<?php /* 隠している楽器（includes/instruments.php）は出さない */ ?>
+<?php foreach (APP_VISIBLE_INSTRUMENTS as $inst):
         $iname = t('instrument.' . $inst);
         $iurl  = $rootPath . '/' . $LANG . '/' . $inst . '/?song=' . rawurlencode($id); ?>
       <a class="hm-card" href="<?= h($iurl) ?>">

@@ -31,6 +31,14 @@ require __DIR__ . '/bootstrap.php';
 /* ===== 1. 検証（ホワイトリスト外は既定値。require のパスに直接使うため必須） ===== */
 $INSTRUMENT = (isset($INSTRUMENT) && in_array($INSTRUMENT, APP_INSTRUMENTS, true)) ? $INSTRUMENT : APP_DEFAULT_INSTRUMENT;
 
+/* 隠している楽器（includes/instruments.php）は既定楽器のページへ送る。
+   曲紹介ページからの ?song=... などはそのまま引き継ぐ */
+if (in_array($INSTRUMENT, APP_HIDDEN_INSTRUMENTS, true)) {
+  $_qs = (string)($_SERVER['QUERY_STRING'] ?? '');
+  header('Location: ' . $rootPath . '/' . $LANG . '/' . APP_DEFAULT_INSTRUMENT . '/' . ($_qs !== '' ? '?' . $_qs : ''), true, 302);
+  exit;
+}
+
 /* ===== 2. 読み込み ===== */
 require APP_ROOT . '/includes/midi.php';
 require APP_ROOT . '/includes/fingering.php';
