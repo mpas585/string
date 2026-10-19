@@ -1921,7 +1921,7 @@
    主役は「赤ペンの ○ / ×」。テストの丸付けと同じく、正解には赤い ○ を手書きの線で描く
    （.pen を stroke-dashoffset で描き進める）。そのほかは既存の札・ボタンに合わせて控えめにする。 */
 
-/* ドロワーのタブが5つになったので2段に折り返す（3＋2） */
+/* ドロワーのタブが6つになったので2段に折り返す（3＋3） */
 #modeSeg{flex-wrap:wrap}
 #modeSeg button{flex:1 1 30%}
 
@@ -1987,6 +1987,21 @@ body.landscape-layout .qz-stage.is-board svg{height:max(260px, calc(100vh - 52px
 .qz-exp{min-height:22px; margin-top:10px; font-size:14px; line-height:1.6; text-align:center; color:var(--muted)}
 .qz-exp.ok{color:var(--good)}
 .qz-exp.ng{color:#f08b70}
+.qz-exp-main{font-weight:700}
+/* 記号の補足（初心者向けの説明）。答えの下に、読みやすい左寄せの囲みで出す */
+.qz-tip{
+  display:flex; gap:8px; align-items:flex-start; margin-top:10px; padding:10px 12px;
+  text-align:left; font-size:13px; line-height:1.75; color:var(--ink);
+  background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:10px;
+}
+.qz-tip > span:first-child{flex:0 0 auto}
+
+/* 楽譜×指板：上に小さめの五線、下に指板。指板はそのぶん低くする */
+.qz-stage.is-combo{flex-direction:column; align-items:center; gap:8px}
+.qz-combo-staff{width:100%; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:0 4px}
+.qz-combo-staff svg{display:block; width:100%; height:auto; max-height:130px}
+.qz-stage.is-combo #qzBoardSvg{height:max(300px, min(560px, calc(100vh - 52px - 380px)))}
+body.landscape-layout .qz-stage.is-combo #qzBoardSvg{height:max(240px, calc(100vh - 52px - 230px))}
 
 /* 「次へ」。.mtv のスクロールの下辺に貼り付ける（指板クイズは指板が縦に長く、下まで行かないと押せないため） */
 .qz-nextbar{

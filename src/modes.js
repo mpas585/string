@@ -29,7 +29,7 @@ import { abortGame, renderGameSongs, syncStartBtn, maybeShowGameIntro } from './
 import { enterMetro, stopMetro } from './metronome.js';
 /* お気に入り（指板の左上のハート）。曲が変わるたびに出し入れする */
 import { syncFavBtn } from './favorites.js';
-/* 座学クイズ（楽譜クイズ squiz／指板クイズ bquiz）。画面は #quizView がまるごと受け持つ */
+/* 座学クイズ（楽譜クイズ squiz／指板クイズ bquiz／楽譜×指板クイズ cquiz）。画面は #quizView がまるごと受け持つ */
 import { enterQuiz, leaveQuiz, isQuizMode } from './quiz.js';
 
 export function render(){
@@ -61,7 +61,7 @@ export function render(){
   if(isQuizMode(ST.mode)){
     emptyEl.style.display='none';
     renderBoard(null);
-    setNowLine(tt(ST.mode==='bquiz' ? 'quiz.mode_board_s' : 'quiz.mode_staff_s'));
+    setNowLine(tt(ST.mode==='bquiz' ? 'quiz.mode_board_s' : ST.mode==='cquiz' ? 'quiz.mode_combo_s' : 'quiz.mode_staff_s'));
     renderLegend(); updateTransport(); updateChrome();
     return;
   }

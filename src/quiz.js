@@ -1,5 +1,5 @@
 /*
-  quiz.js — 座学クイズ（2種類）。画面は #quizView（includes/views/app.php）ひとつで完結する。
+  quiz.js — 座学クイズ（3種類）。画面は #quizView（includes/views/app.php）ひとつで完結する。
 
     楽譜クイズ（mode 'squiz'）
       ・五線に音符を1つ、または記号を1つ出し、4択で答える
@@ -11,7 +11,14 @@
       ・タップ位置は半音の 0.6 ぶんまでずれても正解にする（指で押すと少しずれるため）
       ・🔊 で出題中の音を聴ける（曲を練習と同じ音源 src/audio/synth.js の playNote）
 
-  どちらも5問続けて出し、1問20点の100点満点。最高点は端末に残す（Store 'cf:quiz:v1'）。
+    楽譜×指板クイズ（mode 'cquiz'）
+      ・五線に音符を1つ出し、その音を弾く場所を指板でタップ（楽譜クイズと指板クイズの合体）
+      ・こちらはオクターブも合わせる（同じ高さなら、どの弦で答えても正解）
+      ・音部記号・♯♭・範囲の設定は、楽譜クイズ／指板クイズと同じものを使う
+
+  記号問題は、答えたあとに初心者向けの補足（quiz.sym の3つ目）も出す。
+
+  どれも5問続けて出し、1問20点の100点満点。最高点は端末に残す（Store 'cf:quiz:v1'）。
   正解・不正解は画面全体に赤ペンの ○ / × を描いて知らせる（#qzFx）。
   次の問題へは自動では進まない。答えを見てから「次へ」（#qzNext）を押して進む。
 
@@ -39,11 +46,11 @@ const ACC = { '1': '♯', '-1': '♭', '0': '' };
 
 /* ===== 状態 ===== */
 const QZ = {
-  mode: null,                      /* 'squiz' | 'bquiz' | null */
+  mode: null,                      /* 'squiz' | 'bquiz' | 'cquiz' | null */
   qs: [], i: 0, results: [],
   lock: false, fxTimer: 0,
   cfg: { kind: 'mix', clef: null, acc: 'on', range: 'low' },
-  best: { squiz: null, bquiz: null },
+  best: { squiz: null, bquiz: null, cquiz: null },
 };
 let wired = false;
 
@@ -64,10 +71,12 @@ export function noteLabel(l, a){
   const v = tt('quiz.note_fmt', solfa()[l] + s, LET[l] + s);
   return (v === 'quiz.note_fmt') ? (LET[l] + s) : v;
 }
+/* [名前, 意味, 補足]。補足が無い辞書（古い言語ファイル）でも動くよう空文字で埋める */
 function symText(id){
   const m = dict().sym;
   const v = m && m[id];
-  return (Array.isArray(v) && v.length >= 2) ? v : [id, id];
+  if (!Array.isArray(v) || v.length < 2) return [id, id, ''];
+  return [v[0], v[1], v[2] || ''];
 }
 
 /* ===== 設定と最高点（端末に保存）===== */
@@ -92,7 +101,7 @@ function loadStore(){
       if (['low', 'oct'].includes(o.cfg.range)) QZ.cfg.range = o.cfg.range;
     }
     if (o && o.best){
-      for (const k of ['squiz', 'bquiz']) if (typeof o.best[k] === 'number') QZ.best[k] = o.best[k];
+      for (const k of ['squiz', 'bquiz', 'cquiz']) if (typeof o.best[k] === 'number') QZ.best[k] = o.best[k];
     }
   } catch (e) {}
 }
@@ -176,7 +185,7 @@ function makeNoteQ(used){
     const answer = noteLabel(l, a);
     return {
       type: 'note', q: tt('quiz.q_note'), svg: staffNoteSvg(clef, step, a),
-      opts: shuffle([answer, ...wrong]), answer, midi, exp: '',
+      opts: shuffle([answer, ...wrong]), answer, midi, exp: '', tip: '',
     };
   }
   return null;
@@ -188,12 +197,13 @@ function makeSymQ(used){
   const s = pool[rnd(pool.length)];
   used.add('s' + s.id);
   const same = shuffle(SYMBOLS.filter(x => x.group === s.group && x.id !== s.id)).slice(0, 3);
-  const [name, mean] = symText(s.id);
+  const [name, mean, tip] = symText(s.id);
   const answer = mean;
   return {
     type: 'sym', q: tt(s.group === 'val' ? 'quiz.q_val' : 'quiz.q_sym'), svg: symbolSvg(s.id, QZ.cfg.clef),
     opts: shuffle([answer, ...same.map(x => symText(x.id)[1])]), answer, midi: null,
     exp: (s.group === 'val') ? mean : tt('quiz.exp_sym', name, mean),
+    tip,
   };
 }
 
@@ -239,6 +249,63 @@ function makeBoardQ(used){
 function makeBoardRound(){
   const used = new Set(), out = [];
   for (let i = 0; i < N; i++){ const q = makeBoardQ(used); if (q) out.push(q); }
+  return out;
+}
+
+/* ===== 問題づくり：楽譜×指板クイズ =====
+   指板の範囲（開放〜 boardMax 半音）で弾ける音のうち、選んだ音部記号の五線に
+   加線3本までで書ける音から出す。正解は「同じ高さ」の場所すべて。 */
+const STEP_MIN = -5, STEP_MAX = 13;
+function comboPool(){
+  const clef = QZ.cfg.clef;
+  const baseDia = diatonicIndex(CLEFS[clef].base);
+  const max = boardMax();
+  const midis = new Set();
+  for (let s = 0; s < OPEN.length; s++) for (let off = 0; off <= max; off++) midis.add(OPEN[s] + off);
+  const pool = [];
+  for (const midi of midis){
+    const pc = ((midi % 12) + 12) % 12;
+    /* 書き方の候補：幹音ならそのまま。黒鍵の音は ♯ と ♭ の両方（♯♭を含める設定のときだけ） */
+    const spells = [];
+    for (let l = 0; l < 7; l++){
+      if (PC[l] === pc) spells.push([l, 0]);
+      else if (QZ.cfg.acc === 'on'){
+        if (pcOf(l, 1) === pc && validAcc(l, 1)) spells.push([l, 1]);
+        if (pcOf(l, -1) === pc && validAcc(l, -1)) spells.push([l, -1]);
+      }
+    }
+    for (const [l, a] of spells){
+      const step = diatonicIndex(midi - a) - baseDia;      /* 臨時記号を外した幹音の段 */
+      if (step < STEP_MIN || step > STEP_MAX) continue;
+      pool.push({ midi, l, a, step });
+    }
+  }
+  return pool;
+}
+function makeComboRound(){
+  const pool = shuffle(comboPool());
+  const usedMidi = new Set(), out = [];
+  const max = boardMax();
+  /* 幹音を多めに：♯♭付きは5問中2問まで */
+  let accN = 0;
+  for (const c of pool){
+    if (out.length >= N) break;
+    if (usedMidi.has(c.midi)) continue;
+    if (c.a !== 0 && accN >= 2) continue;
+    const inst = [];
+    for (let s = 0; s < OPEN.length; s++){
+      const off = c.midi - OPEN[s];
+      if (off >= 0 && off <= max) inst.push({ s, off, midi: c.midi });
+    }
+    if (!inst.length) continue;
+    usedMidi.add(c.midi);
+    if (c.a !== 0) accN++;
+    const label = noteLabel(c.l, c.a);
+    out.push({
+      type: 'combo', q: tt('quiz.q_combo'), svg: staffNoteSvg(QZ.cfg.clef, c.step, c.a),
+      label, l: c.l, a: c.a, inst, midi: c.midi, answer: label, exp: '', tip: '',
+    });
+  }
   return out;
 }
 
@@ -356,8 +423,9 @@ function bestText(){
 }
 function renderStart(){
   const t = $('qzTitle'), l = $('qzLead'), b = $('qzBest');
-  if (t) t.textContent = tt(QZ.mode === 'bquiz' ? 'quiz.mode_board' : 'quiz.mode_staff');
-  if (l) l.textContent = tt(QZ.mode === 'bquiz' ? 'quiz.lead_board' : 'quiz.lead_staff');
+  const key = (QZ.mode === 'bquiz') ? 'board' : (QZ.mode === 'cquiz') ? 'combo' : 'staff';
+  if (t) t.textContent = tt('quiz.mode_' + key);
+  if (l) l.textContent = tt('quiz.lead_' + key);
   if (b) b.textContent = bestText();
   syncChips();
   showPanel('start');
@@ -382,14 +450,20 @@ function renderQ(){
   renderDots();
   $('qzQ').textContent = q.q;
   const sub = $('qzSub');
-  sub.textContent = (q.type === 'board') ? tt('quiz.q_board_s') : '';
+  sub.textContent = (q.type === 'board') ? tt('quiz.q_board_s') : (q.type === 'combo') ? tt('quiz.q_combo_s') : '';
   const stage = $('qzStage');
-  stage.className = 'qz-stage ' + (q.type === 'board' ? 'is-board' : 'is-staff');
-  stage.innerHTML = (q.type === 'board') ? boardSvg() : q.svg;
-  const exp = $('qzExp'); exp.textContent = ''; exp.className = 'qz-exp';
+  if (q.type === 'combo'){
+    /* 上に五線（小さめ）、下に指板 */
+    stage.className = 'qz-stage is-board is-combo';
+    stage.innerHTML = `<div class="qz-combo-staff">${q.svg}</div>` + boardSvg();
+  } else {
+    stage.className = 'qz-stage ' + (q.type === 'board' ? 'is-board' : 'is-staff');
+    stage.innerHTML = (q.type === 'board') ? boardSvg() : q.svg;
+  }
+  setExp('', '', '');
   const nx = $('qzNext'); if (nx) nx.hidden = true;
   const opts = $('qzOpts');
-  if (q.type === 'board'){
+  if (q.type === 'board' || q.type === 'combo'){
     opts.innerHTML = '';
   } else {
     opts.innerHTML = q.opts.map((o, k) =>
@@ -399,11 +473,19 @@ function renderQ(){
 
 function startRound(){
   hideFx();
-  QZ.qs = (QZ.mode === 'bquiz') ? makeBoardRound() : makeStaffRound();
+  QZ.qs = (QZ.mode === 'bquiz') ? makeBoardRound() : (QZ.mode === 'cquiz') ? makeComboRound() : makeStaffRound();
   QZ.i = 0; QZ.results = [];
-  if (QZ.mode === 'bquiz') ensureInstruments();          /* 🔊 の初回が遅れないよう先に読み始める */
+  if (QZ.mode !== 'squiz') ensureInstruments();          /* 🔊 の初回が遅れないよう先に読み始める */
   showPanel('play');
   renderQ();
+}
+
+/* 答えの下の説明。main＝答え・意味、tip＝初心者向けの補足（記号問題だけ） */
+function setExp(main, tip, cls){
+  const exp = $('qzExp'); if (!exp) return;
+  exp.className = 'qz-exp' + (cls ? ' show ' + cls : '');
+  exp.innerHTML = (main ? `<div class="qz-exp-main">${esc(main)}</div>` : '') +
+                  (tip ? `<div class="qz-tip"><span aria-hidden="true">💡</span><span>${esc(tip)}</span></div>` : '');
 }
 
 /* 答えたあと：演出を出し、「次へ」を見せる（最後の問題は「結果を見る」） */
@@ -428,7 +510,7 @@ function nextQ(){
 /* 楽譜クイズ：選択肢を押した */
 function answerOpt(k){
   if (QZ.lock) return;
-  const q = QZ.qs[QZ.i]; if (!q || q.type === 'board') return;
+  const q = QZ.qs[QZ.i]; if (!q || q.type === 'board' || q.type === 'combo') return;
   QZ.lock = true;
   const pick = q.opts[k];
   const ok = (pick === q.answer);
@@ -439,17 +521,15 @@ function answerOpt(k){
     if (q.opts[j] === q.answer){ b.classList.add('is-ok'); if (m) m.innerHTML = PEN_O; }
     else if (j === k){ b.classList.add('is-ng'); if (m) m.innerHTML = PEN_X; }
   });
-  const exp = $('qzExp');
-  exp.textContent = q.exp || (ok ? '' : tt('quiz.answer_is', q.answer));
-  exp.className = 'qz-exp show ' + (ok ? 'ok' : 'ng');
+  setExp(q.exp || (ok ? '' : tt('quiz.answer_is', q.answer)), q.tip, ok ? 'ok' : 'ng');
   if (q.midi != null) playMidi(q.midi, 0.9);               /* 音符問題は答えた音を鳴らす */
   afterAnswer(ok);
 }
 
-/* 指板クイズ：指板をタップした */
+/* 指板クイズ／楽譜×指板クイズ：指板をタップした */
 function answerTap(e){
   if (QZ.lock) return;
-  const q = QZ.qs[QZ.i]; if (!q || q.type !== 'board') return;
+  const q = QZ.qs[QZ.i]; if (!q || (q.type !== 'board' && q.type !== 'combo')) return;
   const pos = boardPoint(e); if (!pos) return;
   QZ.lock = true;
   const hit = q.inst.find(p => p.s === pos.s && Math.abs(p.off - pos.off) <= TOL);
@@ -464,9 +544,12 @@ function answerTap(e){
     marks.innerHTML = parts.join('');
   }
   QZ.results[QZ.i] = { ok, q: q.q, answer: q.answer, pick: nameOfMidi(tMidi, q.a === -1) };
-  const exp = $('qzExp');
-  exp.textContent = ok ? '' : tt('quiz.you_tapped', nameOfMidi(tMidi, q.a === -1));
-  exp.className = 'qz-exp show ' + (ok ? 'ok' : 'ng');
+  if (q.type === 'combo'){
+    /* 楽譜×指板は音名を問題に出していないので、答えたあとに名前を見せる */
+    setExp(ok ? q.label : (tt('quiz.answer_is', q.label) + '　' + tt('quiz.you_tapped', nameOfMidi(tMidi, q.a === -1))), '', ok ? 'ok' : 'ng');
+  } else {
+    setExp(ok ? '' : tt('quiz.you_tapped', nameOfMidi(tMidi, q.a === -1)), '', ok ? 'ok' : 'ng');
+  }
   if (ok) playMidi(tMidi, 0.9);
   afterAnswer(ok);
 }
@@ -490,7 +573,7 @@ function finish(){
 }
 
 /* ===== 出入り（src/modes.js の setMode から）===== */
-export function isQuizMode(m){ return m === 'squiz' || m === 'bquiz'; }
+export function isQuizMode(m){ return m === 'squiz' || m === 'bquiz' || m === 'cquiz'; }
 export function enterQuiz(mode){
   if (!isQuizMode(mode)) return;
   if (!QZ.cfg.clef) loadStore();                          /* initQuiz より先に呼ばれたときの保険 */
@@ -537,6 +620,6 @@ export function initQuiz(){
   const qt = $('qzQuit');    if (qt) qt.addEventListener('click', () => { hideFx(); renderStart(); });
   const ls = $('qzListen');  if (ls) ls.addEventListener('click', () => {
     const q = QZ.qs[QZ.i];
-    if (q && q.type === 'board') playMidi(q.midi, 1.2);
+    if (q && (q.type === 'board' || q.type === 'combo')) playMidi(q.midi, 1.2);
   });
 }

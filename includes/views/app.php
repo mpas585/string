@@ -381,12 +381,15 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <button class="pk-card" data-mode="tuner">
     <span class="pk-ic">🎯</span><span class="pk-b"><?php e('ui.mode_tuner') ?><small><?php e('ui.mode_tuner_s') ?></small></span>
   </button>
-  <!-- 座学クイズ（2種類）。中身は src/quiz.js、画面は下の #quizView -->
+  <!-- 座学クイズ（3種類）。中身は src/quiz.js、画面は下の #quizView -->
   <button class="pk-card" data-mode="squiz">
     <span class="pk-ic">📖</span><span class="pk-b"><?php e('quiz.mode_staff') ?><small><?php e('quiz.mode_staff_s') ?></small></span>
   </button>
   <button class="pk-card" data-mode="bquiz">
     <span class="pk-ic">👆</span><span class="pk-b"><?php e('quiz.mode_board') ?><small><?php e('quiz.mode_board_s') ?></small></span>
+  </button>
+  <button class="pk-card" data-mode="cquiz">
+    <span class="pk-ic">🎼</span><span class="pk-b"><?php e('quiz.mode_combo') ?><small><?php e('quiz.mode_combo_s') ?></small></span>
   </button>
 
   <!-- 説明（モード選択の下） -->
@@ -903,6 +906,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
       <button data-mode="squiz"><?php e('quiz.seg_staff') ?></button>
       <button data-mode="bquiz"><?php e('quiz.seg_board') ?></button>
+      <button data-mode="cquiz"><?php e('quiz.seg_combo') ?></button>
     </div>
   </div>
 
@@ -1015,6 +1019,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   </div>
   <div data-m="bquiz">
     <div class="seclbl"><?php e('quiz.mode_board') ?></div>
+    <div class="sub"><?php e('quiz.drawer_note') ?></div>
+  </div>
+  <div data-m="cquiz">
+    <div class="seclbl"><?php e('quiz.mode_combo') ?></div>
     <div class="sub"><?php e('quiz.drawer_note') ?></div>
   </div>
 
@@ -1183,13 +1191,14 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 </div>
 
 <!-- ========== 座学クイズ（画面本体）==========
-     data-m="squiz bquiz" なので、どちらかのクイズのときだけ出る（src/modes.js の applyMode）。
-     中の data-m="squiz" / "bquiz" も同じ仕組みで、クイズの種類ごとに出し分ける。
+     data-m="squiz bquiz cquiz" なので、どれかのクイズのときだけ出る（src/modes.js の applyMode）。
+     中の data-m も同じ仕組みで、クイズの種類ごとに出し分ける
+     （楽譜×指板 cquiz は、音部記号＝楽譜クイズ側、♯♭・範囲＝指板クイズ側の札を両方使う）。
      ・#qzStart … 設定とスタート（札の data-qkey は src/quiz.js の QZ.cfg のキー）
      ・#qzPlay  … 出題中。#qzStage に五線譜か指板の絵、#qzOpts に4択
      ・#qzRes   … 結果（5問・100点満点）
      問題ごとに変わる文言は src/quiz.js が辞書（window.T.quiz）から入れる。 -->
-<div id="quizView" class="mtv qzv m-hide" data-m="squiz bquiz">
+<div id="quizView" class="mtv qzv m-hide" data-m="squiz bquiz cquiz">
   <div class="qz-in">
 
     <section id="qzStart" class="qz-start">
@@ -1203,6 +1212,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
           <button type="button" data-v="note"><?php e('quiz.kind_note') ?></button>
           <button type="button" data-v="sym"><?php e('quiz.kind_sym') ?></button>
         </div>
+      </div>
+      <div data-m="squiz cquiz">
         <div class="mt-lbl"><?php e('quiz.set_clef') ?></div>
         <div class="mt-chips" data-qkey="clef" role="group" aria-label="<?php e('quiz.set_clef') ?>">
           <button type="button" data-v="treble"><?php e('quiz.clef_treble') ?></button>
@@ -1211,7 +1222,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
         </div>
       </div>
 
-      <div data-m="bquiz">
+      <div data-m="bquiz cquiz">
         <div class="mt-lbl"><?php e('quiz.set_acc') ?></div>
         <div class="mt-chips" data-qkey="acc" role="group" aria-label="<?php e('quiz.set_acc') ?>">
           <button type="button" data-v="on"><?php e('quiz.acc_on') ?></button>
@@ -1237,7 +1248,7 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       </div>
       <div id="qzQ" class="qz-q" aria-live="polite"></div>
       <div id="qzSub" class="qz-sub"></div>
-      <div class="qz-listenrow" data-m="bquiz">
+      <div class="qz-listenrow" data-m="bquiz cquiz">
         <button type="button" id="qzListen" class="ghost qz-listen"><?php e('quiz.listen') ?></button>
       </div>
       <div id="qzStage" class="qz-stage"></div>
