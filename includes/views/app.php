@@ -381,6 +381,13 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <button class="pk-card" data-mode="tuner">
     <span class="pk-ic">🎯</span><span class="pk-b"><?php e('ui.mode_tuner') ?><small><?php e('ui.mode_tuner_s') ?></small></span>
   </button>
+  <!-- 座学クイズ（2種類）。中身は src/quiz.js、画面は下の #quizView -->
+  <button class="pk-card" data-mode="squiz">
+    <span class="pk-ic">📖</span><span class="pk-b"><?php e('quiz.mode_staff') ?><small><?php e('quiz.mode_staff_s') ?></small></span>
+  </button>
+  <button class="pk-card" data-mode="bquiz">
+    <span class="pk-ic">👆</span><span class="pk-b"><?php e('quiz.mode_board') ?><small><?php e('quiz.mode_board_s') ?></small></span>
+  </button>
 
   <!-- 説明（モード選択の下） -->
   <section class="pk-desc">
@@ -894,6 +901,8 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 <?php endif; ?>
       <button data-mode="metro"><?php e('ui.seg_metro') ?></button>
       <button data-mode="tuner"><?php e('ui.seg_tuner') ?></button>
+      <button data-mode="squiz"><?php e('quiz.seg_staff') ?></button>
+      <button data-mode="bquiz"><?php e('quiz.seg_board') ?></button>
     </div>
   </div>
 
@@ -996,6 +1005,17 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
   <div data-m="metro">
     <div class="seclbl"><?php e('ui.mode_metro') ?></div>
     <div class="sub"><?php e('ui.metro_drawer_note') ?></div>
+  </div>
+
+  <!-- ========== 座学クイズ ==========
+       メトロノームと同じく、操作はすべて画面のまん中（#quizView）にある。ここは案内だけ。 -->
+  <div data-m="squiz">
+    <div class="seclbl"><?php e('quiz.mode_staff') ?></div>
+    <div class="sub"><?php e('quiz.drawer_note') ?></div>
+  </div>
+  <div data-m="bquiz">
+    <div class="seclbl"><?php e('quiz.mode_board') ?></div>
+    <div class="sub"><?php e('quiz.drawer_note') ?></div>
   </div>
 
   <!-- ========== 共通：推奨ポジション ==========
@@ -1161,6 +1181,88 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
 
   </div>
 </div>
+
+<!-- ========== 座学クイズ（画面本体）==========
+     data-m="squiz bquiz" なので、どちらかのクイズのときだけ出る（src/modes.js の applyMode）。
+     中の data-m="squiz" / "bquiz" も同じ仕組みで、クイズの種類ごとに出し分ける。
+     ・#qzStart … 設定とスタート（札の data-qkey は src/quiz.js の QZ.cfg のキー）
+     ・#qzPlay  … 出題中。#qzStage に五線譜か指板の絵、#qzOpts に4択
+     ・#qzRes   … 結果（5問・100点満点）
+     問題ごとに変わる文言は src/quiz.js が辞書（window.T.quiz）から入れる。 -->
+<div id="quizView" class="mtv qzv m-hide" data-m="squiz bquiz">
+  <div class="qz-in">
+
+    <section id="qzStart" class="qz-start">
+      <h2 id="qzTitle" class="qz-title"></h2>
+      <p id="qzLead" class="qz-lead"></p>
+
+      <div data-m="squiz">
+        <div class="mt-lbl"><?php e('quiz.set_kind') ?></div>
+        <div class="mt-chips" data-qkey="kind" role="group" aria-label="<?php e('quiz.set_kind') ?>">
+          <button type="button" data-v="mix"><?php e('quiz.kind_mix') ?></button>
+          <button type="button" data-v="note"><?php e('quiz.kind_note') ?></button>
+          <button type="button" data-v="sym"><?php e('quiz.kind_sym') ?></button>
+        </div>
+        <div class="mt-lbl"><?php e('quiz.set_clef') ?></div>
+        <div class="mt-chips" data-qkey="clef" role="group" aria-label="<?php e('quiz.set_clef') ?>">
+          <button type="button" data-v="treble"><?php e('quiz.clef_treble') ?></button>
+          <button type="button" data-v="bass"><?php e('quiz.clef_bass') ?></button>
+          <button type="button" data-v="alto"><?php e('quiz.clef_alto') ?></button>
+        </div>
+      </div>
+
+      <div data-m="bquiz">
+        <div class="mt-lbl"><?php e('quiz.set_acc') ?></div>
+        <div class="mt-chips" data-qkey="acc" role="group" aria-label="<?php e('quiz.set_acc') ?>">
+          <button type="button" data-v="on"><?php e('quiz.acc_on') ?></button>
+          <button type="button" data-v="off"><?php e('quiz.acc_off') ?></button>
+        </div>
+        <div class="mt-lbl"><?php e('quiz.set_range') ?></div>
+        <div class="mt-chips" data-qkey="range" role="group" aria-label="<?php e('quiz.set_range') ?>">
+          <button type="button" data-v="low"><?php e('quiz.range_low') ?></button>
+          <button type="button" data-v="oct"><?php e('quiz.range_oct') ?></button>
+        </div>
+      </div>
+
+      <div id="qzBest" class="qz-best"></div>
+      <button type="button" id="qzGo" class="primary qz-go"><?php e('quiz.start') ?></button>
+    </section>
+
+    <section id="qzPlay" class="qz-play" hidden>
+      <div class="qz-head">
+        <span id="qzNum" class="qz-num"></span>
+        <span id="qzDots" class="qz-dots" aria-hidden="true"></span>
+        <b id="qzPts" class="qz-pts"></b>
+        <button type="button" id="qzQuit" class="ghost qz-quit"><?php e('quiz.quit') ?></button>
+      </div>
+      <div id="qzQ" class="qz-q" aria-live="polite"></div>
+      <div id="qzSub" class="qz-sub"></div>
+      <div class="qz-listenrow" data-m="bquiz">
+        <button type="button" id="qzListen" class="ghost qz-listen"><?php e('quiz.listen') ?></button>
+      </div>
+      <div id="qzStage" class="qz-stage"></div>
+      <div id="qzOpts" class="qz-opts" data-m="squiz"></div>
+      <div id="qzExp" class="qz-exp" aria-live="polite"></div>
+    </section>
+
+    <section id="qzRes" class="qz-res" hidden>
+      <div class="qz-res-t"><?php e('quiz.res_title') ?></div>
+      <div class="qz-res-score"><b id="qzResScore">0</b><span><?php e('quiz.point') ?></span></div>
+      <div id="qzResNew" class="qz-res-new" hidden><?php e('quiz.new_best') ?></div>
+      <div id="qzResCount" class="qz-res-count"></div>
+      <div id="qzResMsg" class="qz-res-msg"></div>
+      <ol id="qzResList" class="qz-res-list"></ol>
+      <div id="qzResBest" class="qz-best"></div>
+      <div class="qz-res-btns">
+        <button type="button" id="qzRetry" class="primary"><?php e('quiz.retry') ?></button>
+        <button type="button" id="qzBack" class="ghost"><?php e('quiz.back') ?></button>
+      </div>
+    </section>
+
+  </div>
+</div>
+<!-- 正解・不正解の演出（画面全体に赤ペンの ○ / ×）。押せない飾りなので pointer-events:none -->
+<div id="qzFx" class="qz-fx" aria-hidden="true"></div>
 
 <div id="toast" class="toast"></div>
 

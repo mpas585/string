@@ -29,6 +29,8 @@ import { abortGame, renderGameSongs, syncStartBtn, maybeShowGameIntro } from './
 import { enterMetro, stopMetro } from './metronome.js';
 /* お気に入り（指板の左上のハート）。曲が変わるたびに出し入れする */
 import { syncFavBtn } from './favorites.js';
+/* 座学クイズ（楽譜クイズ squiz／指板クイズ bquiz）。画面は #quizView がまるごと受け持つ */
+import { enterQuiz, leaveQuiz, isQuizMode } from './quiz.js';
 
 export function render(){
   const picker  = document.getElementById('picker');
@@ -51,6 +53,15 @@ export function render(){
     emptyEl.style.display='none';
     renderBoard(null);
     setNowLine(tt('ui.mode_metro_s'));
+    renderLegend(); updateTransport(); updateChrome();
+    return;
+  }
+
+  /* 座学クイズ → メトロノームと同じく指板も譜面も使わない。#quizView が画面をまるごと受け持つ */
+  if(isQuizMode(ST.mode)){
+    emptyEl.style.display='none';
+    renderBoard(null);
+    setNowLine(tt(ST.mode==='bquiz' ? 'quiz.mode_board_s' : 'quiz.mode_staff_s'));
     renderLegend(); updateTransport(); updateChrome();
     return;
   }
@@ -113,6 +124,8 @@ export function setMode(mode, keepDrawer){
   if(ST.mode==='tuner' && mode!=='tuner') stopTuner();
   /* 採点ゲームを離れる → 録音していたら止める（点数は出さずに捨てる） */
   if(ST.mode==='game' && mode!=='game') abortGame(true);
+  /* 座学クイズを離れる → 次の問題へ進むタイマーと演出を止め、クイズ用の音のバスを外す */
+  if(isQuizMode(ST.mode)) leaveQuiz();
 
   ST.mode=mode;
   ST.events=[]; ST.measures=[]; ST.selected=null; ST.current=null;
@@ -162,6 +175,15 @@ export function setMode(mode, keepDrawer){
     closeDrawer();
     render();
     enterMetro();
+
+  } else if(isQuizMode(mode)){
+    /* クイズは譜面を持たない。伴奏も使わない。
+       操作は画面のまん中にあるので、ドロワー内のタブから入った時（keepDrawer）も閉じる */
+    ST.enjoy=false;
+    document.getElementById('enjoySw').classList.remove('on');
+    closeDrawer();
+    render();
+    enterQuiz(mode);
 
   } else if(mode==='tuner'){
     ST.enjoy=false;

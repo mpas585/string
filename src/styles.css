@@ -1915,3 +1915,128 @@
   stroke-width: 3px;
   stroke-linejoin: round;
 }
+
+/* ===== 座学クイズ（src/quiz.js / includes/views/app.php の #quizView）=====
+   置き場所と背景はメトロノーム（.mtv）をそのまま使う。
+   主役は「赤ペンの ○ / ×」。テストの丸付けと同じく、正解には赤い ○ を手書きの線で描く
+   （.pen を stroke-dashoffset で描き進める）。そのほかは既存の札・ボタンに合わせて控えめにする。 */
+
+/* ドロワーのタブが5つになったので2段に折り返す（3＋2） */
+#modeSeg{flex-wrap:wrap}
+#modeSeg button{flex:1 1 30%}
+
+.qzv .qz-in{width:100%; max-width:460px}
+.qz-title{margin:4px 0 6px; font-size:22px; font-weight:800; color:var(--ink); letter-spacing:.04em}
+.qz-lead{margin:0 0 16px; font-size:13px; line-height:1.75; color:var(--muted)}
+.qz-best{margin:6px 0 12px; font-size:12px; color:var(--faint); text-align:center}
+.qz-go{width:100%; justify-content:center; min-height:56px; font-size:17px; font-weight:800; margin-top:4px}
+
+/* 出題中の見出し：何問目・進み具合・点数・やめる */
+.qz-head{display:flex; align-items:center; gap:10px; margin:0 0 12px}
+.qz-num{font-size:12px; color:var(--muted); white-space:nowrap}
+.qz-dots{display:flex; gap:6px; flex:1; justify-content:center}
+.qz-dots i{width:11px; height:11px; border-radius:50%; background:var(--panel2); border:1px solid var(--line)}
+.qz-dots i.cur{border-color:var(--accent); box-shadow:0 0 0 2px rgba(231,178,75,.25)}
+.qz-dots i.ok{background:var(--good); border-color:var(--good)}
+.qz-dots i.ng{background:var(--danger); border-color:var(--danger)}
+.qz-pts{font-size:13px; color:var(--accent); white-space:nowrap}
+.qz-quit{min-height:0; padding:5px 10px; font-size:12px}
+
+.qz-q{font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.4; margin:2px 0 2px}
+.qz-sub{font-size:12px; color:var(--muted); text-align:center; min-height:1em; margin-bottom:8px}
+.qz-listenrow{display:flex; justify-content:center; margin:0 0 8px}
+.qz-listen{min-height:42px; padding:8px 18px; font-size:14px}
+
+/* 五線譜は紙のように明るい面には載せない（アプリ全体が暗いので浮いてしまう）。枠だけ付ける */
+.qz-stage.is-staff{background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:4px 6px; margin-bottom:12px}
+.qz-stage.is-staff svg{display:block; width:100%; height:auto}
+/* 指板は画面の高さに合わせる。指で押す面なのでスクロールやズームの身振りを止める */
+.qz-stage.is-board{display:flex; justify-content:center; margin-bottom:8px}
+.qz-stage.is-board svg{
+  display:block; width:auto; max-width:100%;
+  height:max(320px, min(660px, calc(100vh - 52px - 250px)));
+  touch-action:none; -webkit-user-select:none; user-select:none; cursor:pointer;
+}
+body.landscape-layout .qz-stage.is-board svg{height:max(260px, calc(100vh - 52px - 170px))}
+
+/* 4択 */
+.qz-opts{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.qz-opt{
+  position:relative; justify-content:center; text-align:center; min-height:62px; padding:10px 8px;
+  font-size:15px; font-weight:700; line-height:1.35; color:var(--ink);
+  background:var(--panel2); border:1px solid var(--line); border-radius:12px; cursor:pointer;
+}
+.qz-opt:active{transform:translateY(1px); border-color:var(--accent)}
+.qz-opt:disabled{opacity:1}                         /* 答えたあとも字は薄くしない（○×を読ませる） */
+.qz-opt.is-ok{border-color:var(--good); background:#1e2a1f}
+.qz-opt.is-ng{color:var(--muted)}
+.qz-opt-t{position:relative; z-index:1}
+.qz-mark{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:2}
+.qz-mark svg{width:auto; height:118%; overflow:visible}
+.qz-mark .pen{stroke-width:7}
+
+/* 赤ペン（○ も × も同じ線） */
+.pen{
+  fill:none; stroke:#e5483b; stroke-width:9; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:100; stroke-dashoffset:100;
+  animation:qzpen .36s cubic-bezier(.3,.6,.3,1) forwards;
+}
+.pen2{animation-delay:.16s}
+@keyframes qzpen{to{stroke-dashoffset:0}}
+
+.qz-exp{min-height:22px; margin-top:10px; font-size:14px; line-height:1.6; text-align:center; color:var(--muted)}
+.qz-exp.ok{color:var(--good)}
+.qz-exp.ng{color:#f08b70}
+
+/* 指板の上の印 */
+.qzm circle{stroke:#10240f; stroke-width:2}
+.qzm-ans circle{fill:var(--good); opacity:.95; animation:qzpop .28s ease-out both}
+.qzm-hit circle{fill:var(--accent); stroke:#241a08; animation:qzpop .28s ease-out both}
+.qzm-ng path{fill:none; stroke:#e5483b; stroke-width:4.5; stroke-linecap:round}
+@keyframes qzpop{from{transform:scale(.3); opacity:0} to{transform:scale(1); opacity:1}}
+.qzm circle{transform-box:fill-box; transform-origin:center}
+
+/* ===== 画面全体の演出 ===== */
+.qz-fx{position:fixed; inset:0; z-index:70; pointer-events:none; display:none; align-items:center; justify-content:center}
+.qz-fx.show{display:flex}
+.qz-fx.ok{background:radial-gradient(circle at 50% 45%, rgba(231,178,75,.20), rgba(21,17,12,.55) 70%); animation:qzbg 1.15s ease forwards}
+.qz-fx.ng{background:radial-gradient(circle at 50% 45%, rgba(217,105,74,.20), rgba(21,17,12,.55) 70%); animation:qzbg 1.4s ease forwards}
+.qz-fx-in{position:relative; width:min(64vw, 300px); aspect-ratio:1/1; display:flex; align-items:center; justify-content:center}
+.qz-fx.ok .qz-fx-in{animation:qzin 1.15s ease forwards}
+.qz-fx.ng .qz-fx-in{animation:qzin 1.4s ease forwards}
+.qz-fx-in svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.qz-fx .pen{stroke-width:8; filter:drop-shadow(0 3px 10px rgba(0,0,0,.45))}
+.qz-fx-in b{
+  position:relative; font-size:clamp(36px, 11vw, 56px); font-weight:900; letter-spacing:.04em;
+  color:#fff5e0; text-shadow:0 3px 0 rgba(0,0,0,.45), 0 0 26px rgba(231,178,75,.55);
+}
+.qz-fx.ng .qz-fx-in b{color:#ffe3da; text-shadow:0 3px 0 rgba(0,0,0,.45), 0 0 22px rgba(217,105,74,.55); animation:qzshake .42s ease .1s both}
+@keyframes qzbg{0%{opacity:0} 10%{opacity:1} 78%{opacity:1} 100%{opacity:0}}
+@keyframes qzin{0%{transform:scale(.72); opacity:0} 12%{transform:scale(1.05); opacity:1} 22%{transform:scale(1)} 80%{opacity:1} 100%{opacity:0; transform:scale(1.03)}}
+@keyframes qzshake{0%,100%{transform:translateX(0)} 20%{transform:translateX(-9px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(3px)}}
+
+/* ===== 結果 ===== */
+.qz-res{text-align:center}
+.qz-res-t{font-size:13px; color:var(--muted); letter-spacing:.08em; margin-top:4px}
+.qz-res-score{display:flex; align-items:baseline; justify-content:center; gap:6px; margin:2px 0 2px}
+.qz-res-score b{font-size:76px; line-height:1; font-weight:900; color:var(--accent); font-variant-numeric:tabular-nums}
+.qz-res-score span{font-size:16px; color:var(--muted)}
+.qz-res-new{display:inline-block; margin:4px 0 2px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:800;
+  color:#241a08; background:var(--accent)}
+.qz-res-count{font-size:15px; font-weight:700; color:var(--ink); margin-top:4px}
+.qz-res-msg{font-size:13px; color:var(--muted); margin:4px 0 12px}
+.qz-res-list{list-style:none; margin:0 0 6px; padding:0; text-align:left; border-top:1px solid var(--line)}
+.qz-res-list li{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--line); font-size:13px}
+.qz-res-list .qz-rl-m{flex:0 0 22px; font-size:18px; font-weight:900; text-align:center}
+.qz-res-list li.ok .qz-rl-m{color:#e5483b}
+.qz-res-list li.ng .qz-rl-m{color:var(--faint)}
+.qz-res-list .qz-rl-q{flex:1; min-width:0; color:var(--muted)}
+.qz-res-list b{color:var(--ink); text-align:right}
+.qz-res-btns{display:flex; gap:10px; margin-top:6px}
+.qz-res-btns button{flex:1; justify-content:center; min-height:52px; font-size:15px}
+
+@media (prefers-reduced-motion: reduce){
+  .pen{animation-duration:.01s}
+  .qz-fx.ok, .qz-fx.ng, .qz-fx .qz-fx-in, .qz-fx.ng .qz-fx-in b, .qzm-ans circle, .qzm-hit circle{animation-duration:.01s}
+  .qz-fx.show{background:rgba(21,17,12,.4)}
+}

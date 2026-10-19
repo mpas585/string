@@ -33,6 +33,8 @@ import { initShares, loadShared, openShare, doShare, unshareSong,
 import { pickGameSong, startGame, beginRun, cancelGameCheck, abortGame, retryGame, renderGameSongs } from './game.js';
 /* メトロノーム（採点ゲームがあった場所）。画面ごと src/metronome.js が受け持つ */
 import { initMetro, stopMetro } from './metronome.js';
+/* 座学クイズ（楽譜クイズ／指板クイズ）。画面ごと src/quiz.js が受け持つ */
+import { initQuiz } from './quiz.js';
 import './pwa.js';   /* Service Worker 登録と「ホーム画面に追加」。配線は pwa.js 側で完結 */
 
 /* ===== イベント配線 ＋ 初期化（元 L3522–3794、無改変）===== */
@@ -683,6 +685,8 @@ document.querySelectorAll('#mUpDup [data-dkclose]').forEach(b=> b.addEventListen
   initPracticeUI();
   /* メトロノーム。札の組み立てとボタンの配線（設定を読んだあとに呼ぶ） */
   initMetro();
+  /* 座学クイズ。ボタンの配線と、端末に残した設定・最高点の読み込み */
+  initQuiz();
 
   /* 紹介ページ（/{言語}/{楽器}/?song=<曲id>）からの曲指定。
      「この曲を◯◯で練習する」から来たときは、入口（モード選択）を飛ばして
