@@ -1243,6 +1243,12 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       <div id="qzStage" class="qz-stage"></div>
       <div id="qzOpts" class="qz-opts" data-m="squiz"></div>
       <div id="qzExp" class="qz-exp" aria-live="polite"></div>
+      <!-- 答えたあとに出る「次へ」。自動では進めず、利用者のペースで次の問題へ。
+           最後の問題では「結果を見る」になる（文言は src/quiz.js が入れ替える）。
+           指板クイズは指板が縦に長いので、下辺に貼り付けて常に押せるようにする（.qz-nextbar） -->
+      <div class="qz-nextbar">
+        <button type="button" id="qzNext" class="primary qz-next" hidden><?php e('quiz.next') ?></button>
+      </div>
     </section>
 
     <section id="qzRes" class="qz-res" hidden>

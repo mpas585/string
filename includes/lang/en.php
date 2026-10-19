@@ -498,6 +498,8 @@ return [
     'retry'        => 'Try again',
     'back'         => 'Back to settings',
     'quit'         => 'Quit',
+    'next'         => 'Next',
+    'to_result'    => 'See result',
     'progress'     => '%1$s / %2$s',
     'best'         => 'Best %s pts',
     'best_none'    => 'No record yet',

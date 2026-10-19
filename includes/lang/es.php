@@ -501,6 +501,8 @@ return [
     'retry'        => 'Otra vez',
     'back'         => 'Volver a ajustes',
     'quit'         => 'Salir',
+    'next'         => 'Siguiente',
+    'to_result'    => 'Ver resultado',
     'progress'     => '%1$s / %2$s',
     'best'         => 'Mejor: %s pts',
     'best_none'    => 'Aún sin récord',

@@ -507,6 +507,8 @@ return [
     'retry'        => 'もう一度',
     'back'         => '設定に戻る',
     'quit'         => 'やめる',
+    'next'         => '次へ',
+    'to_result'    => '結果を見る',
     'progress'     => '%1$s / %2$s 問',
     'best'         => 'ベスト %s 点',
     'best_none'    => 'まだ記録がありません',

@@ -1988,6 +1988,15 @@ body.landscape-layout .qz-stage.is-board svg{height:max(260px, calc(100vh - 52px
 .qz-exp.ok{color:var(--good)}
 .qz-exp.ng{color:#f08b70}
 
+/* 「次へ」。.mtv のスクロールの下辺に貼り付ける（指板クイズは指板が縦に長く、下まで行かないと押せないため） */
+.qz-nextbar{
+  position:sticky; bottom:calc(-24px - env(safe-area-inset-bottom)); z-index:3;
+  padding:10px 0 calc(24px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg, transparent, var(--bg) 34%);
+}
+.qz-nextbar:has(.qz-next[hidden]){padding:0; background:none}
+.qz-next{width:100%; justify-content:center; min-height:54px; font-size:17px; font-weight:800}
+
 /* 指板の上の印 */
 .qzm circle{stroke:#10240f; stroke-width:2}
 .qzm-ans circle{fill:var(--good); opacity:.95; animation:qzpop .28s ease-out both}

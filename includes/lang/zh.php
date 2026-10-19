@@ -498,6 +498,8 @@ return [
     'retry'        => '再来一次',
     'back'         => '返回设置',
     'quit'         => '结束',
+    'next'         => '下一题',
+    'to_result'    => '查看结果',
     'progress'     => '%1$s / %2$s 题',
     'best'         => '最佳 %s 分',
     'best_none'    => '还没有记录',

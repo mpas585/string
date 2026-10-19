@@ -12,7 +12,8 @@
       ・🔊 で出題中の音を聴ける（曲を練習と同じ音源 src/audio/synth.js の playNote）
 
   どちらも5問続けて出し、1問20点の100点満点。最高点は端末に残す（Store 'cf:quiz:v1'）。
-  正解・不正解は画面全体に赤ペンの ○ / × を描いて知らせ（#qzFx）、少し待って次の問題へ進む。
+  正解・不正解は画面全体に赤ペンの ○ / × を描いて知らせる（#qzFx）。
+  次の問題へは自動では進まない。答えを見てから「次へ」（#qzNext）を押して進む。
 
   モードの出入りは src/modes.js の setMode から enterQuiz / leaveQuiz を呼ぶ。
   ボタンの配線は initQuiz（src/main.js が起動時に1回呼ぶ）。
@@ -29,8 +30,6 @@ import { SYMBOLS, symbolSvg, staffNoteSvg } from './quiz-symbols.js';
 const N = 5;                       /* 1回の問題数 */
 const PTS = 20;                    /* 1問の点数 */
 const TOL = 0.6;                   /* 指板クイズ：許すずれ（半音） */
-const WAIT_OK = 1250;              /* 正解のあと次へ進むまで（ms） */
-const WAIT_NG = 2300;              /* 不正解のあと。正しい答えを見る時間を長めに取る */
 const STORE_KEY = 'cf:quiz:v1';
 
 /* 音名。度数（C=0..B=6）と、その半音位置 */
@@ -42,7 +41,7 @@ const ACC = { '1': '♯', '-1': '♭', '0': '' };
 const QZ = {
   mode: null,                      /* 'squiz' | 'bquiz' | null */
   qs: [], i: 0, results: [],
-  lock: false, timer: 0, fxTimer: 0,
+  lock: false, fxTimer: 0,
   cfg: { kind: 'mix', clef: null, acc: 'on', range: 'low' },
   best: { squiz: null, bquiz: null },
 };
@@ -388,6 +387,7 @@ function renderQ(){
   stage.className = 'qz-stage ' + (q.type === 'board' ? 'is-board' : 'is-staff');
   stage.innerHTML = (q.type === 'board') ? boardSvg() : q.svg;
   const exp = $('qzExp'); exp.textContent = ''; exp.className = 'qz-exp';
+  const nx = $('qzNext'); if (nx) nx.hidden = true;
   const opts = $('qzOpts');
   if (q.type === 'board'){
     opts.innerHTML = '';
@@ -398,7 +398,6 @@ function renderQ(){
 }
 
 function startRound(){
-  clearTimeout(QZ.timer);
   hideFx();
   QZ.qs = (QZ.mode === 'bquiz') ? makeBoardRound() : makeStaffRound();
   QZ.i = 0; QZ.results = [];
@@ -407,13 +406,23 @@ function startRound(){
   renderQ();
 }
 
+/* 答えたあと：演出を出し、「次へ」を見せる（最後の問題は「結果を見る」） */
 function afterAnswer(ok){
   showFx(ok);
   renderDots();
-  QZ.timer = setTimeout(() => {
-    QZ.i++;
-    if (QZ.i < QZ.qs.length) renderQ(); else finish();
-  }, ok ? WAIT_OK : WAIT_NG);
+  const nx = $('qzNext');
+  if (nx){
+    nx.textContent = tt((QZ.i + 1 < QZ.qs.length) ? 'quiz.next' : 'quiz.to_result');
+    nx.hidden = false;
+    try { nx.focus({ preventScroll: true }); } catch (e) {}
+  }
+}
+/* 「次へ」：答える前（lock されていない）には何もしない */
+function nextQ(){
+  if (!QZ.lock) return;
+  hideFx();
+  QZ.i++;
+  if (QZ.i < QZ.qs.length) renderQ(); else finish();
 }
 
 /* 楽譜クイズ：選択肢を押した */
@@ -485,14 +494,12 @@ export function isQuizMode(m){ return m === 'squiz' || m === 'bquiz'; }
 export function enterQuiz(mode){
   if (!isQuizMode(mode)) return;
   if (!QZ.cfg.clef) loadStore();                          /* initQuiz より先に呼ばれたときの保険 */
-  clearTimeout(QZ.timer);
   hideFx();
   QZ.mode = mode;
   QZ.qs = []; QZ.i = 0; QZ.results = []; QZ.lock = false;
   renderStart();
 }
 export function leaveQuiz(){
-  clearTimeout(QZ.timer);
   hideFx();
   audioOff();
   QZ.mode = null; QZ.qs = []; QZ.results = []; QZ.lock = false;
@@ -525,8 +532,9 @@ export function initQuiz(){
   });
   const go = $('qzGo');      if (go) go.addEventListener('click', startRound);
   const re = $('qzRetry');   if (re) re.addEventListener('click', startRound);
-  const bk = $('qzBack');    if (bk) bk.addEventListener('click', () => { clearTimeout(QZ.timer); hideFx(); renderStart(); });
-  const qt = $('qzQuit');    if (qt) qt.addEventListener('click', () => { clearTimeout(QZ.timer); hideFx(); renderStart(); });
+  const nx = $('qzNext');    if (nx) nx.addEventListener('click', nextQ);
+  const bk = $('qzBack');    if (bk) bk.addEventListener('click', () => { hideFx(); renderStart(); });
+  const qt = $('qzQuit');    if (qt) qt.addEventListener('click', () => { hideFx(); renderStart(); });
   const ls = $('qzListen');  if (ls) ls.addEventListener('click', () => {
     const q = QZ.qs[QZ.i];
     if (q && q.type === 'board') playMidi(q.midi, 1.2);
