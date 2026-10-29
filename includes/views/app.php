@@ -974,6 +974,10 @@ if (!defined('STRING_APP')) { http_response_code(403); exit; }
       </div>
       <div id="tracks" class="tracks">
         <div id="trackList"></div>
+        <!-- メロディガイドが決まると出る（出し入れは src/songs.js の syncTrackPlay） -->
+        <div class="row controls">
+          <button type="button" id="trackPlay" class="primary" style="flex:1; justify-content:center; min-height:46px" hidden><?php e('ui.track_play') ?></button>
+        </div>
         <div class="row controls">
           <button id="skipStart" class="ghost" style="flex:1; justify-content:center"><?php e('ui.skip_start') ?></button>
         </div>

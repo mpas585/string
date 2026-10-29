@@ -12,7 +12,7 @@ import { applyMode, render, selectEvent, setFinger, setLead, setMode, setOctave,
 import { acquireWake, beatFromSeekEvent, currentBeat, flashMeasure, isRotated, playRange, releaseWake, seekPreview, seekTo, setSeekHead, startPlay, stopPlay, setTempo } from './audio/scheduler.js';
 import { applyVolumes } from './audio/context.js';
 import { loadSettings, saveSettings, syncSettingsUI, syncCountSeg, closeGear, toggleGear, openGearPage, openDrawer, closeDrawer, openDockModal, closeDockModal, setScoreSub, resetFingering } from './drawer.js';
-import { loadSong, SONGS, loadSongManifest, selectTrack, setTrackRole, setTrackInst, skipToStart, loadScoreFile, setSongQuery, setSongPage, songListPage,
+import { loadSong, SONGS, loadSongManifest, selectTrack, setTrackRole, setTrackInst, skipToStart, playFromTracks, loadScoreFile, setSongQuery, setSongPage, songListPage,
          renderSongList, setFavFilter, favFilterOn } from './songs.js';
 /* お気に入り（指板の左上のハート／曲一覧の絞り込み） */
 import { toggleFavCurrent, syncFavBtn, syncFavFilterBtn, reloadFavs } from './favorites.js';
@@ -586,6 +586,8 @@ on('trackList','change', e=>{
   setTrackInst(+sel.dataset.i, sel.value);
 });
 on('skipStart','click', skipToStart);
+/* トラック選択の面の［再生］：選んだメロディガイド・伴奏で最初の音から鳴らす */
+on('trackPlay','click', playFromTracks);
 /* MIDIトラック選択の面から「譜面を読み込む」へ戻る */
 on('trackBack','click', ()=> setScoreSub('load'));
 

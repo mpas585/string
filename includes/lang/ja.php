@@ -234,6 +234,7 @@ return [
     'file_note'      => 'MusicXML（.xml/.musicxml/.mxl）と MIDI（.mid）に対応',
     'tracks'         => 'トラック選択',
     'skip_start'     => '⏭ 最初の音へスキップ',
+    'track_play'     => '▶ この設定で再生',
     'tracks_note'    => 'トラックごとに役割を選べます。メロディガイド（練習する旋律）は1つ、伴奏は複数選べ、音色も選べます。伴奏モードONで伴奏が一緒に鳴ります。%sの音域に近いトラックを自動でガイドにしています。',
     'track_preview'  => '視聴',
     'track_select'   => '選択',

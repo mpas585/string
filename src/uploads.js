@@ -92,7 +92,7 @@ function sigOf(s) {
 
 /* ===== 譜面 ⇄ 保存する形 ===== */
 export function packScore(parsed, tempo, meta) {
-  return {
+  const out = {
     v: 1,
     tempo: Math.round(tempo || ST.tempo),
     /* MIDI のときは選んでいたトラック（番号と名前）。開き直したときにこれを見せる */
@@ -105,6 +105,14 @@ export function packScore(parsed, tempo, meta) {
     /* スラー群 [[開始イベント添字, 終了イベント添字], …]。無ければ空配列。 */
     slurs: (Array.isArray(parsed.slurs) ? parsed.slurs.map(g => [g[0], g[1]]) : []),
   };
+  /* MIDI のときだけ、トラックの割り当てを足す（MusicXML などは従来の形のまま＝sig も変わらない）。
+       roles  … [{r:役割, i:音色}, …]（トラック番号順）。一覧から開き直したときに割り当てを戻す
+       accomp … 伴奏に割り当てたトラックの音の並び（unpackAccomp と同じ形）。伴奏ボタンで鳴る */
+  if (meta && Array.isArray(meta.roles)) {
+    out.roles = meta.roles.map(x => ({ r: String(x.r || 'mute'), i: String(x.i || 'piano') }));
+    out.accomp = Array.isArray(meta.accomp) ? meta.accomp : [];
+  }
+  return out;
 }
 /* 伴奏パート（data.accomp）→ ST.accompTracks の形 [{inst, ev:[{onset, dur, midis}]}]。
    持っていない・壊れているときは空配列（＝伴奏ボタンは出ない）。 */
@@ -281,8 +289,17 @@ export function beginUpload(name) {
   session = { name: String(name || ''), id: 0 };
 }
 
-/* ===== 保存（譜面を読み込んだ経路から呼ばれる） ===== */
-export async function rememberUpload(name, parsed, tempo, meta) {
+/* ===== 保存（譜面を読み込んだ経路から呼ばれる） =====
+   1件ずつ順番に送る。MIDI を読み込んだ直後の保存（新規追加）が返ってくる前に
+   トラックの割り当てを変えると、まだ id が決まっていないため別の1件として追加されてしまう。
+   前の保存が終わってから次を判定すれば、続きは同じ1件の書き換えになる。 */
+let saveQueue = Promise.resolve();
+export function rememberUpload(name, parsed, tempo, meta) {
+  const job = saveQueue.then(() => rememberUploadNow(name, parsed, tempo, meta)).catch(() => {});
+  saveQueue = job;
+  return job;
+}
+async function rememberUploadNow(name, parsed, tempo, meta) {
   if (!isSignedIn() || !parsed || !parsed.events || !parsed.events.length) return;
 
   let packed, data;
@@ -385,8 +402,19 @@ export async function openUpload(id, showTracks) {
       try {
         const m = parseMidi(base64ToBytes(r.src).buffer);
         const trk = (r.data && r.data.track != null) ? r.data.track : 0;
-        midi = { tracks: m.tracks, tempo: m.tempo, tsNum: m.tsNum, tsDen: m.tsDen,
-                 division: m.division, name: r.name, sel: Math.min(trk, m.tracks.length - 1), src: r.src };
+        const sel = Math.max(0, Math.min(trk, m.tracks.length - 1));
+        /* 保存してあったトラックの割り当て（伴奏・音色）を戻す。無い（古い保存）ときは全部ミュート＋ピアノ。
+           メロディガイドは保存時に選んでいたトラック（data.track）1つだけ */
+        const roles = (r.data && Array.isArray(r.data.roles)) ? r.data.roles : [];
+        m.tracks.forEach((t, k) => {
+          const ro = roles[k] || null;
+          t.role = (ro && ro.r === 'accomp') ? 'accomp' : 'mute';
+          t.inst = (ro && INSTRUMENTS.indexOf(ro.i) >= 0) ? ro.i : 'piano';
+        });
+        m.tracks[sel].role = 'guide';
+        /* kind:'midi' が無いと、トラックを選び直したときに音の並びが作れず（trackEvents）、保存もされない */
+        midi = { kind: 'midi', tracks: m.tracks, tempo: m.tempo, tsNum: m.tsNum, tsDen: m.tsDen,
+                 division: m.division, name: r.name, keyBase: r.name, title: r.name, sel: sel, src: r.src };
       } catch (e) { midi = null; }
     }
     setMidiFile(midi); renderTracks();
@@ -404,6 +432,8 @@ export async function openUpload(id, showTracks) {
        持たない譜面は空のまま＝従来どおり伴奏ボタンは出ない。 */
     ST.accompTracks = unpackAccomp(r.data);
     syncDock();
+    /* 譜面が載ったので、トラック選択の面（［再生］ボタンの出し入れ）を作り直す */
+    renderTracks();
 
     /* 保存してあった運指を当てる。当てたぶんは localStorage にも書いて、
        次はオフラインでも同じ運指で開けるようにする（送り返しは applying で止める） */

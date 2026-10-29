@@ -226,6 +226,7 @@ return [
     'file_note'      => '支持 MusicXML（.xml/.musicxml/.mxl）与 MIDI（.mid）',
     'tracks'         => '音轨选择',
     'skip_start'     => '⏭ 跳到第一个音',
+    'track_play'     => '▶ 按此设置播放',
     'tracks_note'    => '可为每条音轨选择角色：一条旋律引导（你练习的旋律）、任意多条伴奏（各自可选音色）或静音。开启伴奏模式时伴奏会一起播放。已自动将音域接近%s的音轨设为引导。',
     'track_preview'  => '试听',
     'track_select'   => '选择',

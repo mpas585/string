@@ -226,6 +226,7 @@ return [
     'file_note'      => 'Supports MusicXML (.xml/.musicxml/.mxl) and MIDI (.mid)',
     'tracks'         => 'Tracks',
     'skip_start'     => '⏭ Skip to first note',
+    'track_play'     => '▶ Play with these tracks',
     'tracks_note'    => 'Choose a role for each track: one melody guide (the line you practice), any number of accompaniment tracks (each with its own instrument), or mute. Accompaniment plays when Accompaniment mode is on. The track closest to the %s range is preset as the guide.',
     'track_preview'  => 'Preview',
     'track_select'   => 'Select',

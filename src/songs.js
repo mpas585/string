@@ -466,7 +466,7 @@ export function setMidiFile(v){ midiFile=v; }  /* 分割対応: 外部モジュ�
 export function renderTracks(){
   const box=document.getElementById('tracks');
   const list=document.getElementById('trackList');
-  if(!midiFile){ box.classList.remove('show'); list.innerHTML=''; return; }
+  if(!midiFile){ box.classList.remove('show'); list.innerHTML=''; syncTrackPlay(); return; }
   box.classList.add('show');
   const instOpts=(sel)=> INSTRUMENTS.map(v=>`<option value="${v}"${v===sel?' selected':''}>${tt('ui.inst_'+v)}</option>`).join('');
   list.innerHTML = midiFile.tracks.map((t,i)=>{
@@ -488,6 +488,53 @@ export function renderTracks(){
       + instRow
       + `</div>`;
   }).join('');
+  syncTrackPlay();
+}
+/* トラック選択の面の［再生］ボタン。メロディガイドが決まっていて譜面が載っているときだけ出す */
+export function syncTrackPlay(){
+  const b=document.getElementById('trackPlay');
+  if(!b) return;
+  const ok = !!midiFile && midiFile.tracks.some(t=> t.role==='guide') && ST.events.length>0;
+  b.hidden = !ok;
+}
+/* ［再生］：選んだトラックの設定で最初の音から鳴らす。
+   伴奏を割り当てたトラックがあるのに伴奏モードがOFFなら、ここでONにする（選んだ伴奏が鳴らないのを防ぐ） */
+export function playFromTracks(){
+  if(!midiFile || !ST.events.length) return;
+  if(ST.playing) stopPlay();
+  const hasAccomp = Array.isArray(ST.accompTracks) && ST.accompTracks.some(a=> a && a.ev && a.ev.length);
+  if(hasAccomp && !ST.enjoy){
+    ST.enjoy=true;
+    const ej=document.getElementById('enjoySw');
+    if(ej) ej.classList.add('on');
+    /* saveSettings は呼ばない：未ログインだと「設定を保存しますか？」が再生と同時に出てしまう */
+  }
+  const first=firstNoteBeat();
+  ST.playhead=first;
+  closeDrawer();
+  setTimeout(()=> startPlay(first), 200);
+}
+/* トラックの割り当て（メロディガイド・伴奏・音色）をアップロードの1件へ保存する。
+   アップロードしたMIDIのときだけ（曲・XMLは保存対象にしない）。
+   data.roles … トラックごとの {r:役割, i:音色}。一覧から開き直したときに割り当てを戻すため
+   data.accomp … 伴奏トラックの音の並び。元のMIDIを預けていなくても伴奏が鳴るようにするため
+   parsed を省くと、いま画面に出ている譜面（ST.parsed）を保存する＝譜面の編集を巻き戻さない */
+function saveTrackState(parsed){
+  if(!midiFile || midiFile.kind!=='midi') return;
+  const i=midiFile.sel;
+  const t=midiFile.tracks[i];
+  const p=parsed || ST.parsed;
+  if(!t || !p) return;
+  const roles=midiFile.tracks.map(x=>({r:(x.role||'mute'), i:(x.inst||'piano')}));
+  const accomp=[];
+  midiFile.tracks.forEach(x=>{
+    if(x.role!=='accomp') return;
+    const pe=trackEvents(x);
+    const events=pe.events.map(e=>[e.onset, e.dur, e.pitches.map(pp=>pp.midi)]);
+    if(events.length) accomp.push({inst:(x.inst||'piano'), name:x.name, events});
+  });
+  rememberUpload(midiFile.name, p, midiFile.tempo,
+    {track:i, trackName:t.name, roles, accomp, src:midiFile.src||null});
 }
 /* トラックの役割を変える（メロディガイド＝1つだけ・伴奏・ミュート）。試聴はしない。 */
 export function setTrackRole(i, role){
@@ -499,6 +546,7 @@ export function setTrackRole(i, role){
   midiFile.tracks[i].role = (role==='accomp') ? 'accomp' : 'mute';
   renderTracks();
   buildAccomp();
+  saveTrackState();         /* 伴奏・ミュートの割り当ても保存する */
 }
 /* 伴奏トラックの音色を変える */
 export function setTrackInst(i, inst){
@@ -506,6 +554,7 @@ export function setTrackInst(i, inst){
   if(INSTRUMENTS.indexOf(inst)<0) inst='piano';
   midiFile.tracks[i].inst=inst;
   buildAccomp();
+  saveTrackState();         /* 音色も保存する */
 }
 export function selectTrack(i, play){
   if(!midiFile || !midiFile.tracks[i]) return;
@@ -524,11 +573,9 @@ export function selectTrack(i, play){
     : ((midiFile.name || base) + ' / ' + t.name);
   setTempo(Math.round(midiFile.tempo || ST.tempo));
   setScore(parsed, scoreName, title);
-  /* 保存：アップロードしたMIDIのときだけ（曲・XMLは保存対象にしない） */
-  if(midiFile.kind==='midi'){
-    rememberUpload(midiFile.name, parsed, midiFile.tempo, {track:i, trackName:t.name, src:midiFile.src||null});
-  }
   buildAccomp();            /* setScore が accompTracks を消すので、ここで組み直す */
+  /* 保存：アップロードしたMIDIのときだけ（曲・XMLは保存対象にしない）。伴奏の割り当ても一緒に残す */
+  saveTrackState(parsed);
   renderTracks();
   const out=parsed.events.filter(e=> !e.fing).length;
   toast(tt('msg.track_loaded', t.name, parsed.events.length) + (out ? tt('msg.out_range_suffix', out) : ''));

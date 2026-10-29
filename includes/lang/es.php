@@ -229,6 +229,7 @@ return [
     'file_note'      => 'Compatible con MusicXML (.xml/.musicxml/.mxl) y MIDI (.mid)',
     'tracks'         => 'Pistas',
     'skip_start'     => '⏭ Ir a la primera nota',
+    'track_play'     => '▶ Reproducir con estas pistas',
     'tracks_note'    => 'Elige un rol para cada pista: una guía de melodía (la línea que practicas), varias pistas de acompañamiento (cada una con su instrumento) o silenciar. El acompañamiento suena con el modo Acompañamiento activado. La pista más cercana al registro del %s se preselecciona como guía.',
     'track_preview'  => 'Escuchar',
     'track_select'   => 'Elegir',
